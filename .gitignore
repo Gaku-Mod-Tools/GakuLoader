@@ -1,0 +1,13 @@
+build/
+x64/
+.vs/
+*.user
+*.suo
+*.VC.db
+*.VC.opendb
+*.pdb
+*.ilk
+*.exp
+*.tlog
+*.lastbuildstate
+__pycache__/

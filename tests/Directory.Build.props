@@ -1,0 +1,20 @@
+<Project>
+  <Import Project="$(MSBuildThisFileDirectory)..\Directory.Build.props" />
+
+  <!--
+    Test targets only.
+
+    Release normally defines NDEBUG, which compiles assert() away. The suite uses
+    assert() for sequencing as well as for checks, so a Release build with NDEBUG
+    removes real work from the test bodies and then crashes several steps later.
+    Debug passing while Release segfaults was exactly this.
+
+    /U NDEBUG is applied after the command-line /D NDEBUG, so the assertions survive
+    even though the shared Release group defines the symbol.
+  -->
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <UndefinePreprocessorDefinitions>NDEBUG;%(UndefinePreprocessorDefinitions)</UndefinePreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+</Project>

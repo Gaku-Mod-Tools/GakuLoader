@@ -1,0 +1,96 @@
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>17.0</VCProjectVersion>
+    <ProjectGuid>{6F1A2B30-4C5D-4E6F-8A90-1B2C3D4E5F03}</ProjectGuid>
+    <RootNamespace>GakuLoader</RootNamespace>
+  </PropertyGroup>
+
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries Condition="'$(Configuration)' == 'Debug'">true</UseDebugLibraries>
+    <UseDebugLibraries Condition="'$(Configuration)' == 'Release'">false</UseDebugLibraries>
+  </PropertyGroup>
+
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+
+  <PropertyGroup>
+    <!-- 产物契约：Release → build\version.dll（测试脚本、tools/test-package.ps1、文档都依赖此路径）。
+         Debug 必须落在独立目录：两个配置共用一个 OutDir 时，一次 IDE 里的 Debug 构建就会
+         悄悄替换掉待部署的 Release 产物，而 /MTd 的 DLL 带着调试 CRT 与断言，不是发布物。
+         Debug 的路径与 tests\Debug、lib\Debug 的既有约定保持一致。 -->
+    <OutDir Condition="'$(Configuration)' == 'Release'">$(GakuBuildDir)</OutDir>
+    <OutDir Condition="'$(Configuration)' == 'Debug'">$(GakuBuildDir)debug\</OutDir>
+    <TargetName>version</TargetName>
+  </PropertyGroup>
+
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <PreprocessorDefinitions>_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>d3d11.lib;dxgi.lib;d3dcompiler.lib;imm32.lib;dwmapi.lib;gdi32.lib;ole32.lib;uuid.lib;shell32.lib;user32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <!-- 中间产物不落在 build\ 根目录，那里只放发布物 -->
+      <ImportLibrary>$(GakuBuildDir)lib\$(Configuration)\version.lib</ImportLibrary>
+    </Link>
+  </ItemDefinitionGroup>
+
+  <ItemGroup>
+    <ClCompile Include="src\Main.cpp" />
+    <ClCompile Include="src\Proxy.cpp" />
+    <ClCompile Include="src\PluginHost.cpp" />
+    <ClCompile Include="src\ActorEntry.cpp" />
+    <ClCompile Include="src\Trace.cpp" />
+    <ClCompile Include="src\CrashTrace.cpp" />
+    <ClCompile Include="src\Hotkeys.cpp" />
+    <ClCompile Include="src\QuitGuard.cpp" />
+    <ClCompile Include="src\UnityQuit.cpp" />
+    <ClCompile Include="src\ExitDiagnosis.cpp" />
+    <ClCompile Include="src\GameHook.cpp" />
+    <ClCompile Include="src\DesktopUi.cpp" />
+    <ClCompile Include="src\DesktopDialogs.cpp" />
+    <ClCompile Include="src\DiagnosticBoundary.cpp" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ClInclude Include="include\GakuPlugin.h" />
+    <ClInclude Include="src\Host.hpp" />
+    <ClInclude Include="src\HostConfig.hpp" />
+    <ClInclude Include="src\HostContracts.hpp" />
+    <ClInclude Include="src\Proxy.hpp" />
+    <ClInclude Include="src\Trace.hpp" />
+    <ClInclude Include="src\Hotkeys.hpp" />
+    <ClInclude Include="src\QuitGuard.hpp" />
+    <ClInclude Include="src\UnityQuit.hpp" />
+    <ClInclude Include="src\ExitDiagnosis.hpp" />
+    <ClInclude Include="src\GameHook.hpp" />
+    <ClInclude Include="src\DesktopUi.hpp" />
+    <ClInclude Include="src\DesktopDialogs.hpp" />
+    <ClInclude Include="src\DiagnosticBoundary.hpp" />
+    <ClInclude Include="src\ActorEntry.hpp" />
+    <ClInclude Include="src\CrashTrace.hpp" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="MinHook.vcxproj">
+      <Project>{6F1A2B30-4C5D-4E6F-8A90-1B2C3D4E5F01}</Project>
+    </ProjectReference>
+    <ProjectReference Include="ImGui.vcxproj">
+      <Project>{6F1A2B30-4C5D-4E6F-8A90-1B2C3D4E5F02}</Project>
+    </ProjectReference>
+  </ItemGroup>
+
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>

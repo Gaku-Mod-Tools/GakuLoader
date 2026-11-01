@@ -1,0 +1,39 @@
+name: Windows MSVC
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build-and-test:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build host (VS2022 / v143)
+        shell: powershell
+        run: ./build.ps1 -PlatformToolset v143
+      - name: Build MSVC test matrix
+        shell: powershell
+        run: ./tests/build-tests.ps1 -SkipFixtures -PlatformToolset v143
+      - name: Docs, independent plugin and headless frame pump
+        shell: powershell
+        run: ./tests/run-all.ps1 -SkipBuild -SkipFixtures -Only docs,frame-pump
+      - name: C ABI layout and MinHook isolation
+        shell: powershell
+        run: |
+          & ./build/tests/Release/c-abi-test.exe
+          if ($LASTEXITCODE -ne 0) { throw 'C ABI test failed' }
+          & ./build/tests/Release/minhook-isolation.exe
+          if ($LASTEXITCODE -ne 0) { throw 'MinHook isolation test failed' }
+      - name: Local package contract
+        shell: powershell
+        run: ./tools/test-package.ps1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: msvc-checks
+          path: |
+            build/tests/*.json
+            build/tests/*.log
+            build/examples/minimal-plugin/Release/activation.log

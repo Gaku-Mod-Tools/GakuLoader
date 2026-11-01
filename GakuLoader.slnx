@@ -1,0 +1,24 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <BuildType Name="Release" />
+    <BuildType Name="Debug" />
+  </Configurations>
+  <Folder Name="/host/">
+    <Project Path="GakuLoader.vcxproj" Id="6f1a2b30-4c5d-4e6f-8a90-1b2c3d4e5f03" />
+  </Folder>
+  <Folder Name="/deps/">
+    <Project Path="MinHook.vcxproj" Id="6f1a2b30-4c5d-4e6f-8a90-1b2c3d4e5f01" />
+    <Project Path="ImGui.vcxproj" Id="6f1a2b30-4c5d-4e6f-8a90-1b2c3d4e5f02" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/HostTests.vcxproj" Id="6f1a2b30-4c5d-4e6f-8a90-1b2c3d4e5f10" />
+    <Project Path="tests/MinHookIsolation.vcxproj" Id="6f1a2b30-4c5d-4e6f-8a90-1b2c3d4e5f11" />
+    <Project Path="tests/FramePumpTests.vcxproj" Id="6f1a2b30-4c5d-4e6f-8a90-1b2c3d4e5f12" />
+    <Project Path="tests/DiagnosticBoundaryTests.vcxproj" Id="6f1a2b30-4c5d-4e6f-8a90-1b2c3d4e5f13" />
+    <Project Path="tests/CAbiTest.vcxproj" Id="6f1a2b30-4c5d-4e6f-8a90-1b2c3d4e5f14" />
+    <Project Path="tests/DesktopUiSmoke.vcxproj" Id="6f1a2b30-4c5d-4e6f-8a90-1b2c3d4e5f15" />
+    <Project Path="tests/DesktopDialogsTests.vcxproj" Id="6f1a2b30-4c5d-4e6f-8a90-1b2c3d4e5f16" />
+    <Project Path="tests/HostDialogConcurrency.vcxproj" Id="6f1a2b30-4c5d-4e6f-8a90-1b2c3d4e5f17" />
+  </Folder>
+</Solution>
