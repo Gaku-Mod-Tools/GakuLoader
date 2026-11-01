@@ -8,18 +8,18 @@
     ".git/",
     "build/"
   ],
-  "content_tree_sha256": "14d395c0dcde10af93d8ea8f4df72e277bde7a59ae8342c5752e7d6746e06698",
+  "content_tree_sha256": "f3514d7614d9ee31b43470cb96a4cadf00cd4959eca92923a6a543e271c61205",
   "files": [
     {
       "path": ".gitattributes",
-      "size": 9,
-      "sha256": "8b9c3028d6467ff3be7c793141927841d70f47f52d0590677438f488ca154992",
+      "size": 72,
+      "sha256": "308a40fa1d89ae5ea4390b4c9b46a0108b09f171f07898f25d451fa0c69c4e9f",
       "generated_for_staging": true
     },
     {
       "path": ".github/workflows/windows-msvc.yml",
-      "size": 1337,
-      "sha256": "b2a79fc81bba1c0790895cd45d7893e0d002b6ec39d742046a41403f0cb4fe6c",
+      "size": 618,
+      "sha256": "13d3d3090d086ac05754a08f4dac79eb1f4f8c8164ff3d7d547df5fe51e2799d",
       "source_sha256": "83f1691ce7b6363f6bf1f2ed6aecbf377ec60ed04471d6e76d9107a4050e7c4a",
       "staging_adapted": true
     },
