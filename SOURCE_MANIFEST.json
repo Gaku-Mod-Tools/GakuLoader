@@ -8,7 +8,7 @@
     ".git/",
     "build/"
   ],
-  "content_tree_sha256": "f3514d7614d9ee31b43470cb96a4cadf00cd4959eca92923a6a543e271c61205",
+  "content_tree_sha256": "700927b0b05677906a8a83e2d7545b5ff636959f7705dfc9015cacd9d290f222",
   "files": [
     {
       "path": ".gitattributes",
@@ -163,14 +163,14 @@
     },
     {
       "path": "deps/minhook/LICENSE.txt",
-      "size": 4427,
-      "sha256": "1cc8956a03c1fc4f89ec44a0f9dfd6961cb249a630d2747351a8fa46012101d7",
+      "size": 4354,
+      "sha256": "638d0e5629c065357491fc202a398358eba988a05e04c43fd762cd1c70df443a",
       "generated_for_staging": true
     },
     {
       "path": "deps/minhook/PROVENANCE.md",
-      "size": 1219,
-      "sha256": "598cce820195914d9c22e025de642c7e6ff7bd657ee7789af8f17c6de8fe14ca",
+      "size": 1449,
+      "sha256": "39e345ed7594856fc3543d59d629605f1c9fe13ef5d9e2f27fd0cbd34e25c130",
       "generated_for_staging": true
     },
     {

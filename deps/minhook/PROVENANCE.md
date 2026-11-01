@@ -12,3 +12,5 @@ Full upstream license text including the HDE32/HDE64 portions was read from the 
 https://raw.githubusercontent.com/TsudaKageyu/minhook/8af6b4acae5a9388fd742b56fa79ece89d96f823/LICENSE.txt
 and transcribed into LICENSE.txt with normalized UTF-8/LF text. Existing copyright/license headers in every source file remain unchanged.
 This license is BSD-2-Clause; it is not first-party MIT code. The local source patch is not represented as upstream-authored code.
+
+The described batch operations are observed local features, not an exhaustive upstream delta. The declared gitlink is not proof that other supplied files match that upstream revision; upstream-object parity remains unverified.
