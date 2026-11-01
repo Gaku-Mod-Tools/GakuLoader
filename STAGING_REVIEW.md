@@ -42,3 +42,11 @@ Run `tools/validate-source.ps1` after the initial clean source commit. It builds
 only docs/frame-pump, C ABI, MinHook isolation, independent minimal plugin and local package checks. It records logs and a build receipt under ignored `build/validation/`.
 A built test project is not reported as a test execution. MinGW, actual desktop windows, game loading/acceptance and remote CI are excluded.
 Results, if subsequently recorded, are in `VALIDATION.md`; this selection review alone does not assert that a build succeeded.
+
+## Documentation restoration after the initial snapshot
+
+The public READMEs and user guides were restored from mature GakuLoader documentation at `6db0f56440b183d37b57c467d68b452d13eb3d47`.
+The initial snapshot incorrectly replaced those product entry points with internal audit/source-validation framing.
+All eleven repository Wiki files had remained present; navigation and ordinary Markdown compatibility were repaired without claiming a separate GitHub Wiki migration.
+See `DOCS_RESTORATION.md` for exact source commits, path/hash records, checks and the documentation-only boundary.
+This internal selection review is not the public product homepage.

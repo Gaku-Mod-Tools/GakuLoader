@@ -57,3 +57,7 @@ trace=false
 ## 旧配置迁移
 
 如果根目录下有旧版的 `gml-host.ini` 且当前没有 `gakuloader.ini`，加载器在首次启动时会自动把旧文件复制一份命名为 `gakuloader.ini`，避免用户之前关掉的插件又被重新开启。这只是配置文件的单次拷贝导入，并不代表兼容旧版插件。
+
+---
+
+[Wiki 首页](Home.md) · [全部章节](_Sidebar.md) · [项目首页](../README.md)

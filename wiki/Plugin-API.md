@@ -26,7 +26,7 @@
 
 ### 5. `onDesktopUi(void* pluginState)`
 - **运行线程**：独立的 Desktop UI 线程。
-- **说明**：只有在用户按下 F1 打开窗口并在左侧选中了你的插件面板时才会执行。在这里画 ImGui 控件。详见 [[界面与 UI|UI]]。
+- **说明**：只有在用户按下 F1 打开窗口并在左侧选中了你的插件面板时才会执行。在这里画 ImGui 控件。详见 [界面与 UI](UI.md)。
 
 ### 6. `shutdown(void* pluginState)`
 - **运行线程**：Unity 主线程。
@@ -80,3 +80,7 @@ mainThread.enqueue(mainThread.context, [](void* data) {
 - 服务名不能以 `gakuloader.` 开头（该前缀为宿主保留）。
 - 服务名最长 127 字节，表最大 64 KiB，全进程最多注册 64 个自定义服务。
 - 宿主只负责复制和查表，不接管指针指向的数据。发布服务的插件退出时，宿主会自动撤销它发布的服务。
+
+---
+
+[Wiki 首页](Home.md) · [全部章节](_Sidebar.md) · [项目首页](../README.md)

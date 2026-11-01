@@ -51,3 +51,7 @@ QuitGuard 的处理流程是：
 
 ### 怎么确认退出卡住是不是插件 Hook 引起的？
 在 `gakumas-local/` 目录下放一个名为 `gml_disable_hooks.txt` 的空文本文件。加载器启动时会跳过所有 MinHook 的安装，只保留 QuitGuard。如果此时关游戏依然卡住等 5 秒强杀，就证明卡住完全是 Unity 引擎自己的问题，和插件的 Hook 没关系。
+
+---
+
+[Wiki 首页](Home.md) · [全部章节](_Sidebar.md) · [项目首页](../README.md)

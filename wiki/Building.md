@@ -16,11 +16,9 @@
 
 ## 本地构建
 
-本快照已 vendor 构建所需依赖，普通文件随仓库检出；不需要初始化子模块或下载兄弟仓库。
+构建所需的 ImGui 和 MinHook 源码已包含在 `deps/`，无需初始化子模块或准备相邻仓库。
 
-默认只做源码验证，在仓库根目录执行 `tools/validate-source.ps1`。它不执行窗口或游戏检查。
-
-单独构建命令：
+在仓库根目录执行：
 
 ```powershell
 # 自动选择已安装的 v143/v145；Release 输出 build/version.dll
@@ -36,9 +34,9 @@
 .\build.ps1 -OutputDll build/candidate/version.dll
 ```
 
-脚本通过 `vswhere` 定位 MSBuild，并在构建前检查工具集和 vendor 文件；Windows SDK 是否完整由 MSBuild 校验。
+脚本通过 `vswhere` 定位 MSBuild，并在构建前检查工具集和依赖源码；Windows SDK 是否完整由 MSBuild 校验。
 `build.ps1` 始终只构建本地产物；`-OutputDll` 仅复制候选文件。本仓不接受 `-SkipDeploy` 或 `-DeployPath`，
-也不会根据默认游戏路径安装。本仓不提供二进制发行包；手动安装边界见 [Installation](Installation.md)。
+也不会根据默认游戏路径安装。整套产品部署由上层发布包负责，见 [Installation](Installation.md)。
 
 ## 第一个插件
 
@@ -87,6 +85,8 @@ MSVC 路径可以独立检查文档、最小插件和本地宿主包：
 
 [Windows MSVC 工作流](../.github/workflows/windows-msvc.yml) 准备了 VS2022/v143 的宿主、
 MSVC 测试构建、独立插件、文档链接与命令、本地包契约，以及无窗口帧泵、C ABI、MinHook 检查。
-配置文件落盘不代表远端已运行。MinGW 异构矩阵和真实桌面窗口检查需在具备相应依赖的环境另行执行。
-受限进程若遇 `LNK1101`（MSPDB140.DLL），应先在允许 MSVC 调试符号服务的环境确认构建；
-不要把无法链接的结果当成插件逻辑或游戏验收失败。
+MinGW 异构矩阵和真实桌面窗口检查需要相应的工具链与 Windows 桌面环境。
+
+---
+
+[Wiki 首页](Home.md) · [全部章节](_Sidebar.md) · [项目首页](../README.md)

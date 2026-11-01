@@ -69,3 +69,7 @@ actorEntry.registerEntry(actorEntry.context, &binding);
 
 ### 自动互斥保护
 参与者代码与桌面 UI 回调（`onDesktopUi`）都在宿主的互斥门控保护下运行。也就是说，当参与者在读变量时，桌面 UI 线程不可能插进来写；反过来 UI 正在绘制修改数据时，参与者也不会并发读到一半。因此你可以在参与者里直接读取被 UI 复选框修改的开关变量，无需自己额外加互斥锁。
+
+---
+
+[Wiki 首页](Home.md) · [全部章节](_Sidebar.md) · [项目首页](../README.md)

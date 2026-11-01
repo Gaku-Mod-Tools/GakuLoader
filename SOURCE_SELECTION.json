@@ -808,5 +808,137 @@
     "deps/imgui": "f3f6295d532b98e322691afb8ef418209d963786",
     "deps/minhook": "8af6b4acae5a9388fd742b56fa79ece89d96f823"
   },
-  "upstream_pristine_claim": false
+  "upstream_pristine_claim": false,
+  "documentation_restoration": {
+    "baseline_staging_commit": "775107a5d78daa87ee9dc1ae78be2a0df0235255",
+    "mature_source_commit": "6db0f56440b183d37b57c467d68b452d13eb3d47",
+    "legacy_crosscheck_commit": "2183b0676728a22516eb1ed582b0212dc8b3e61b",
+    "review_status": "restored product documentation; existing docs/link and actual minimal SDK checks passed; no ownership approval or game acceptance implied",
+    "files": {
+      "README.md": {
+        "source_repository": "GakuLoader",
+        "source_commit": "6db0f56440b183d37b57c467d68b452d13eb3d47",
+        "source_path": "README.md",
+        "source_sha256": "ca330f89df66d2bd7d9bab878e873ea1fbb0268490112f2bfc2362a7c9b8a2d8",
+        "action": "restored public documentation with repository-relative Markdown navigation and current vendored dependency instructions"
+      },
+      "README.en.md": {
+        "source_repository": "GakuLoader",
+        "source_commit": "6db0f56440b183d37b57c467d68b452d13eb3d47",
+        "source_path": "README.en.md",
+        "source_sha256": "fe8826b1e42ecee1f27becca40aabe618f2b03d1438310a80dfcece866ab88f8",
+        "action": "restored public documentation with repository-relative Markdown navigation and current vendored dependency instructions"
+      },
+      "README.ja.md": {
+        "source_repository": "GakuLoader",
+        "source_commit": "6db0f56440b183d37b57c467d68b452d13eb3d47",
+        "source_path": "README.ja.md",
+        "source_sha256": "c3b23faea9cc0a6f635601bf8364d13307f368fd10c68bd513c415de26bf5de4",
+        "action": "restored public documentation with repository-relative Markdown navigation and current vendored dependency instructions"
+      },
+      "docs/QUICKSTART.md": {
+        "source_repository": "GakuLoader",
+        "source_commit": "6db0f56440b183d37b57c467d68b452d13eb3d47",
+        "source_path": "docs/QUICKSTART.md",
+        "source_sha256": "47553472a177409680c6b1ed1a9891f66d9b52f85d8cecc7573fecdda43dbf60",
+        "action": "restored public documentation with repository-relative Markdown navigation and current vendored dependency instructions"
+      },
+      "docs/PLUGIN_DEVELOPMENT.md": {
+        "source_repository": "GakuLoader",
+        "source_commit": "6db0f56440b183d37b57c467d68b452d13eb3d47",
+        "source_path": "docs/PLUGIN_DEVELOPMENT.md",
+        "source_sha256": "dd2aeb6460501fd39fe5f0f8c4901660a478d33000403ca24af19747a205f915",
+        "action": "restored public documentation with repository-relative Markdown navigation and current vendored dependency instructions"
+      },
+      "wiki/Building.md": {
+        "source_repository": "GakuLoader",
+        "source_commit": "6db0f56440b183d37b57c467d68b452d13eb3d47",
+        "source_path": "wiki/Building.md",
+        "source_sha256": "b21fa8e869e6f6d9ce80587ecf9f80c19ce48ce064a746402746705399e9ce98",
+        "action": "restored public documentation with repository-relative Markdown navigation and current vendored dependency instructions"
+      },
+      "wiki/Configuration.md": {
+        "source_repository": "GakuLoader",
+        "source_commit": "6db0f56440b183d37b57c467d68b452d13eb3d47",
+        "source_path": "wiki/Configuration.md",
+        "source_sha256": "474ff03f2c6be60fe0b2f89f3af86d4ecefa093284c8e3af67d7bece41323b89",
+        "action": "restored public documentation with repository-relative Markdown navigation and current vendored dependency instructions"
+      },
+      "wiki/Home.md": {
+        "source_repository": "GakuLoader",
+        "source_commit": "6db0f56440b183d37b57c467d68b452d13eb3d47",
+        "source_path": "wiki/Home.md",
+        "source_sha256": "1de66c58546c55e351c21c14a11cd60b835d2affc26e7bf7b1862af7aaba61bb",
+        "action": "restored public documentation with repository-relative Markdown navigation and current vendored dependency instructions"
+      },
+      "wiki/Hooks.md": {
+        "source_repository": "GakuLoader",
+        "source_commit": "6db0f56440b183d37b57c467d68b452d13eb3d47",
+        "source_path": "wiki/Hooks.md",
+        "source_sha256": "6f4cc03c99fa0063d9768fdd92935741f83fb55c16327c7bd20051810d1367c9",
+        "action": "restored public documentation with repository-relative Markdown navigation and current vendored dependency instructions"
+      },
+      "wiki/Hotkeys.md": {
+        "source_repository": "GakuLoader",
+        "source_commit": "6db0f56440b183d37b57c467d68b452d13eb3d47",
+        "source_path": "wiki/Hotkeys.md",
+        "source_sha256": "20d3988ee4e31c8a0ce815048ec2d23f8bdb02e487b6eafb4264e24c92c36ae2",
+        "action": "restored public documentation with repository-relative Markdown navigation and current vendored dependency instructions"
+      },
+      "wiki/Installation.md": {
+        "source_repository": "GakuLoader",
+        "source_commit": "6db0f56440b183d37b57c467d68b452d13eb3d47",
+        "source_path": "wiki/Installation.md",
+        "source_sha256": "004b7a8b0b8ee5800b3177e6ccb4e504f05acbd6b836a44c58cdafcc998e0b9f",
+        "action": "restored public documentation with repository-relative Markdown navigation and current vendored dependency instructions"
+      },
+      "wiki/Plugin-API.md": {
+        "source_repository": "GakuLoader",
+        "source_commit": "6db0f56440b183d37b57c467d68b452d13eb3d47",
+        "source_path": "wiki/Plugin-API.md",
+        "source_sha256": "e0560e09b2c05acad903640304ee17326e3bc64904dcdf3b237c52797fd3ac33",
+        "action": "restored public documentation with repository-relative Markdown navigation and current vendored dependency instructions"
+      },
+      "wiki/Troubleshooting.md": {
+        "source_repository": "GakuLoader",
+        "source_commit": "6db0f56440b183d37b57c467d68b452d13eb3d47",
+        "source_path": "wiki/Troubleshooting.md",
+        "source_sha256": "29c3816f222a0a8e7ff3c2a99549021b4f4ea2fbb2daa127d365dc2efd24693b",
+        "action": "restored public documentation with repository-relative Markdown navigation and current vendored dependency instructions"
+      },
+      "wiki/UI.md": {
+        "source_repository": "GakuLoader",
+        "source_commit": "6db0f56440b183d37b57c467d68b452d13eb3d47",
+        "source_path": "wiki/UI.md",
+        "source_sha256": "e76126df8760355c1434680fe57f40a628d6974956236acd04dc09255657dd46",
+        "action": "restored public documentation with repository-relative Markdown navigation and current vendored dependency instructions"
+      },
+      "wiki/Writing-a-Plugin.md": {
+        "source_repository": "GakuLoader",
+        "source_commit": "6db0f56440b183d37b57c467d68b452d13eb3d47",
+        "source_path": "wiki/Writing-a-Plugin.md",
+        "source_sha256": "4529fed1831a1c5bcd4fbdb376768b894f735a74aa3463919440cfcbedbf0bd7",
+        "action": "restored public documentation with repository-relative Markdown navigation and current vendored dependency instructions"
+      },
+      "wiki/_Sidebar.md": {
+        "source_repository": "GakuLoader",
+        "source_commit": "6db0f56440b183d37b57c467d68b452d13eb3d47",
+        "source_path": "wiki/_Sidebar.md",
+        "source_sha256": "2cc97bcb6f8d172bed15ce7ab81d50e7bd1c7d382c0f727cea5ce02a35f7607d",
+        "action": "restored public documentation with repository-relative Markdown navigation and current vendored dependency instructions"
+      },
+      "docs/README.md": {
+        "source_repository": null,
+        "source_commit": null,
+        "source_sha256": null,
+        "action": "new task-oriented navigation index, generated during this documentation fix"
+      },
+      "DOCS_RESTORATION.md": {
+        "source_repository": null,
+        "source_commit": null,
+        "source_sha256": null,
+        "action": "new factual documentation restoration/check record"
+      }
+    }
+  }
 }

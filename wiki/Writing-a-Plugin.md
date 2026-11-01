@@ -107,3 +107,7 @@ extern "C" GAKU_PLUGIN_EXPORT GakuStatus GakuPlugin_Query(
 - **运行时库**：建议使用 `/MT`（静态链接 CRT），避免因为使用者机器上缺少特定 VC++ Redistributable 导致插件加载失败。
 - **输出位置**：编译完成后把 DLL 放进 `gakumas-local/plugins/` 目录即可。
 - **头文件更新**：不要保留历史遗留的旧版接口（`GmlPlugin_Query`、`GakumasModPlugin.h`）。旧接口已经被彻底删除，加载器只认导出 `GakuPlugin_Query` 的插件。
+
+---
+
+[Wiki 首页](Home.md) · [全部章节](_Sidebar.md) · [项目首页](../README.md)

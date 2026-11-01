@@ -1,14 +1,14 @@
 {
   "schema": "gakuloader.frozen-source-manifest/1",
   "source_revision": "6db0f56440b183d37b57c467d68b452d13eb3d47",
-  "scope": "explicit local source selection; vendored patched bytes; no binaries or real fixtures",
+  "scope": "explicit source selection with restored mature user documentation; vendored local source variants",
   "excludes": [
     "SOURCE_MANIFEST.json (self)",
-    "VALIDATION.md (subsequent observed results)",
+    "VALIDATION.md (historical observed results)",
     ".git/",
     "build/"
   ],
-  "content_tree_sha256": "700927b0b05677906a8a83e2d7545b5ff636959f7705dfc9015cacd9d290f222",
+  "content_tree_sha256": "d13d3c7cd5f9e6ba36ac40729eb2b58ac9d1591ff34fe0b8235ba5c1489f96bf",
   "files": [
     {
       "path": ".gitattributes",
@@ -273,10 +273,22 @@
     },
     {
       "path": "docs/QUICKSTART.md",
-      "size": 5626,
-      "sha256": "874b47f919d3f2c2e3622861b95702f40ee6ed31d59729abac861ac4bb4a4ba4",
+      "size": 5420,
+      "sha256": "43864be61c621855e1354986b508f5bab3a4c19e56f17eb92ba319fc76f83f67",
       "source_sha256": "38560e324be3e0de424d15368a030d8d6bdee0a16e843fd7e679d652e456f4fb",
       "staging_adapted": true
+    },
+    {
+      "path": "docs/README.md",
+      "size": 982,
+      "sha256": "cc64e72a9959a1aba3817082eff3ca1c42fb69132e3671ecad2b135dfdd30125",
+      "generated_for_staging": true
+    },
+    {
+      "path": "DOCS_RESTORATION.md",
+      "size": 3507,
+      "sha256": "bb5b37731db5cdf9773486739f618499082071e94721ba8032be4ab806e4161a",
+      "generated_for_staging": true
     },
     {
       "path": "examples/minimal-plugin/build.ps1",
@@ -371,29 +383,29 @@
     },
     {
       "path": "README.en.md",
-      "size": 1395,
-      "sha256": "67a11d9e1a86df06f65d34ad7a1c2f94012896a08f7c3661ae47c1f5baf27a06",
+      "size": 5586,
+      "sha256": "70ea1ed6490444f39dc733a19d5fc3d476efe3ecc4ee247d9e0a8e50c0ab262f",
       "source_sha256": "dc6559cbf716e79ab62e68a21dae554ecfda45dc16949356608be7ae2012a3c9",
       "staging_adapted": true
     },
     {
       "path": "README.ja.md",
-      "size": 1681,
-      "sha256": "2d37d21d48976702569b341a6d19f71aab712f0b897afbae873ecfce76d39585",
+      "size": 7059,
+      "sha256": "2cd49faa48ec6f1717eabacf75cbfb3923489356dab8959bdfbf584f4c83f8e9",
       "source_sha256": "b6a0bce825cfa445d4f6044f8c5427e2d7c2de2870bff4122eaa9558679ea6c2",
       "staging_adapted": true
     },
     {
       "path": "README.md",
-      "size": 1946,
-      "sha256": "f621f3d45a085b882c7360648c19267ceb0ee99f70231864c6a3f99732e73c47",
+      "size": 4888,
+      "sha256": "08848156a6322f65dbf28d409d0f21a44259c50947fea2dd8e889244ab006e35",
       "source_sha256": "b3c2e08ab8c2c653a707ef744f0b029e8a2bd2782c452ed7cb709269ed00e43d",
       "staging_adapted": true
     },
     {
       "path": "SOURCE_SELECTION.json",
-      "size": 42080,
-      "sha256": "517ea866065ea9c81534ffb278c1133b3db2507feaa742824aa14e4e0e08596c",
+      "size": 49909,
+      "sha256": "469bc89d79ce2b8a5be63b8b1d326b9cdcca9bad0a70ddbe4349cb4108d80c55",
       "generated_for_staging": true
     },
     {
@@ -608,8 +620,8 @@
     },
     {
       "path": "STAGING_REVIEW.md",
-      "size": 3798,
-      "sha256": "74ad8542cd78849918785e27ddaf36c091a551cd166e897b90da2e2562b332e7",
+      "size": 4462,
+      "sha256": "be56f40983d5b706e243e35b5afc09832f786fb16d12369e7fcc3b2c567df881",
       "generated_for_staging": true
     },
     {
@@ -906,81 +918,87 @@
     },
     {
       "path": "wiki/_Sidebar.md",
-      "size": 326,
-      "sha256": "2cc97bcb6f8d172bed15ce7ab81d50e7bd1c7d382c0f727cea5ce02a35f7607d",
+      "size": 438,
+      "sha256": "d0e250f07d99bbb74ab026bce159c6bcb66064a7e05b74c03ba718d59ec6e97a",
       "source_sha256": "2cc97bcb6f8d172bed15ce7ab81d50e7bd1c7d382c0f727cea5ce02a35f7607d",
-      "staging_adapted": false
+      "staging_adapted": true
     },
     {
       "path": "wiki/Building.md",
-      "size": 4129,
-      "sha256": "17d982bbe41e1e1fdf9365d4792fe9a18dda61cccf0bbc7c80aefa0c7d3d9325",
+      "size": 3857,
+      "sha256": "e983293f66a186ef5b7a21d1a44b04d7f2b180055dde7be69005c329bf506d5d",
       "source_sha256": "eff46790e21187b7ffc065122e0a2141178823245f6142b0717438f33463237a",
       "staging_adapted": true
     },
     {
       "path": "wiki/Configuration.md",
-      "size": 2369,
-      "sha256": "474ff03f2c6be60fe0b2f89f3af86d4ecefa093284c8e3af67d7bece41323b89",
+      "size": 2461,
+      "sha256": "fa3313b862e748c66c388397b3473f595552eb0e68ddd9ef480cb62764d30ae1",
       "source_sha256": "474ff03f2c6be60fe0b2f89f3af86d4ecefa093284c8e3af67d7bece41323b89",
-      "staging_adapted": false
+      "staging_adapted": true
     },
     {
       "path": "wiki/Home.md",
-      "size": 1645,
-      "sha256": "1de66c58546c55e351c21c14a11cd60b835d2affc26e7bf7b1862af7aaba61bb",
+      "size": 1722,
+      "sha256": "46df48ece9e69a4ea3abc2bf0de5f396fc6e1287a6374c1d4ca39067829e9301",
       "source_sha256": "1de66c58546c55e351c21c14a11cd60b835d2affc26e7bf7b1862af7aaba61bb",
-      "staging_adapted": false
+      "staging_adapted": true
     },
     {
       "path": "wiki/Hooks.md",
-      "size": 3224,
-      "sha256": "6f4cc03c99fa0063d9768fdd92935741f83fb55c16327c7bd20051810d1367c9",
+      "size": 3316,
+      "sha256": "c6da5a97c948658f827e41d62bb521e3b404e94c8f04047c18933f0bddb0dcaa",
       "source_sha256": "6f4cc03c99fa0063d9768fdd92935741f83fb55c16327c7bd20051810d1367c9",
-      "staging_adapted": false
+      "staging_adapted": true
     },
     {
       "path": "wiki/Hotkeys.md",
-      "size": 2642,
-      "sha256": "20d3988ee4e31c8a0ce815048ec2d23f8bdb02e487b6eafb4264e24c92c36ae2",
+      "size": 2734,
+      "sha256": "681af55a9c971fb9dde0a13e46814eb04925dbb04a0e8b704f439808f375a8d2",
       "source_sha256": "20d3988ee4e31c8a0ce815048ec2d23f8bdb02e487b6eafb4264e24c92c36ae2",
-      "staging_adapted": false
+      "staging_adapted": true
     },
     {
       "path": "wiki/Installation.md",
-      "size": 2496,
-      "sha256": "7095caf62599fdf1085defee3ac5b1a2fc9ba7caf7fa756ea4168f125ec3b440",
+      "size": 2259,
+      "sha256": "708f4996851eff17a0c78dee77654f4245bec7f49f65527c69c96d322cb32e3f",
       "source_sha256": "004b7a8b0b8ee5800b3177e6ccb4e504f05acbd6b836a44c58cdafcc998e0b9f",
       "staging_adapted": true
     },
     {
       "path": "wiki/Plugin-API.md",
-      "size": 4206,
-      "sha256": "e0560e09b2c05acad903640304ee17326e3bc64904dcdf3b237c52797fd3ac33",
+      "size": 4300,
+      "sha256": "9d699e409e0793096b203a80c7e59ac56f0fc85e2d1b742b15b0b9b52daae9ab",
       "source_sha256": "e0560e09b2c05acad903640304ee17326e3bc64904dcdf3b237c52797fd3ac33",
-      "staging_adapted": false
+      "staging_adapted": true
     },
     {
       "path": "wiki/Troubleshooting.md",
-      "size": 3153,
-      "sha256": "29c3816f222a0a8e7ff3c2a99549021b4f4ea2fbb2daa127d365dc2efd24693b",
+      "size": 3245,
+      "sha256": "3dd42249f316cb6bcf6add85d98708dce6a69234c797d420ab1617ddb20b81c2",
       "source_sha256": "29c3816f222a0a8e7ff3c2a99549021b4f4ea2fbb2daa127d365dc2efd24693b",
-      "staging_adapted": false
+      "staging_adapted": true
     },
     {
       "path": "wiki/UI.md",
-      "size": 3245,
-      "sha256": "e76126df8760355c1434680fe57f40a628d6974956236acd04dc09255657dd46",
+      "size": 3337,
+      "sha256": "64f29c44ce26ea64af5874cdd77b50af1e9965dfd1645a5033a56e21b11cdb91",
       "source_sha256": "e76126df8760355c1434680fe57f40a628d6974956236acd04dc09255657dd46",
-      "staging_adapted": false
+      "staging_adapted": true
     },
     {
       "path": "wiki/Writing-a-Plugin.md",
-      "size": 4388,
-      "sha256": "4529fed1831a1c5bcd4fbdb376768b894f735a74aa3463919440cfcbedbf0bd7",
+      "size": 4480,
+      "sha256": "122c1f1580766f767d23a8c0558b2678085600db5cfb9064cd4d046a948e13e2",
       "source_sha256": "4529fed1831a1c5bcd4fbdb376768b894f735a74aa3463919440cfcbedbf0bd7",
-      "staging_adapted": false
+      "staging_adapted": true
     }
   ],
-  "signature": "none"
+  "signature": "none",
+  "documentation_restoration": {
+    "baseline": "775107a5d78daa87ee9dc1ae78be2a0df0235255",
+    "mature_source": "6db0f56440b183d37b57c467d68b452d13eb3d47",
+    "record": "DOCS_RESTORATION.md",
+    "code_changes": false
+  }
 }

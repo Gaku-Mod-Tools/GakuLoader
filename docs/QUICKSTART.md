@@ -1,8 +1,3 @@
-# 独立源码快照快速开始
-
-默认执行 `tools/validate-source.ps1`；产物仅写入本仓 `build/`。依赖已 vendor，
-不需要其他仓库。本页后续安装说明仅供未来另行授权的二进制使用，不是默认验证步骤。
-
 # 快速上手
 
 GakuLoader 是《Gakumas》的原生插件宿主：游戏根目录的 `version.dll` 转发系统版本 API，并负责插件生命周期。插件作者见 [插件开发指南](PLUGIN_DEVELOPMENT.md)。
@@ -45,7 +40,8 @@ console=false
 
 缺省值就是上面的行为。修改后重启游戏生效，插件不支持 hot reload。`[plugins]` 在 `LoadLibrary` 前跳过禁用项，文件原样保留；支持 `true/false`、`yes/no`、`1/0`，空值保持默认允许。`[hotkeys]` 是物理键绑定：同一组合被两个 owner 认领时，两者一起失效并在 F1 管理器里显示冲突，不会静默双触发；F1 由 Loader 保留。若存在旧 `gml-host.ini` 且没有 `gakuloader.ini`，首次启动会**复制一次**作为配置迁移——这是配置导入，不是二进制兼容。
 
-建议在首次安装前备份原始游戏目录。如需卸载，直接从游戏根目录移除 `version.dll` 即可恢复官方原版。
+首次安装前备份已有的 `version.dll` 和配置。卸载时退出游戏并移走 Loader 的 `version.dll`；
+若安装前已有其它代理，恢复其原始备份。插件与配置可以保留。
 
 ## 确认宿主启动
 
@@ -103,5 +99,6 @@ Release 输出 `build/version.dll`，Debug 输出 `build/debug/version.dll`。�
 最小插件的验证使用合成宿主，不依赖游戏、Loader 构建或 MinGW。完整宿主测试需要额外的跨编译器夹具，
 见 [构建与测试](../wiki/Building.md)。夹具、WARP 与合成宿主检查均不能替代实际游戏行为验收。
 
-本源码快照不含产品发行包，也不提供自动游戏部署工具。
-旧 GakuModLoader 拆仓前的部署工具不作为本仓自动入口。详见 [安装与卸载](../wiki/Installation.md)。
+配套安装、升级与回滚见 [安装与卸载](../wiki/Installation.md)；完整章节见 [Wiki 首页](../wiki/Home.md)。
+
+[全部文档](README.md) · [项目首页](../README.md)
