@@ -1,0 +1,30 @@
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64"><Configuration>Debug</Configuration><Platform>x64</Platform></ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64"><Configuration>Release</Configuration><Platform>x64</Platform></ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>17.0</VCProjectVersion>
+    <ProjectGuid>{36C67AF8-7339-4C3D-BD12-9C3C28704461}</ProjectGuid>
+    <RootNamespace>PathsFixture</RootNamespace>
+    <FixtureVariant Condition="'$(FixtureVariant)' == ''">1</FixtureVariant>
+    <FixtureName Condition="'$(FixtureName)' == ''">paths-alpha</FixtureName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries Condition="'$(Configuration)' == 'Debug'">true</UseDebugLibraries>
+    <UseDebugLibraries Condition="'$(Configuration)' == 'Release'">false</UseDebugLibraries>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <PropertyGroup>
+    <OutDir>$(GakuBuildDir)tests\$(Configuration)\paths-fixtures\</OutDir>
+    <IntDir>$(GakuBuildDir)obj\PathsFixture\$(Configuration)\$(FixtureVariant)\</IntDir>
+    <TargetName>$(FixtureName)</TargetName>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile><PreprocessorDefinitions>PATHS_FIXTURE_VARIANT=$(FixtureVariant);%(PreprocessorDefinitions)</PreprocessorDefinitions></ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup><ClCompile Include="PathsFixture.cpp" /></ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>

@@ -8,6 +8,7 @@
 #include "Trace.hpp"
 #include "CrashTrace.hpp"
 #include "GakuProcessLifetimeHooks.h"
+#include "PluginPaths.hpp"
 #include <minhook.h>
 #include <cstdio>
 #include <cstdarg>
@@ -21,7 +22,11 @@
 
 namespace GakuLoader {
 namespace {
-struct PluginOwner { std::string id; std::atomic_bool accepting{true}; };
+struct PluginOwner {
+    std::string id;
+    std::atomic_bool accepting{true};
+    PluginPaths::State paths;
+};
 struct RegisteredService { PluginOwner* owner; std::vector<unsigned char> table; };
 struct QueuedTask { PluginOwner* owner; GakuTaskFn callback; void* userData; };
 struct HookLease { PluginOwner* owner; void* detour; void* original; bool enabled; bool processLifetime; };
@@ -267,6 +272,7 @@ void RetireOwner(PluginOwner* owner) {
     const auto started = GetTickCount64();
     // Mark closed before removing bindings; registration uses the same mutex.
     { std::lock_guard<std::mutex> lock(g_servicesMutex); owner->accepting = false; }
+    owner->paths.Retire();
     DesktopDialogs::CancelOwner(owner);
     Hotkeys::RetireOwner(owner);
     ActorEntry::RetireOwner(owner);
@@ -357,6 +363,38 @@ GakuStatus RequestPluginPanel(void* context) {
     if (!owner->accepting) return GAKU_E_SHUTTING_DOWN;
     return DesktopUi::RequestShowPanel(owner->id.c_str());
 }
+PluginOwner* FindPathOwner(void* context) {
+    // Owner objects live until exit. Only borrow a pointer under the registry
+    // lock, then use the owner's own path lock for filesystem operations.
+    std::lock_guard lock(g_servicesMutex);
+    const auto found = std::find_if(g_owners.begin(), g_owners.end(), [context](const auto& owner) {
+        return owner.get() == context;
+    });
+    return found == g_owners.end() ? nullptr : found->get();
+}
+GakuStatus GetPathRoot(void* context, GakuPathKind kind, wchar_t* output, uint32_t capacity, uint32_t* required) {
+    try {
+        auto* owner = FindPathOwner(context);
+        if (!owner) return GAKU_E_INVALID_ARGUMENT;
+        if (!owner->accepting) return GAKU_E_SHUTTING_DOWN;
+        return owner->paths.GetRoot(kind, output, capacity, required);
+    } catch (...) { return GAKU_E_INTERNAL; }
+}
+GakuStatus EnsurePathRoot(void* context, GakuPathKind kind) {
+    try {
+        auto* owner = FindPathOwner(context);
+        if (!owner) return GAKU_E_INVALID_ARGUMENT;
+        if (!owner->accepting) return GAKU_E_SHUTTING_DOWN;
+        std::error_code error;
+        const auto status = owner->paths.EnsureRoot(kind, error);
+        if (error) HostLogWarn("[Paths] owner=%s category=%u create failed OS=%d (%s)",
+            owner->id.c_str(), kind, error.value(), error.category().name());
+        return status;
+    } catch (...) {
+        try { HostLogWarn("[Paths] category=%u create failed with an internal exception", kind); } catch (...) {}
+        return GAKU_E_INTERNAL;
+    }
+}
 GakuStatus QueryService(void* context, const char* name, uint32_t version, uint32_t size, void* output) {
     if (!context || !name || !name[0] || !output) return GAKU_E_INVALID_ARGUMENT;
     // Built-in tables contain no mutable plugin-domain state. Each owner gets
@@ -369,6 +407,17 @@ GakuStatus QueryService(void* context, const char* name, uint32_t version, uint3
         const GakuRuntimeService table{GAKU_SERVICE_VERSION, sizeof(GakuRuntimeService), g_gameRootW.c_str(),
             g_localRootW.c_str(), g_pluginsRootW.c_str(), GetGameAssembly};
         return CopyServiceTable(&table, sizeof(table), version, size, output);
+    }
+    if (strcmp(name, GAKU_SERVICE_PATHS) == 0) {
+        try {
+            auto* owner = FindPathOwner(context);
+            if (!owner) return GAKU_E_INVALID_ARGUMENT;
+            if (!owner->accepting) return GAKU_E_SHUTTING_DOWN;
+            const auto status = owner->paths.Status();
+            if (status != GAKU_OK) return status;
+            const GakuPathsV1 table{GAKU_PATHS_VERSION, sizeof(GakuPathsV1), context, GetPathRoot, EnsurePathRoot};
+            return CopyServiceTable(&table, sizeof(table), version, size, output);
+        } catch (...) { return GAKU_E_INTERNAL; }
     }
     if (strcmp(name, GAKU_SERVICE_MAIN_THREAD) == 0) {
         const GakuMainThreadService table{GAKU_SERVICE_VERSION, sizeof(GakuMainThreadService), context,
@@ -711,9 +760,10 @@ void ActivatePlugins() {
             FreeLibrary(module); continue;
         }
         auto owner = std::make_unique<PluginOwner>(); owner->id = plugin.id;
+        owner->paths.Configure(std::filesystem::path(g_localRootW), plugin.id);
         plugin.owner = owner.get();
         plugin.host = {GAKU_ABI_VERSION, sizeof(GakuHostApi), owner.get(), QueryService, RegisterService};
-        g_owners.push_back(std::move(owner));
+        { std::lock_guard registryLock(g_servicesMutex); g_owners.push_back(std::move(owner)); }
         const auto activated = plugin.descriptor.activate(&plugin.host, &plugin.state);
         if (activated != GAKU_OK) {
             plugin.failed = true;

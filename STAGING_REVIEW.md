@@ -50,3 +50,15 @@ The initial snapshot incorrectly replaced those product entry points with intern
 All eleven repository Wiki files had remained present; navigation and ordinary Markdown compatibility were repaired without claiming a separate GitHub Wiki migration.
 See `DOCS_RESTORATION.md` for exact source commits, path/hash records, checks and the documentation-only boundary.
 This internal selection review is not the public product homepage.
+
+## Paths service refresh (2026-11-02)
+
+Seventeen source, SDK, example, test and developer-guide files are selected byte-for-byte from GakuLoader commit `0426648bd0601486347513af200aa4167a9fa09c`.
+`SOURCE_SELECTION.json` records each selected source hash and preserves the earlier snapshot and documentation-restoration provenance.
+The three public READMEs and all eleven Wiki files retain their previous bytes; the documentation index adds one link to `docs/PLUGIN_PATHS.md`.
+The ordinary vendored dependencies, build entry point and CI adaptations remain in place. The stage validator adds the paths suite to its existing default selection.
+
+The refreshed x64 Release DLL, production paths fixtures, C ABI executable, static example/documentation consistency and Markdown links, manifest hashes, and package export/static-CRT checks passed locally.
+The new DLL SHA-256 is `A7E848BCAC23DC33E91350D3522D9D22DFF12C0993BD0523D851A7F698B3E43C`.
+Build logs and the validation receipt are in workspace `build/staging_refresh_20261102/Loader`; the earlier ignored `build/version.dll` bytes and timestamp remain unchanged.
+The existing full test matrix, Debug, game/deployment checks and remote CI were not rerun for this refresh. Earlier validation records remain historical evidence.

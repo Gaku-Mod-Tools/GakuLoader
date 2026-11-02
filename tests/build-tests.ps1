@@ -37,7 +37,8 @@ $buildLog = Join-Path $logDir 'msvc-build.log'
 
 # Direct project entry keeps older VS2022 installations usable without .slnx support.
 $projects = @((Join-Path $repo 'GakuLoader.vcxproj')) +
-    @(Get-ChildItem -LiteralPath $PSScriptRoot -Filter '*.vcxproj' -File | ForEach-Object { $_.FullName })
+    @(Get-ChildItem -LiteralPath $PSScriptRoot -Filter '*.vcxproj' -File |
+        Where-Object { $_.Name -ne 'PathsFixture.vcxproj' } | ForEach-Object { $_.FullName })
 Set-Content -LiteralPath $buildLog -Value '' -Encoding ASCII
 foreach ($project in $projects) {
     Write-Host "Building $([IO.Path]::GetFileName($project)) (MSVC/$Configuration)..." -ForegroundColor Cyan
@@ -50,10 +51,27 @@ foreach ($project in $projects) {
     }
 }
 
+# Native MSVC fixtures for paths are independent of the optional MinGW matrix.
+# Per-variant IntDir prevents reuse of another plugin's compiled identity.
+$pathsFixtures = @(
+    @{ name = 'paths-alpha'; variant = 1 },
+    @{ name = 'paths-beta'; variant = 2 },
+    @{ name = 'paths-uppercase'; variant = 3 }
+)
+foreach ($fixture in $pathsFixtures) {
+    & $msbuild (Join-Path $PSScriptRoot 'PathsFixture.vcxproj') "/p:Configuration=$Configuration" '/p:Platform=x64' `
+        "/p:PlatformToolset=$($tools.PlatformToolset)" "/p:VCToolsVersion=$($tools.Version)" `
+        "/p:FixtureName=$($fixture.name)" "/p:FixtureVariant=$($fixture.variant)" `
+        '/nologo' '/verbosity:minimal' '/m' '/nodeReuse:false' 2>&1 |
+        Tee-Object -FilePath $buildLog -Append
+    if ($LASTEXITCODE -ne 0) { throw "MSVC paths fixture build failed: $($fixture.name) (log: $buildLog)" }
+}
+
 $testDir = Join-Path $repo "build\tests\$Configuration"
 $expected = @('host-tests.exe', 'minhook-isolation.exe', 'frame-pump-tests.exe',
     'diagnostic-boundary-tests.exe', 'c-abi-test.exe', 'desktop-ui-smoke.exe',
-    'desktop-dialogs-tests.exe', 'host-dialog-concurrency.exe')
+    'desktop-dialogs-tests.exe', 'host-dialog-concurrency.exe', 'paths-tests.exe',
+    'paths-fixtures\paths-alpha.dll', 'paths-fixtures\paths-beta.dll', 'paths-fixtures\paths-uppercase.dll')
 foreach ($name in $expected) {
     if (-not (Test-Path (Join-Path $testDir $name))) {
         throw "Expected test binary missing: $(Join-Path $testDir $name)"

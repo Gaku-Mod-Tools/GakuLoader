@@ -66,6 +66,9 @@
 
   <ItemGroup>
     <ClInclude Include="include\GakuPlugin.h" />
+    <ClInclude Include="include\GakuPaths.h" />
+    <ClInclude Include="include\GakuPaths.hpp" />
+    <ClInclude Include="src\PluginPaths.hpp" />
     <ClInclude Include="src\Host.hpp" />
     <ClInclude Include="src\HostConfig.hpp" />
     <ClInclude Include="src\HostContracts.hpp" />

@@ -1,5 +1,6 @@
 #include "GakuPlugin.h"
 #include "GakuProcessLifetimeHooks.h"
+#include "GakuPaths.h"
 #include <stddef.h>
 _Static_assert(offsetof(GakuHostApi, abiVersion) == 0, "version must be first");
 _Static_assert(offsetof(GakuHostApi, structSize) == sizeof(uint32_t), "size must be second");
@@ -11,6 +12,10 @@ _Static_assert(sizeof(GakuPluginDescriptor) == 80, "x64 v1 descriptor layout");
 _Static_assert(sizeof(GakuServiceHeader) == 8, "table header layout");
 _Static_assert(sizeof(GakuLogService) == 24, "log service layout");
 _Static_assert(sizeof(GakuRuntimeService) == 40, "runtime service layout");
+_Static_assert(sizeof(GakuPathsV1) == 32, "optional path service layout");
+_Static_assert(offsetof(GakuPathsV1, context) == 8, "path service owner token");
+_Static_assert(offsetof(GakuPathsV1, getRoot) == 16, "path service getter");
+_Static_assert(offsetof(GakuPathsV1, ensureRoot) == 24, "path service creator");
 _Static_assert(sizeof(GakuMainThreadService) == 32, "main-thread service layout");
 _Static_assert(sizeof(GakuHookRequest) == 24, "hook request layout");
 _Static_assert(sizeof(GakuHookService) == 40, "hook service layout");

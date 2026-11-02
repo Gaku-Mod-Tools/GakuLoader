@@ -9,6 +9,7 @@
 | 查日志、排查加载或热键问题 | [故障排查](../wiki/Troubleshooting.md) |
 | 编写第一个插件 | [最小插件](PLUGIN_DEVELOPMENT.md)、[编写插件](../wiki/Writing-a-Plugin.md) |
 | 查询生命周期与服务 | [插件 API](../wiki/Plugin-API.md) |
+| 选择插件用户数据、配置与缓存目录 | [插件数据路径](PLUGIN_PATHS.md) |
 | 使用 Hook 或共享 actor 入口 | [Hooks](../wiki/Hooks.md) |
 | 理解 F1 窗口与 ImGui | [界面](../wiki/UI.md) |
 | 注册或重映射热键 | [快捷键](../wiki/Hotkeys.md) |

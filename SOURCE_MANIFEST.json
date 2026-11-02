@@ -1,14 +1,14 @@
 {
   "schema": "gakuloader.frozen-source-manifest/1",
-  "source_revision": "6db0f56440b183d37b57c467d68b452d13eb3d47",
-  "scope": "explicit source selection with restored mature user documentation; vendored local source variants",
+  "source_revision": "0426648bd0601486347513af200aa4167a9fa09c",
+  "scope": "explicit source selection; optional paths delta from fixed revision with mature docs and vendored adaptations retained",
   "excludes": [
     "SOURCE_MANIFEST.json (self)",
     "VALIDATION.md (historical observed results)",
     ".git/",
     "build/"
   ],
-  "content_tree_sha256": "d13d3c7cd5f9e6ba36ac40729eb2b58ac9d1591ff34fe0b8235ba5c1489f96bf",
+  "content_tree_sha256": "856db9e31245430da3da97915971e08a2719673720ed66326a4fe63580289337",
   "files": [
     {
       "path": ".gitattributes",
@@ -36,11 +36,116 @@
       "generated_for_staging": true
     },
     {
+      "path": "DOCS_RESTORATION.md",
+      "size": 3507,
+      "sha256": "bb5b37731db5cdf9773486739f618499082071e94721ba8032be4ab806e4161a",
+      "generated_for_staging": true
+    },
+    {
+      "path": "Directory.Build.props",
+      "size": 4197,
+      "sha256": "dee3ff3860c259d9e2f5707db58c598a9a0d2cea6ee738a543e647b083bc2794",
+      "source_sha256": "dee3ff3860c259d9e2f5707db58c598a9a0d2cea6ee738a543e647b083bc2794",
+      "staging_adapted": false
+    },
+    {
+      "path": "GakuLoader.slnx",
+      "size": 1456,
+      "sha256": "2d571da1c73b49e585b8ca404db3595becbc59866fd109a43c3f77da7854c011",
+      "source_sha256": "2d571da1c73b49e585b8ca404db3595becbc59866fd109a43c3f77da7854c011",
+      "staging_adapted": false,
+      "source_revision": "0426648bd0601486347513af200aa4167a9fa09c"
+    },
+    {
+      "path": "GakuLoader.vcxproj",
+      "size": 4321,
+      "sha256": "8eae1cf6cf233bfe90a0317752c1605101b51d3a5c702c0202b1754abe35ff4b",
+      "source_sha256": "8eae1cf6cf233bfe90a0317752c1605101b51d3a5c702c0202b1754abe35ff4b",
+      "staging_adapted": false,
+      "source_revision": "0426648bd0601486347513af200aa4167a9fa09c"
+    },
+    {
+      "path": "ImGui.vcxproj",
+      "size": 2137,
+      "sha256": "378b03e79e0eda920d26aef8dda571e6c7ad1f87a242809adb2206246d3a41a5",
+      "source_sha256": "378b03e79e0eda920d26aef8dda571e6c7ad1f87a242809adb2206246d3a41a5",
+      "staging_adapted": false
+    },
+    {
+      "path": "LICENSE",
+      "size": 1080,
+      "sha256": "74f36d03b547c7bd183a828a026dbf38027eb1705d97c1b0ea4bfa466716d60b",
+      "source_sha256": "74f36d03b547c7bd183a828a026dbf38027eb1705d97c1b0ea4bfa466716d60b",
+      "staging_adapted": false
+    },
+    {
+      "path": "MinHook.vcxproj",
+      "size": 2032,
+      "sha256": "8a7153a47a2f8d9d019fd61658a8dc1d215a89c77773fd145ccefbdf5284628e",
+      "source_sha256": "8a7153a47a2f8d9d019fd61658a8dc1d215a89c77773fd145ccefbdf5284628e",
+      "staging_adapted": false
+    },
+    {
+      "path": "README.en.md",
+      "size": 5586,
+      "sha256": "70ea1ed6490444f39dc733a19d5fc3d476efe3ecc4ee247d9e0a8e50c0ab262f",
+      "source_sha256": "dc6559cbf716e79ab62e68a21dae554ecfda45dc16949356608be7ae2012a3c9",
+      "staging_adapted": true
+    },
+    {
+      "path": "README.ja.md",
+      "size": 7059,
+      "sha256": "2cd49faa48ec6f1717eabacf75cbfb3923489356dab8959bdfbf584f4c83f8e9",
+      "source_sha256": "b6a0bce825cfa445d4f6044f8c5427e2d7c2de2870bff4122eaa9558679ea6c2",
+      "staging_adapted": true
+    },
+    {
+      "path": "README.md",
+      "size": 4888,
+      "sha256": "08848156a6322f65dbf28d409d0f21a44259c50947fea2dd8e889244ab006e35",
+      "source_sha256": "b3c2e08ab8c2c653a707ef744f0b029e8a2bd2782c452ed7cb709269ed00e43d",
+      "staging_adapted": true
+    },
+    {
+      "path": "SOURCE_SELECTION.json",
+      "size": 85491,
+      "sha256": "325c37abd2ada5173a282fcd0185e27a65b7c43e888d17cd8bf3010177fd23f9",
+      "generated_for_staging": true
+    },
+    {
+      "path": "STAGING_REVIEW.md",
+      "size": 5753,
+      "sha256": "5fa85615e49beffdc4ab579ef383a987c27010bfa4c3e7d4c3cfc5a449f0f80c",
+      "generated_for_staging": true,
+      "staging_adapted": true
+    },
+    {
+      "path": "THIRD_PARTY_NOTICES.md",
+      "size": 1606,
+      "sha256": "a8ab0cbb88d7e4d06064b5b9b6e16667d19e117dcda181478bba5c92e0e8543a",
+      "source_sha256": "4aabce0d89de80e5d4629a30fcd9f1a50448adfd617fdb238642cc02e502d3c7",
+      "staging_adapted": true
+    },
+    {
       "path": "build.ps1",
       "size": 3762,
       "sha256": "58e24c7788cdcd06ca5527a147a49639fd3a6fb3ed10e70821679658ca1abfe4",
       "source_sha256": "144f16a5781f68a29b1963ee20010ce91167c9542c15a60e34b3758e30109616",
       "staging_adapted": true
+    },
+    {
+      "path": "deps/imgui/LICENSE.txt",
+      "size": 1104,
+      "sha256": "29f44af2b6551afda01b8b9ad568fcf650439b2d8cd3b67142b99f4255e1235d",
+      "source_sha256": "29f44af2b6551afda01b8b9ad568fcf650439b2d8cd3b67142b99f4255e1235d",
+      "staging_adapted": false
+    },
+    {
+      "path": "deps/imgui/PROVENANCE.md",
+      "size": 822,
+      "sha256": "3fcb55ccdcb457294e508503ebf738ff05a3fe18469a5a26fe9c6a096bba95c0",
+      "source_sha256": "3fcb55ccdcb457294e508503ebf738ff05a3fe18469a5a26fe9c6a096bba95c0",
+      "staging_adapted": false
     },
     {
       "path": "deps/imgui/backends/imgui_impl_dx11.cpp",
@@ -141,27 +246,6 @@
       "staging_adapted": false
     },
     {
-      "path": "deps/imgui/LICENSE.txt",
-      "size": 1104,
-      "sha256": "29f44af2b6551afda01b8b9ad568fcf650439b2d8cd3b67142b99f4255e1235d",
-      "source_sha256": "29f44af2b6551afda01b8b9ad568fcf650439b2d8cd3b67142b99f4255e1235d",
-      "staging_adapted": false
-    },
-    {
-      "path": "deps/imgui/PROVENANCE.md",
-      "size": 822,
-      "sha256": "3fcb55ccdcb457294e508503ebf738ff05a3fe18469a5a26fe9c6a096bba95c0",
-      "source_sha256": "3fcb55ccdcb457294e508503ebf738ff05a3fe18469a5a26fe9c6a096bba95c0",
-      "staging_adapted": false
-    },
-    {
-      "path": "deps/minhook/include/MinHook.h",
-      "size": 8275,
-      "sha256": "b6ef8ef9ee099e4c74da689b8880aa11eb599f9924a23382b97cbe7e04714f50",
-      "source_sha256": "b6ef8ef9ee099e4c74da689b8880aa11eb599f9924a23382b97cbe7e04714f50",
-      "staging_adapted": false
-    },
-    {
       "path": "deps/minhook/LICENSE.txt",
       "size": 4354,
       "sha256": "638d0e5629c065357491fc202a398358eba988a05e04c43fd762cd1c70df443a",
@@ -172,6 +256,13 @@
       "size": 1449,
       "sha256": "39e345ed7594856fc3543d59d629605f1c9fe13ef5d9e2f27fd0cbd34e25c130",
       "generated_for_staging": true
+    },
+    {
+      "path": "deps/minhook/include/MinHook.h",
+      "size": 8275,
+      "sha256": "b6ef8ef9ee099e4c74da689b8880aa11eb599f9924a23382b97cbe7e04714f50",
+      "source_sha256": "b6ef8ef9ee099e4c74da689b8880aa11eb599f9924a23382b97cbe7e04714f50",
+      "staging_adapted": false
     },
     {
       "path": "deps/minhook/src/buffer.c",
@@ -258,17 +349,19 @@
       "staging_adapted": false
     },
     {
-      "path": "Directory.Build.props",
-      "size": 4197,
-      "sha256": "dee3ff3860c259d9e2f5707db58c598a9a0d2cea6ee738a543e647b083bc2794",
-      "source_sha256": "dee3ff3860c259d9e2f5707db58c598a9a0d2cea6ee738a543e647b083bc2794",
-      "staging_adapted": false
+      "path": "docs/PLUGIN_DEVELOPMENT.md",
+      "size": 13100,
+      "sha256": "38d80827cc4a0041959606a014a8bef00ebca9e73fecc3c2b7b09c9fa786d52b",
+      "source_sha256": "38d80827cc4a0041959606a014a8bef00ebca9e73fecc3c2b7b09c9fa786d52b",
+      "staging_adapted": false,
+      "source_revision": "0426648bd0601486347513af200aa4167a9fa09c"
     },
     {
-      "path": "docs/PLUGIN_DEVELOPMENT.md",
-      "size": 12141,
-      "sha256": "dd2aeb6460501fd39fe5f0f8c4901660a478d33000403ca24af19747a205f915",
-      "source_sha256": "dd2aeb6460501fd39fe5f0f8c4901660a478d33000403ca24af19747a205f915",
+      "path": "docs/PLUGIN_PATHS.md",
+      "size": 5842,
+      "sha256": "74a7c2959f153deb940183397ca2c0eec944c0ca3d9b1cfb1b92666ca2b2d9d1",
+      "source_revision": "0426648bd0601486347513af200aa4167a9fa09c",
+      "source_sha256": "74a7c2959f153deb940183397ca2c0eec944c0ca3d9b1cfb1b92666ca2b2d9d1",
       "staging_adapted": false
     },
     {
@@ -280,42 +373,24 @@
     },
     {
       "path": "docs/README.md",
-      "size": 982,
-      "sha256": "cc64e72a9959a1aba3817082eff3ca1c42fb69132e3671ecad2b135dfdd30125",
-      "generated_for_staging": true
-    },
-    {
-      "path": "DOCS_RESTORATION.md",
-      "size": 3507,
-      "sha256": "bb5b37731db5cdf9773486739f618499082071e94721ba8032be4ab806e4161a",
-      "generated_for_staging": true
-    },
-    {
-      "path": "examples/minimal-plugin/build.ps1",
-      "size": 1005,
-      "sha256": "bbb447c398ff72f4b1d15ac1172f0d44e87038970a10c8e5704b00cd5bae97d6",
-      "source_sha256": "bbb447c398ff72f4b1d15ac1172f0d44e87038970a10c8e5704b00cd5bae97d6",
-      "staging_adapted": false
+      "size": 1076,
+      "sha256": "6962747311595edcadabfffdfe18b189882e942cae51bad7cfddb86cf4a65e8a",
+      "generated_for_staging": true,
+      "staging_adapted": true
     },
     {
       "path": "examples/minimal-plugin/MinimalPlugin.cpp",
-      "size": 2146,
-      "sha256": "62441caa5ad6b173255b20a087cb2fdf687f92e41abcb048d5e6397b2991c85e",
-      "source_sha256": "62441caa5ad6b173255b20a087cb2fdf687f92e41abcb048d5e6397b2991c85e",
-      "staging_adapted": false
+      "size": 2926,
+      "sha256": "d8154a6f24346cf083d0d457ff9fc645874efaa0583350bf9672da1584789254",
+      "source_sha256": "d8154a6f24346cf083d0d457ff9fc645874efaa0583350bf9672da1584789254",
+      "staging_adapted": false,
+      "source_revision": "0426648bd0601486347513af200aa4167a9fa09c"
     },
     {
       "path": "examples/minimal-plugin/MinimalPlugin.vcxproj",
       "size": 1058,
       "sha256": "992b14965f311feb26e7a2cfd9536e7647a379cc499643497d5b9b2e4dc5ef64",
       "source_sha256": "992b14965f311feb26e7a2cfd9536e7647a379cc499643497d5b9b2e4dc5ef64",
-      "staging_adapted": false
-    },
-    {
-      "path": "examples/minimal-plugin/verify.ps1",
-      "size": 865,
-      "sha256": "ce8e7b2f7797513832c24bdf97136a3ca91efd821c425889bfbc0721eeba1071",
-      "source_sha256": "ce8e7b2f7797513832c24bdf97136a3ca91efd821c425889bfbc0721eeba1071",
       "staging_adapted": false
     },
     {
@@ -333,24 +408,33 @@
       "staging_adapted": false
     },
     {
-      "path": "GakuLoader.slnx",
-      "size": 1274,
-      "sha256": "0c4bdcaad8cfc8ecf2728affbb81442216802d247a79fbb9da3335652f5af8ec",
-      "source_sha256": "0c4bdcaad8cfc8ecf2728affbb81442216802d247a79fbb9da3335652f5af8ec",
+      "path": "examples/minimal-plugin/build.ps1",
+      "size": 1005,
+      "sha256": "bbb447c398ff72f4b1d15ac1172f0d44e87038970a10c8e5704b00cd5bae97d6",
+      "source_sha256": "bbb447c398ff72f4b1d15ac1172f0d44e87038970a10c8e5704b00cd5bae97d6",
       "staging_adapted": false
     },
     {
-      "path": "GakuLoader.vcxproj",
-      "size": 4271,
-      "sha256": "10d1caafb4637a38dbe32706e7a5219a9e2f401ff49a481d2f718f8746e653f5",
-      "source_sha256": "10d1caafb4637a38dbe32706e7a5219a9e2f401ff49a481d2f718f8746e653f5",
+      "path": "examples/minimal-plugin/verify.ps1",
+      "size": 865,
+      "sha256": "ce8e7b2f7797513832c24bdf97136a3ca91efd821c425889bfbc0721eeba1071",
+      "source_sha256": "ce8e7b2f7797513832c24bdf97136a3ca91efd821c425889bfbc0721eeba1071",
       "staging_adapted": false
     },
     {
-      "path": "ImGui.vcxproj",
-      "size": 2137,
-      "sha256": "378b03e79e0eda920d26aef8dda571e6c7ad1f87a242809adb2206246d3a41a5",
-      "source_sha256": "378b03e79e0eda920d26aef8dda571e6c7ad1f87a242809adb2206246d3a41a5",
+      "path": "include/GakuPaths.h",
+      "size": 2368,
+      "sha256": "a1182d4903c642299fe28e3687a46ac23c19dfdb40e47a83e84da7af52865ea3",
+      "source_revision": "0426648bd0601486347513af200aa4167a9fa09c",
+      "source_sha256": "a1182d4903c642299fe28e3687a46ac23c19dfdb40e47a83e84da7af52865ea3",
+      "staging_adapted": false
+    },
+    {
+      "path": "include/GakuPaths.hpp",
+      "size": 5671,
+      "sha256": "a18bd3b2bb647ee219f3c0fb167dc5eb8fd068fb8db3a4d708b52a5f54e49705",
+      "source_revision": "0426648bd0601486347513af200aa4167a9fa09c",
+      "source_sha256": "a18bd3b2bb647ee219f3c0fb167dc5eb8fd068fb8db3a4d708b52a5f54e49705",
       "staging_adapted": false
     },
     {
@@ -366,47 +450,6 @@
       "sha256": "b892064ebb74cf1afa7155d60eccf1183669912732735fbc2ef23c46071fb7f0",
       "source_sha256": "b892064ebb74cf1afa7155d60eccf1183669912732735fbc2ef23c46071fb7f0",
       "staging_adapted": false
-    },
-    {
-      "path": "LICENSE",
-      "size": 1080,
-      "sha256": "74f36d03b547c7bd183a828a026dbf38027eb1705d97c1b0ea4bfa466716d60b",
-      "source_sha256": "74f36d03b547c7bd183a828a026dbf38027eb1705d97c1b0ea4bfa466716d60b",
-      "staging_adapted": false
-    },
-    {
-      "path": "MinHook.vcxproj",
-      "size": 2032,
-      "sha256": "8a7153a47a2f8d9d019fd61658a8dc1d215a89c77773fd145ccefbdf5284628e",
-      "source_sha256": "8a7153a47a2f8d9d019fd61658a8dc1d215a89c77773fd145ccefbdf5284628e",
-      "staging_adapted": false
-    },
-    {
-      "path": "README.en.md",
-      "size": 5586,
-      "sha256": "70ea1ed6490444f39dc733a19d5fc3d476efe3ecc4ee247d9e0a8e50c0ab262f",
-      "source_sha256": "dc6559cbf716e79ab62e68a21dae554ecfda45dc16949356608be7ae2012a3c9",
-      "staging_adapted": true
-    },
-    {
-      "path": "README.ja.md",
-      "size": 7059,
-      "sha256": "2cd49faa48ec6f1717eabacf75cbfb3923489356dab8959bdfbf584f4c83f8e9",
-      "source_sha256": "b6a0bce825cfa445d4f6044f8c5427e2d7c2de2870bff4122eaa9558679ea6c2",
-      "staging_adapted": true
-    },
-    {
-      "path": "README.md",
-      "size": 4888,
-      "sha256": "08848156a6322f65dbf28d409d0f21a44259c50947fea2dd8e889244ab006e35",
-      "source_sha256": "b3c2e08ab8c2c653a707ef744f0b029e8a2bd2782c452ed7cb709269ed00e43d",
-      "staging_adapted": true
-    },
-    {
-      "path": "SOURCE_SELECTION.json",
-      "size": 49909,
-      "sha256": "469bc89d79ce2b8a5be63b8b1d326b9cdcca9bad0a70ddbe4349cb4108d80c55",
-      "generated_for_staging": true
     },
     {
       "path": "src/ActorEntry.cpp",
@@ -557,9 +600,18 @@
     },
     {
       "path": "src/PluginHost.cpp",
-      "size": 49415,
-      "sha256": "77ae68de48eea5ee26856c39a7a5ae609ba5209a620936f9476bedffde2dea90",
-      "source_sha256": "77ae68de48eea5ee26856c39a7a5ae609ba5209a620936f9476bedffde2dea90",
+      "size": 51775,
+      "sha256": "3ac5424af17aefebb808e97f056fed77b9c2325bb3c98b6bf636ea38d5505545",
+      "source_sha256": "3ac5424af17aefebb808e97f056fed77b9c2325bb3c98b6bf636ea38d5505545",
+      "staging_adapted": false,
+      "source_revision": "0426648bd0601486347513af200aa4167a9fa09c"
+    },
+    {
+      "path": "src/PluginPaths.hpp",
+      "size": 4348,
+      "sha256": "36eb11bc986c7ad34127c1ab4434e192ad352a578e1e3a07ad23d9d58f9e1879",
+      "source_revision": "0426648bd0601486347513af200aa4167a9fa09c",
+      "source_sha256": "36eb11bc986c7ad34127c1ab4434e192ad352a578e1e3a07ad23d9d58f9e1879",
       "staging_adapted": false
     },
     {
@@ -619,31 +671,12 @@
       "staging_adapted": false
     },
     {
-      "path": "STAGING_REVIEW.md",
-      "size": 4462,
-      "sha256": "be56f40983d5b706e243e35b5afc09832f786fb16d12369e7fcc3b2c567df881",
-      "generated_for_staging": true
-    },
-    {
-      "path": "tests/build-fixtures.ps1",
-      "size": 4994,
-      "sha256": "91171b5bc9d1a61dd56af22883f23a06a45bd321611ec88250afa07f448e9c88",
-      "source_sha256": "91171b5bc9d1a61dd56af22883f23a06a45bd321611ec88250afa07f448e9c88",
-      "staging_adapted": false
-    },
-    {
-      "path": "tests/build-tests.ps1",
-      "size": 3372,
-      "sha256": "e26fbcf684483bc56661f368a4203f51e3993917e9a213bf5f6364e5cf800414",
-      "source_sha256": "e26fbcf684483bc56661f368a4203f51e3993917e9a213bf5f6364e5cf800414",
-      "staging_adapted": false
-    },
-    {
       "path": "tests/CAbiTest.c",
-      "size": 2085,
-      "sha256": "e4753dbf83068f7c6342f20aac437a6e939f669c0b2a63e3d775a6c182ea1316",
-      "source_sha256": "e4753dbf83068f7c6342f20aac437a6e939f669c0b2a63e3d775a6c182ea1316",
-      "staging_adapted": false
+      "size": 2422,
+      "sha256": "656c8196f16f301b1e0769d653a2e7c9b0c0964b8c9f3769ababc3f42d148881",
+      "source_sha256": "656c8196f16f301b1e0769d653a2e7c9b0c0964b8c9f3769ababc3f42d148881",
+      "staging_adapted": false,
+      "source_revision": "0426648bd0601486347513af200aa4167a9fa09c"
     },
     {
       "path": "tests/CAbiTest.vcxproj",
@@ -793,11 +826,66 @@
       "staging_adapted": false
     },
     {
-      "path": "tests/run-all.ps1",
-      "size": 6137,
-      "sha256": "ee6dd0e5bfd5191d96316dae3319f1e8665b42334c06f7f905223438aace247d",
-      "source_sha256": "ee6dd0e5bfd5191d96316dae3319f1e8665b42334c06f7f905223438aace247d",
+      "path": "tests/PathsFixture.cpp",
+      "size": 1319,
+      "sha256": "c9abf64fce9f5bd49bc309ac5f3b5a4b8fefd1a51b392f6812083b39c231b4de",
+      "source_revision": "0426648bd0601486347513af200aa4167a9fa09c",
+      "source_sha256": "c9abf64fce9f5bd49bc309ac5f3b5a4b8fefd1a51b392f6812083b39c231b4de",
       "staging_adapted": false
+    },
+    {
+      "path": "tests/PathsFixture.vcxproj",
+      "size": 1794,
+      "sha256": "1b2cc33a2c86f1c9f5849c9fde05f3fec4d09f4a8e867371eabe1ace686931a6",
+      "source_revision": "0426648bd0601486347513af200aa4167a9fa09c",
+      "source_sha256": "1b2cc33a2c86f1c9f5849c9fde05f3fec4d09f4a8e867371eabe1ace686931a6",
+      "staging_adapted": false
+    },
+    {
+      "path": "tests/PathsTests.cpp",
+      "size": 16168,
+      "sha256": "0f8458b5da7ea9875f386bc7b1a995b272f14058b4a00af9862e77369070a869",
+      "source_revision": "0426648bd0601486347513af200aa4167a9fa09c",
+      "source_sha256": "0f8458b5da7ea9875f386bc7b1a995b272f14058b4a00af9862e77369070a869",
+      "staging_adapted": false
+    },
+    {
+      "path": "tests/PathsTests.vcxproj",
+      "size": 1914,
+      "sha256": "598edebee3421699e59dc7a700a695ea6844aefcff054f38e5d23decb5760448",
+      "source_revision": "0426648bd0601486347513af200aa4167a9fa09c",
+      "source_sha256": "598edebee3421699e59dc7a700a695ea6844aefcff054f38e5d23decb5760448",
+      "staging_adapted": false
+    },
+    {
+      "path": "tests/UnityQuitPhaseTests.cpp",
+      "size": 2254,
+      "sha256": "eb50ca4b6cfbe0f6ef26c70756a32e9f7f691031677bb670537e9e6ad179b8a9",
+      "source_sha256": "eb50ca4b6cfbe0f6ef26c70756a32e9f7f691031677bb670537e9e6ad179b8a9",
+      "staging_adapted": false
+    },
+    {
+      "path": "tests/build-fixtures.ps1",
+      "size": 4994,
+      "sha256": "91171b5bc9d1a61dd56af22883f23a06a45bd321611ec88250afa07f448e9c88",
+      "source_sha256": "91171b5bc9d1a61dd56af22883f23a06a45bd321611ec88250afa07f448e9c88",
+      "staging_adapted": false
+    },
+    {
+      "path": "tests/build-tests.ps1",
+      "size": 4361,
+      "sha256": "1229d6783454c8217c4d28f9a8373dd706ab5e2c9e137bbaadf583728ca323e7",
+      "source_sha256": "1229d6783454c8217c4d28f9a8373dd706ab5e2c9e137bbaadf583728ca323e7",
+      "staging_adapted": false,
+      "source_revision": "0426648bd0601486347513af200aa4167a9fa09c"
+    },
+    {
+      "path": "tests/run-all.ps1",
+      "size": 6115,
+      "sha256": "8d560a122430982ae162c107a7ebc923f8f3d18e76e4f96cca2bb907a6efc92e",
+      "source_sha256": "8d560a122430982ae162c107a7ebc923f8f3d18e76e4f96cca2bb907a6efc92e",
+      "staging_adapted": false,
+      "source_revision": "0426648bd0601486347513af200aa4167a9fa09c"
     },
     {
       "path": "tests/run_diagnostic_boundary.ps1",
@@ -828,25 +916,19 @@
       "staging_adapted": false
     },
     {
+      "path": "tests/test-paths.ps1",
+      "size": 2153,
+      "sha256": "eceb9774e56537e8acf9c4bd7606707d7b0b27371d33c1ded68ac078bfbf5c9c",
+      "source_revision": "0426648bd0601486347513af200aa4167a9fa09c",
+      "source_sha256": "eceb9774e56537e8acf9c4bd7606707d7b0b27371d33c1ded68ac078bfbf5c9c",
+      "staging_adapted": false
+    },
+    {
       "path": "tests/test_diagnostic_boundary.cpp",
       "size": 16232,
       "sha256": "b259fae3cb6948f048d8dc7bd6a7f2b18f12810f2d63b020400866c816f07cce",
       "source_sha256": "b259fae3cb6948f048d8dc7bd6a7f2b18f12810f2d63b020400866c816f07cce",
       "staging_adapted": false
-    },
-    {
-      "path": "tests/UnityQuitPhaseTests.cpp",
-      "size": 2254,
-      "sha256": "eb50ca4b6cfbe0f6ef26c70756a32e9f7f691031677bb670537e9e6ad179b8a9",
-      "source_sha256": "eb50ca4b6cfbe0f6ef26c70756a32e9f7f691031677bb670537e9e6ad179b8a9",
-      "staging_adapted": false
-    },
-    {
-      "path": "THIRD_PARTY_NOTICES.md",
-      "size": 1606,
-      "sha256": "a8ab0cbb88d7e4d06064b5b9b6e16667d19e117dcda181478bba5c92e0e8543a",
-      "source_sha256": "4aabce0d89de80e5d4629a30fcd9f1a50448adfd617fdb238642cc02e502d3c7",
-      "staging_adapted": true
     },
     {
       "path": "tools/check-source-manifest.ps1",
@@ -912,15 +994,9 @@
     },
     {
       "path": "tools/validate-source.ps1",
-      "size": 4110,
-      "sha256": "27c6bb3cf0e972c6fafecbbeaaa078903b382574732233558d78666f3a219eb3",
-      "generated_for_staging": true
-    },
-    {
-      "path": "wiki/_Sidebar.md",
-      "size": 438,
-      "sha256": "d0e250f07d99bbb74ab026bce159c6bcb66064a7e05b74c03ba718d59ec6e97a",
-      "source_sha256": "2cc97bcb6f8d172bed15ce7ab81d50e7bd1c7d382c0f727cea5ce02a35f7607d",
+      "size": 4128,
+      "sha256": "1d68190bfdd456184d0dae2acccd79e4501763706fe32ef7470331fd52675d9d",
+      "generated_for_staging": true,
       "staging_adapted": true
     },
     {
@@ -992,6 +1068,13 @@
       "sha256": "122c1f1580766f767d23a8c0558b2678085600db5cfb9064cd4d046a948e13e2",
       "source_sha256": "4529fed1831a1c5bcd4fbdb376768b894f735a74aa3463919440cfcbedbf0bd7",
       "staging_adapted": true
+    },
+    {
+      "path": "wiki/_Sidebar.md",
+      "size": 438,
+      "sha256": "d0e250f07d99bbb74ab026bce159c6bcb66064a7e05b74c03ba718d59ec6e97a",
+      "source_sha256": "2cc97bcb6f8d172bed15ce7ab81d50e7bd1c7d382c0f727cea5ce02a35f7607d",
+      "staging_adapted": true
     }
   ],
   "signature": "none",
@@ -1000,5 +1083,11 @@
     "mature_source": "6db0f56440b183d37b57c467d68b452d13eb3d47",
     "record": "DOCS_RESTORATION.md",
     "code_changes": false
+  },
+  "content_tree_sha256_algorithm": "sha256 of UTF-8 ordinal-path-sorted path NUL size NUL sha256 LF records",
+  "paths_refresh_20261102": {
+    "source_revision": "0426648bd0601486347513af200aa4167a9fa09c",
+    "record": "STAGING_REVIEW.md",
+    "selection_record": "SOURCE_SELECTION.json"
   }
 }

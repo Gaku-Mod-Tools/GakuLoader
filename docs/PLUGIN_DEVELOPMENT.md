@@ -11,9 +11,12 @@
 // keeps a frame counter. It is compiled by tools/test-docs.ps1 so the example in
 // docs/PLUGIN_DEVELOPMENT.md cannot drift away from the header.
 #include "GakuPlugin.h"
+#include "GakuPaths.hpp"
 
 namespace {
 GakuLogService g_log{};
+GakuPathsV1 g_paths{};
+std::filesystem::path g_configRoot;
 
 void Log(GakuLogLevel level, const char* message) {
     if (g_log.write) g_log.write(g_log.context, level, message);
@@ -28,6 +31,16 @@ GakuStatus Activate(const GakuHostApi* host, void** pluginState) {
     const auto status = host->queryService(host->hostContext, GAKU_SERVICE_LOG,
         GAKU_SERVICE_VERSION, sizeof(g_log), &g_log);
     if (status != GAKU_OK) return status;
+    const auto pathsStatus = GakuPaths::Query(host, g_paths);
+    if (pathsStatus == GAKU_OK) {
+        const auto rootStatus = GakuPaths::GetRoot(g_paths, GAKU_PATH_CONFIGS, g_configRoot);
+        if (rootStatus != GAKU_OK) return rootStatus;
+        // Pure lookup: this counter-only sample has nothing to persist. A real
+        // write calls ensureRoot first and checks its result; never fall back
+        // to an old directory after a new-layout write fails.
+    } else if (pathsStatus != GAKU_E_UNAVAILABLE) return pathsStatus;
+    // Old hosts may lack this optional service. This sample has no saved data
+    // to migrate or silently switch back; see docs/PLUGIN_PATHS.md for writers.
     // Activation runs before Unity exists. Only native work belongs here.
     *pluginState = nullptr;
     Log(GAKU_LOG_INFO, "example.minimal activated");
@@ -119,6 +132,7 @@ const auto status = host->queryService(host->hostContext, GAKU_SERVICE_LOG,
 |---|---|
 | `gakuloader.log` | UTF-8 纯文本写入 Loader 私有日志；不是 printf 格式串，也不走 Unity 日志 |
 | `gakuloader.runtime` | 游戏根/本地/插件目录（绝对宽字符路径，进程生命周期有效）与 `getGameAssembly()`；后者在 GameAssembly 加载前为 NULL |
+| `gakuloader.paths` | 可选 v1，独立 `GakuPaths.h`；按 owner 查询绝对 UTF-16 分类根、按需创建，见[数据路径](PLUGIN_PATHS.md)。不自动迁移旧数据 |
 | `gakuloader.main-thread` | 有界 FIFO（1024）；`enqueue` 永不同步执行，shutdown 丢弃未执行任务；`isMainThread` 供线程判断 |
 | `gakuloader.hooks` | 独占 detour 租约；冲突返回 `GAKU_E_CONFLICT`。`acquireBatch` 一次发布 1..256 个 original。不要调用 `MH_ALL_HOOKS` / `MH_Uninitialize` |
 | `gakuloader.process-lifetime-hooks` | 可选 v1 扩展，声明在 `include/GakuProcessLifetimeHooks.h`；原子保留本 owner 已启用的指定 Hook，退役及退出收尾后继续生效 |
