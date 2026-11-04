@@ -8,7 +8,7 @@
     ".git/",
     "build/"
   ],
-  "content_tree_sha256": "61fab59c92a888a3878ede76d1543a07f9c4bc72ece155f8ae7f48485767d884",
+  "content_tree_sha256": "2a558ff8c0a019b89d3310f0485bb7f6cb1f68862249edfef68670d3b29321bb",
   "files": [
     {
       "path": ".gitattributes",
@@ -106,18 +106,51 @@
     },
     {
       "path": "README.md",
-      "size": 5245,
-      "sha256": "076c7f7f472eb2c3b53f908a69d29ede94c8fa2d5bdfecc59615117133814858",
+      "size": 6942,
+      "sha256": "3a4a03cb652ad4d3a38dd23da5790a26cc0ef43546a61891353336332eb421c9",
       "source_sha256": "dd62f3ba1f1e4f0346c226ada558ec4d70bff0acf9cb0358f999080347fc0a06",
       "staging_adapted": true,
       "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
-      "source_git_blob": "f2b385e12b8efb8b39738eb768779243ea1b080f"
+      "source_git_blob": "f2b385e12b8efb8b39738eb768779243ea1b080f",
+      "documentation_history": [
+        {
+          "date": "2026-11-04",
+          "previous": {
+            "path": "README.md",
+            "size": 5245,
+            "sha256": "076c7f7f472eb2c3b53f908a69d29ede94c8fa2d5bdfecc59615117133814858",
+            "source_sha256": "dd62f3ba1f1e4f0346c226ada558ec4d70bff0acf9cb0358f999080347fc0a06",
+            "staging_adapted": true,
+            "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+            "source_git_blob": "f2b385e12b8efb8b39738eb768779243ea1b080f"
+          }
+        }
+      ],
+      "documentation_repair": {
+        "review": "Reviewed technical facts and conditions against current staged code; humanizer-zh expression pass.",
+        "runtime_changed": false
+      }
     },
     {
       "path": "SOURCE_SELECTION.json",
-      "size": 138337,
-      "sha256": "6888de9c4dfcb0aebea8e47a99d3c6f9e0445ac3c64092191e90baa8a290dcfe",
-      "generated_for_staging": true
+      "size": 143014,
+      "sha256": "57e4e841a555f4c3fba5526becc5f0b2fa465a2d4cd629cfe8b35c0131346a1a",
+      "generated_for_staging": true,
+      "documentation_history": [
+        {
+          "date": "2026-11-04",
+          "previous": {
+            "path": "SOURCE_SELECTION.json",
+            "size": 138337,
+            "sha256": "6888de9c4dfcb0aebea8e47a99d3c6f9e0445ac3c64092191e90baa8a290dcfe",
+            "generated_for_staging": true
+          }
+        }
+      ],
+      "documentation_repair": {
+        "review": "Reviewed technical facts and conditions against current staged code; humanizer-zh expression pass.",
+        "runtime_changed": false
+      }
     },
     {
       "path": "STAGING_REVIEW.md",
@@ -1230,88 +1263,272 @@
     },
     {
       "path": "wiki/Building.md",
-      "size": 3857,
-      "sha256": "e983293f66a186ef5b7a21d1a44b04d7f2b180055dde7be69005c329bf506d5d",
+      "size": 3664,
+      "sha256": "d6243572485f3b0dc1e4538b98158c7027a3afdae653da52aa735cd305bfc46e",
       "source_sha256": "eff46790e21187b7ffc065122e0a2141178823245f6142b0717438f33463237a",
-      "staging_adapted": true
+      "staging_adapted": true,
+      "documentation_history": [
+        {
+          "date": "2026-11-04",
+          "previous": {
+            "path": "wiki/Building.md",
+            "size": 3857,
+            "sha256": "e983293f66a186ef5b7a21d1a44b04d7f2b180055dde7be69005c329bf506d5d",
+            "source_sha256": "eff46790e21187b7ffc065122e0a2141178823245f6142b0717438f33463237a",
+            "staging_adapted": true
+          }
+        }
+      ],
+      "documentation_repair": {
+        "review": "Reviewed technical facts and conditions against current staged code; humanizer-zh expression pass.",
+        "runtime_changed": false
+      }
     },
     {
       "path": "wiki/Configuration.md",
-      "size": 3596,
-      "sha256": "ca0a3ca4314a8b63a0c609c42d3b1f2981f68d4f67ae0a89529a5a961b6a6ecf",
+      "size": 5554,
+      "sha256": "e217102c02ca2fd0bbaf3ef227943824b43eb2baa55314a0951f4b62f9b31e5c",
       "source_sha256": "9ac70400d02675a07974bacdcdc8266143b9c6a2025b2d4f86fa6ed74b9fb65d",
       "staging_adapted": true,
       "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
-      "source_git_blob": "017b8842b767b393501c198c5233a6aec410358b"
+      "source_git_blob": "017b8842b767b393501c198c5233a6aec410358b",
+      "documentation_history": [
+        {
+          "date": "2026-11-04",
+          "previous": {
+            "path": "wiki/Configuration.md",
+            "size": 3596,
+            "sha256": "ca0a3ca4314a8b63a0c609c42d3b1f2981f68d4f67ae0a89529a5a961b6a6ecf",
+            "source_sha256": "9ac70400d02675a07974bacdcdc8266143b9c6a2025b2d4f86fa6ed74b9fb65d",
+            "staging_adapted": true,
+            "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+            "source_git_blob": "017b8842b767b393501c198c5233a6aec410358b"
+          }
+        }
+      ],
+      "documentation_repair": {
+        "review": "Reviewed technical facts and conditions against current staged code; humanizer-zh expression pass.",
+        "runtime_changed": false
+      }
     },
     {
       "path": "wiki/Home.md",
-      "size": 1722,
-      "sha256": "46df48ece9e69a4ea3abc2bf0de5f396fc6e1287a6374c1d4ca39067829e9301",
+      "size": 1810,
+      "sha256": "0c8bd89fe54c459fc0c5a21e1fa793736054ec15ecea12218610a2cf3adafa4a",
       "source_sha256": "1de66c58546c55e351c21c14a11cd60b835d2affc26e7bf7b1862af7aaba61bb",
-      "staging_adapted": true
+      "staging_adapted": true,
+      "documentation_history": [
+        {
+          "date": "2026-11-04",
+          "previous": {
+            "path": "wiki/Home.md",
+            "size": 1722,
+            "sha256": "46df48ece9e69a4ea3abc2bf0de5f396fc6e1287a6374c1d4ca39067829e9301",
+            "source_sha256": "1de66c58546c55e351c21c14a11cd60b835d2affc26e7bf7b1862af7aaba61bb",
+            "staging_adapted": true
+          }
+        }
+      ],
+      "documentation_repair": {
+        "review": "Reviewed technical facts and conditions against current staged code; humanizer-zh expression pass.",
+        "runtime_changed": false
+      }
     },
     {
       "path": "wiki/Hooks.md",
-      "size": 3316,
-      "sha256": "c6da5a97c948658f827e41d62bb521e3b404e94c8f04047c18933f0bddb0dcaa",
+      "size": 4879,
+      "sha256": "37ee86d0e63e1c6d45a1daaeb86d60879ab2f6c0d3569cb1959f421e8052b848",
       "source_sha256": "6f4cc03c99fa0063d9768fdd92935741f83fb55c16327c7bd20051810d1367c9",
-      "staging_adapted": true
+      "staging_adapted": true,
+      "documentation_history": [
+        {
+          "date": "2026-11-04",
+          "previous": {
+            "path": "wiki/Hooks.md",
+            "size": 3316,
+            "sha256": "c6da5a97c948658f827e41d62bb521e3b404e94c8f04047c18933f0bddb0dcaa",
+            "source_sha256": "6f4cc03c99fa0063d9768fdd92935741f83fb55c16327c7bd20051810d1367c9",
+            "staging_adapted": true
+          }
+        }
+      ],
+      "documentation_repair": {
+        "review": "Reviewed technical facts and conditions against current staged code; humanizer-zh expression pass.",
+        "runtime_changed": false
+      }
     },
     {
       "path": "wiki/Hotkeys.md",
-      "size": 3782,
-      "sha256": "2d78c4766da557d0d13eba3e587ed0abd10f94f50593e6fad50fb964faa98542",
+      "size": 4140,
+      "sha256": "7f9df7437c2c413c311125bdd757a646d02d84eac00f04807517df1a7e08a177",
       "source_sha256": "81ec42c4c03849146b8b59aedb78566775d90b94e6e179706ba4bd20013b61f9",
       "staging_adapted": true,
       "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
-      "source_git_blob": "7d0800ca3253050fa12f1f1369320545090d279f"
+      "source_git_blob": "7d0800ca3253050fa12f1f1369320545090d279f",
+      "documentation_history": [
+        {
+          "date": "2026-11-04",
+          "previous": {
+            "path": "wiki/Hotkeys.md",
+            "size": 3782,
+            "sha256": "2d78c4766da557d0d13eba3e587ed0abd10f94f50593e6fad50fb964faa98542",
+            "source_sha256": "81ec42c4c03849146b8b59aedb78566775d90b94e6e179706ba4bd20013b61f9",
+            "staging_adapted": true,
+            "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+            "source_git_blob": "7d0800ca3253050fa12f1f1369320545090d279f"
+          }
+        }
+      ],
+      "documentation_repair": {
+        "review": "Reviewed technical facts and conditions against current staged code; humanizer-zh expression pass.",
+        "runtime_changed": false
+      }
     },
     {
       "path": "wiki/Installation.md",
-      "size": 2259,
-      "sha256": "708f4996851eff17a0c78dee77654f4245bec7f49f65527c69c96d322cb32e3f",
+      "size": 2396,
+      "sha256": "a8b2b21c38822876011418d17a9b3e4aed9ffd0788bf10da7e0ce9c5f2973ff0",
       "source_sha256": "004b7a8b0b8ee5800b3177e6ccb4e504f05acbd6b836a44c58cdafcc998e0b9f",
-      "staging_adapted": true
+      "staging_adapted": true,
+      "documentation_history": [
+        {
+          "date": "2026-11-04",
+          "previous": {
+            "path": "wiki/Installation.md",
+            "size": 2259,
+            "sha256": "708f4996851eff17a0c78dee77654f4245bec7f49f65527c69c96d322cb32e3f",
+            "source_sha256": "004b7a8b0b8ee5800b3177e6ccb4e504f05acbd6b836a44c58cdafcc998e0b9f",
+            "staging_adapted": true
+          }
+        }
+      ],
+      "documentation_repair": {
+        "review": "Reviewed technical facts and conditions against current staged code; humanizer-zh expression pass.",
+        "runtime_changed": false
+      }
     },
     {
       "path": "wiki/Plugin-API.md",
-      "size": 4300,
-      "sha256": "9d699e409e0793096b203a80c7e59ac56f0fc85e2d1b742b15b0b9b52daae9ab",
+      "size": 7722,
+      "sha256": "21844942b2dbf7a4fa74a888a803157fc99c5ac81a5d72fbf00ad5ed08388f47",
       "source_sha256": "e0560e09b2c05acad903640304ee17326e3bc64904dcdf3b237c52797fd3ac33",
-      "staging_adapted": true
+      "staging_adapted": true,
+      "documentation_history": [
+        {
+          "date": "2026-11-04",
+          "previous": {
+            "path": "wiki/Plugin-API.md",
+            "size": 4300,
+            "sha256": "9d699e409e0793096b203a80c7e59ac56f0fc85e2d1b742b15b0b9b52daae9ab",
+            "source_sha256": "e0560e09b2c05acad903640304ee17326e3bc64904dcdf3b237c52797fd3ac33",
+            "staging_adapted": true
+          }
+        }
+      ],
+      "documentation_repair": {
+        "review": "Reviewed technical facts and conditions against current staged code; humanizer-zh expression pass.",
+        "runtime_changed": false
+      }
     },
     {
       "path": "wiki/Troubleshooting.md",
-      "size": 3422,
-      "sha256": "4a0b58579bf983825a0c2383359ac5e871f67566ca35b90d4f3978bbe5b10407",
+      "size": 4607,
+      "sha256": "916f0bcd2506735dc14fe5515179df98598796c38d1593c10868cee16af8b70f",
       "source_sha256": "182d26a05e7b864abcbd44053be8cfa09d122d39f191354b633239bf115bf700",
       "staging_adapted": true,
       "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
-      "source_git_blob": "1396ac14c07c1d2a4b37ec95a67272485f99b2b0"
+      "source_git_blob": "1396ac14c07c1d2a4b37ec95a67272485f99b2b0",
+      "documentation_history": [
+        {
+          "date": "2026-11-04",
+          "previous": {
+            "path": "wiki/Troubleshooting.md",
+            "size": 3422,
+            "sha256": "4a0b58579bf983825a0c2383359ac5e871f67566ca35b90d4f3978bbe5b10407",
+            "source_sha256": "182d26a05e7b864abcbd44053be8cfa09d122d39f191354b633239bf115bf700",
+            "staging_adapted": true,
+            "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+            "source_git_blob": "1396ac14c07c1d2a4b37ec95a67272485f99b2b0"
+          }
+        }
+      ],
+      "documentation_repair": {
+        "review": "Reviewed technical facts and conditions against current staged code; humanizer-zh expression pass.",
+        "runtime_changed": false
+      }
     },
     {
       "path": "wiki/UI.md",
-      "size": 3885,
-      "sha256": "af6b4b8b55cbfa263b00520e59bf00aa1f98ad34207a686d5bb4be350928423e",
+      "size": 5255,
+      "sha256": "89ba0cfe5482db94b502080e153fc9ba35aa028a95f46f9094dbb5f972cba6f7",
       "source_sha256": "f996a2263c9b8507a52edf0f908da3993415e4fd7e43228401e6bbcea5631f23",
       "staging_adapted": true,
       "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
-      "source_git_blob": "576f29c189cbde6a8eb98c27ddbd37755a989a32"
+      "source_git_blob": "576f29c189cbde6a8eb98c27ddbd37755a989a32",
+      "documentation_history": [
+        {
+          "date": "2026-11-04",
+          "previous": {
+            "path": "wiki/UI.md",
+            "size": 3885,
+            "sha256": "af6b4b8b55cbfa263b00520e59bf00aa1f98ad34207a686d5bb4be350928423e",
+            "source_sha256": "f996a2263c9b8507a52edf0f908da3993415e4fd7e43228401e6bbcea5631f23",
+            "staging_adapted": true,
+            "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+            "source_git_blob": "576f29c189cbde6a8eb98c27ddbd37755a989a32"
+          }
+        }
+      ],
+      "documentation_repair": {
+        "review": "Reviewed technical facts and conditions against current staged code; humanizer-zh expression pass.",
+        "runtime_changed": false
+      }
     },
     {
       "path": "wiki/Writing-a-Plugin.md",
-      "size": 4480,
-      "sha256": "122c1f1580766f767d23a8c0558b2678085600db5cfb9064cd4d046a948e13e2",
+      "size": 4937,
+      "sha256": "3acb3db807040e142424ad0005e09bba7237b6ea665ed79c0159c47a15a23587",
       "source_sha256": "4529fed1831a1c5bcd4fbdb376768b894f735a74aa3463919440cfcbedbf0bd7",
-      "staging_adapted": true
+      "staging_adapted": true,
+      "documentation_history": [
+        {
+          "date": "2026-11-04",
+          "previous": {
+            "path": "wiki/Writing-a-Plugin.md",
+            "size": 4480,
+            "sha256": "122c1f1580766f767d23a8c0558b2678085600db5cfb9064cd4d046a948e13e2",
+            "source_sha256": "4529fed1831a1c5bcd4fbdb376768b894f735a74aa3463919440cfcbedbf0bd7",
+            "staging_adapted": true
+          }
+        }
+      ],
+      "documentation_repair": {
+        "review": "Reviewed technical facts and conditions against current staged code; humanizer-zh expression pass.",
+        "runtime_changed": false
+      }
     },
     {
       "path": "wiki/_Sidebar.md",
-      "size": 438,
-      "sha256": "d0e250f07d99bbb74ab026bce159c6bcb66064a7e05b74c03ba718d59ec6e97a",
+      "size": 530,
+      "sha256": "db1181a03d33ebfd72c41804d8b59d0b2cfac515344c2fd307b94d92bb696a96",
       "source_sha256": "2cc97bcb6f8d172bed15ce7ab81d50e7bd1c7d382c0f727cea5ce02a35f7607d",
-      "staging_adapted": true
+      "staging_adapted": true,
+      "documentation_history": [
+        {
+          "date": "2026-11-04",
+          "previous": {
+            "path": "wiki/_Sidebar.md",
+            "size": 438,
+            "sha256": "d0e250f07d99bbb74ab026bce159c6bcb66064a7e05b74c03ba718d59ec6e97a",
+            "source_sha256": "2cc97bcb6f8d172bed15ce7ab81d50e7bd1c7d382c0f727cea5ce02a35f7607d",
+            "staging_adapted": true
+          }
+        }
+      ],
+      "documentation_repair": {
+        "review": "Reviewed technical facts and conditions against current staged code; humanizer-zh expression pass.",
+        "runtime_changed": false
+      }
     }
   ],
   "signature": "none",
@@ -1332,5 +1549,29 @@
     "baseline_source_commit": "0426648bd0601486347513af200aa4167a9fa09c",
     "record": "STAGING_REVIEW.md",
     "selection_record": "SOURCE_SELECTION.json"
+  },
+  "documentation_repair_20261104": {
+    "date": "2026-11-04",
+    "base_staging_commit": "fed3972e747249867da60e4962053b76da2962a6",
+    "previous_manifest_sha256": "2cc77dd16822abf0903ddaef5c85434bd3bb3a4f330e272d3b56442ecc5cd6aa",
+    "scope": "Authorized README/documentation corrections and humanizer-zh review against this staged code; no runtime, test, algorithm, parameter or vendor changes.",
+    "runtime_rebuilt": false,
+    "game_acceptance_added": false,
+    "remote_updated": false,
+    "changed_payload_files": [
+      "README.md",
+      "SOURCE_SELECTION.json",
+      "wiki/Building.md",
+      "wiki/Configuration.md",
+      "wiki/Home.md",
+      "wiki/Hooks.md",
+      "wiki/Hotkeys.md",
+      "wiki/Installation.md",
+      "wiki/Plugin-API.md",
+      "wiki/Troubleshooting.md",
+      "wiki/UI.md",
+      "wiki/Writing-a-Plugin.md",
+      "wiki/_Sidebar.md"
+    ]
   }
 }

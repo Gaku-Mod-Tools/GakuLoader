@@ -93,10 +93,17 @@
       "source_path": "README.md",
       "source_git_blob": "f2b385e12b8efb8b39738eb768779243ea1b080f",
       "source_sha256": "dd62f3ba1f1e4f0346c226ada558ec4d70bff0acf9cb0358f999080347fc0a06",
-      "staged_sha256": "076c7f7f472eb2c3b53f908a69d29ede94c8fa2d5bdfecc59615117133814858",
+      "staged_sha256": "3a4a03cb652ad4d3a38dd23da5790a26cc0ef43546a61891353336332eb421c9",
       "source_scope": "first-party-declared-MIT",
       "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
-      "staging_adapted": true
+      "staging_adapted": true,
+      "documentation_history": [
+        {
+          "date": "2026-11-04",
+          "staged_sha256": "076c7f7f472eb2c3b53f908a69d29ede94c8fa2d5bdfecc59615117133814858"
+        }
+      ],
+      "documentation_repair": "README/Wiki wording reviewed against the frozen implementation; original source fields retain their historical identity."
     },
     "THIRD_PARTY_NOTICES.md": {
       "source_path": "THIRD_PARTY_NOTICES.md",
@@ -807,7 +814,15 @@
       "source_scope": "first-party-declared-MIT",
       "review": "selected-source-or-public-doc; no binaries/config/materials",
       "source_revision": "6db0f56440b183d37b57c467d68b452d13eb3d47",
-      "staged_sha256": "e983293f66a186ef5b7a21d1a44b04d7f2b180055dde7be69005c329bf506d5d"
+      "staged_sha256": "d6243572485f3b0dc1e4538b98158c7027a3afdae653da52aa735cd305bfc46e",
+      "documentation_history": [
+        {
+          "date": "2026-11-04",
+          "staged_sha256": "e983293f66a186ef5b7a21d1a44b04d7f2b180055dde7be69005c329bf506d5d"
+        }
+      ],
+      "staging_adapted": true,
+      "documentation_repair": "README/Wiki wording reviewed against the frozen implementation; original source fields retain their historical identity."
     },
     "wiki/Configuration.md": {
       "source_repository": "GakuLoader",
@@ -815,10 +830,17 @@
       "source_path": "wiki/Configuration.md",
       "source_git_blob": "017b8842b767b393501c198c5233a6aec410358b",
       "source_sha256": "9ac70400d02675a07974bacdcdc8266143b9c6a2025b2d4f86fa6ed74b9fb65d",
-      "staged_sha256": "ca0a3ca4314a8b63a0c609c42d3b1f2981f68d4f67ae0a89529a5a961b6a6ecf",
+      "staged_sha256": "e217102c02ca2fd0bbaf3ef227943824b43eb2baa55314a0951f4b62f9b31e5c",
       "source_scope": "first-party-declared-MIT",
       "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
-      "staging_adapted": true
+      "staging_adapted": true,
+      "documentation_history": [
+        {
+          "date": "2026-11-04",
+          "staged_sha256": "ca0a3ca4314a8b63a0c609c42d3b1f2981f68d4f67ae0a89529a5a961b6a6ecf"
+        }
+      ],
+      "documentation_repair": "README/Wiki wording reviewed against the frozen implementation; original source fields retain their historical identity."
     },
     "wiki/Home.md": {
       "source_path": "wiki/Home.md",
@@ -826,7 +848,15 @@
       "source_scope": "first-party-declared-MIT",
       "review": "selected-source-or-public-doc; no binaries/config/materials",
       "source_revision": "6db0f56440b183d37b57c467d68b452d13eb3d47",
-      "staged_sha256": "46df48ece9e69a4ea3abc2bf0de5f396fc6e1287a6374c1d4ca39067829e9301"
+      "staged_sha256": "0c8bd89fe54c459fc0c5a21e1fa793736054ec15ecea12218610a2cf3adafa4a",
+      "documentation_history": [
+        {
+          "date": "2026-11-04",
+          "staged_sha256": "46df48ece9e69a4ea3abc2bf0de5f396fc6e1287a6374c1d4ca39067829e9301"
+        }
+      ],
+      "staging_adapted": true,
+      "documentation_repair": "README/Wiki wording reviewed against the frozen implementation; original source fields retain their historical identity."
     },
     "wiki/Hooks.md": {
       "source_path": "wiki/Hooks.md",
@@ -834,7 +864,15 @@
       "source_scope": "first-party-declared-MIT",
       "review": "selected-source-or-public-doc; no binaries/config/materials",
       "source_revision": "6db0f56440b183d37b57c467d68b452d13eb3d47",
-      "staged_sha256": "c6da5a97c948658f827e41d62bb521e3b404e94c8f04047c18933f0bddb0dcaa"
+      "staged_sha256": "37ee86d0e63e1c6d45a1daaeb86d60879ab2f6c0d3569cb1959f421e8052b848",
+      "documentation_history": [
+        {
+          "date": "2026-11-04",
+          "staged_sha256": "c6da5a97c948658f827e41d62bb521e3b404e94c8f04047c18933f0bddb0dcaa"
+        }
+      ],
+      "staging_adapted": true,
+      "documentation_repair": "README/Wiki wording reviewed against the frozen implementation; original source fields retain their historical identity."
     },
     "wiki/Hotkeys.md": {
       "source_repository": "GakuLoader",
@@ -842,10 +880,17 @@
       "source_path": "wiki/Hotkeys.md",
       "source_git_blob": "7d0800ca3253050fa12f1f1369320545090d279f",
       "source_sha256": "81ec42c4c03849146b8b59aedb78566775d90b94e6e179706ba4bd20013b61f9",
-      "staged_sha256": "2d78c4766da557d0d13eba3e587ed0abd10f94f50593e6fad50fb964faa98542",
+      "staged_sha256": "7f9df7437c2c413c311125bdd757a646d02d84eac00f04807517df1a7e08a177",
       "source_scope": "first-party-declared-MIT",
       "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
-      "staging_adapted": true
+      "staging_adapted": true,
+      "documentation_history": [
+        {
+          "date": "2026-11-04",
+          "staged_sha256": "2d78c4766da557d0d13eba3e587ed0abd10f94f50593e6fad50fb964faa98542"
+        }
+      ],
+      "documentation_repair": "README/Wiki wording reviewed against the frozen implementation; original source fields retain their historical identity."
     },
     "wiki/Installation.md": {
       "source_path": "wiki/Installation.md",
@@ -853,7 +898,15 @@
       "source_scope": "first-party-declared-MIT",
       "review": "selected-source-or-public-doc; no binaries/config/materials",
       "source_revision": "6db0f56440b183d37b57c467d68b452d13eb3d47",
-      "staged_sha256": "708f4996851eff17a0c78dee77654f4245bec7f49f65527c69c96d322cb32e3f"
+      "staged_sha256": "a8b2b21c38822876011418d17a9b3e4aed9ffd0788bf10da7e0ce9c5f2973ff0",
+      "documentation_history": [
+        {
+          "date": "2026-11-04",
+          "staged_sha256": "708f4996851eff17a0c78dee77654f4245bec7f49f65527c69c96d322cb32e3f"
+        }
+      ],
+      "staging_adapted": true,
+      "documentation_repair": "README/Wiki wording reviewed against the frozen implementation; original source fields retain their historical identity."
     },
     "wiki/Plugin-API.md": {
       "source_path": "wiki/Plugin-API.md",
@@ -861,7 +914,15 @@
       "source_scope": "first-party-declared-MIT",
       "review": "selected-source-or-public-doc; no binaries/config/materials",
       "source_revision": "6db0f56440b183d37b57c467d68b452d13eb3d47",
-      "staged_sha256": "9d699e409e0793096b203a80c7e59ac56f0fc85e2d1b742b15b0b9b52daae9ab"
+      "staged_sha256": "21844942b2dbf7a4fa74a888a803157fc99c5ac81a5d72fbf00ad5ed08388f47",
+      "documentation_history": [
+        {
+          "date": "2026-11-04",
+          "staged_sha256": "9d699e409e0793096b203a80c7e59ac56f0fc85e2d1b742b15b0b9b52daae9ab"
+        }
+      ],
+      "staging_adapted": true,
+      "documentation_repair": "README/Wiki wording reviewed against the frozen implementation; original source fields retain their historical identity."
     },
     "wiki/Troubleshooting.md": {
       "source_repository": "GakuLoader",
@@ -869,10 +930,17 @@
       "source_path": "wiki/Troubleshooting.md",
       "source_git_blob": "1396ac14c07c1d2a4b37ec95a67272485f99b2b0",
       "source_sha256": "182d26a05e7b864abcbd44053be8cfa09d122d39f191354b633239bf115bf700",
-      "staged_sha256": "4a0b58579bf983825a0c2383359ac5e871f67566ca35b90d4f3978bbe5b10407",
+      "staged_sha256": "916f0bcd2506735dc14fe5515179df98598796c38d1593c10868cee16af8b70f",
       "source_scope": "first-party-declared-MIT",
       "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
-      "staging_adapted": true
+      "staging_adapted": true,
+      "documentation_history": [
+        {
+          "date": "2026-11-04",
+          "staged_sha256": "4a0b58579bf983825a0c2383359ac5e871f67566ca35b90d4f3978bbe5b10407"
+        }
+      ],
+      "documentation_repair": "README/Wiki wording reviewed against the frozen implementation; original source fields retain their historical identity."
     },
     "wiki/UI.md": {
       "source_repository": "GakuLoader",
@@ -880,10 +948,17 @@
       "source_path": "wiki/UI.md",
       "source_git_blob": "576f29c189cbde6a8eb98c27ddbd37755a989a32",
       "source_sha256": "f996a2263c9b8507a52edf0f908da3993415e4fd7e43228401e6bbcea5631f23",
-      "staged_sha256": "af6b4b8b55cbfa263b00520e59bf00aa1f98ad34207a686d5bb4be350928423e",
+      "staged_sha256": "89ba0cfe5482db94b502080e153fc9ba35aa028a95f46f9094dbb5f972cba6f7",
       "source_scope": "first-party-declared-MIT",
       "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
-      "staging_adapted": true
+      "staging_adapted": true,
+      "documentation_history": [
+        {
+          "date": "2026-11-04",
+          "staged_sha256": "af6b4b8b55cbfa263b00520e59bf00aa1f98ad34207a686d5bb4be350928423e"
+        }
+      ],
+      "documentation_repair": "README/Wiki wording reviewed against the frozen implementation; original source fields retain their historical identity."
     },
     "wiki/Writing-a-Plugin.md": {
       "source_path": "wiki/Writing-a-Plugin.md",
@@ -891,7 +966,15 @@
       "source_scope": "first-party-declared-MIT",
       "review": "selected-source-or-public-doc; no binaries/config/materials",
       "source_revision": "6db0f56440b183d37b57c467d68b452d13eb3d47",
-      "staged_sha256": "122c1f1580766f767d23a8c0558b2678085600db5cfb9064cd4d046a948e13e2"
+      "staged_sha256": "3acb3db807040e142424ad0005e09bba7237b6ea665ed79c0159c47a15a23587",
+      "documentation_history": [
+        {
+          "date": "2026-11-04",
+          "staged_sha256": "122c1f1580766f767d23a8c0558b2678085600db5cfb9064cd4d046a948e13e2"
+        }
+      ],
+      "staging_adapted": true,
+      "documentation_repair": "README/Wiki wording reviewed against the frozen implementation; original source fields retain their historical identity."
     },
     "wiki/_Sidebar.md": {
       "source_path": "wiki/_Sidebar.md",
@@ -899,7 +982,15 @@
       "source_scope": "first-party-declared-MIT",
       "review": "selected-source-or-public-doc; no binaries/config/materials",
       "source_revision": "6db0f56440b183d37b57c467d68b452d13eb3d47",
-      "staged_sha256": "d0e250f07d99bbb74ab026bce159c6bcb66064a7e05b74c03ba718d59ec6e97a"
+      "staged_sha256": "db1181a03d33ebfd72c41804d8b59d0b2cfac515344c2fd307b94d92bb696a96",
+      "documentation_history": [
+        {
+          "date": "2026-11-04",
+          "staged_sha256": "d0e250f07d99bbb74ab026bce159c6bcb66064a7e05b74c03ba718d59ec6e97a"
+        }
+      ],
+      "staging_adapted": true,
+      "documentation_repair": "README/Wiki wording reviewed against the frozen implementation; original source fields retain their historical identity."
     },
     "deps/imgui/LICENSE.txt": {
       "source_path": "deps/imgui/LICENSE.txt",
@@ -1722,7 +1813,15 @@
         "source_revision": "0426648bd0601486347513af200aa4167a9fa09c",
         "source_path": "docs/PLUGIN_DEVELOPMENT.md",
         "source_sha256": "38d80827cc4a0041959606a014a8bef00ebca9e73fecc3c2b7b09c9fa786d52b",
-        "staged_sha256": "38d80827cc4a0041959606a014a8bef00ebca9e73fecc3c2b7b09c9fa786d52b"
+        "staged_sha256": "03578c77ab374608c0576b823d22f3a1e7177819aeba9a35c9cddbb10507ea51",
+        "documentation_history": [
+          {
+            "date": "2026-11-04",
+            "staged_sha256": "38d80827cc4a0041959606a014a8bef00ebca9e73fecc3c2b7b09c9fa786d52b"
+          }
+        ],
+        "staging_adapted": true,
+        "documentation_repair": "README/Wiki wording reviewed against the frozen implementation; original source fields retain their historical identity."
       }
     },
     "retained_readme_wiki_sha256": {
@@ -1797,10 +1896,17 @@
         "source_path": "README.md",
         "source_git_blob": "f2b385e12b8efb8b39738eb768779243ea1b080f",
         "source_sha256": "dd62f3ba1f1e4f0346c226ada558ec4d70bff0acf9cb0358f999080347fc0a06",
-        "staged_sha256": "076c7f7f472eb2c3b53f908a69d29ede94c8fa2d5bdfecc59615117133814858",
+        "staged_sha256": "3a4a03cb652ad4d3a38dd23da5790a26cc0ef43546a61891353336332eb421c9",
         "source_scope": "first-party-declared-MIT",
         "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
-        "staging_adapted": true
+        "staging_adapted": true,
+        "documentation_history": [
+          {
+            "date": "2026-11-04",
+            "staged_sha256": "076c7f7f472eb2c3b53f908a69d29ede94c8fa2d5bdfecc59615117133814858"
+          }
+        ],
+        "documentation_repair": "README/Wiki wording reviewed against the frozen implementation; original source fields retain their historical identity."
       },
       "docs/PLUGIN_DEVELOPMENT.md": {
         "source_repository": "GakuLoader",
@@ -2259,10 +2365,17 @@
         "source_path": "wiki/Configuration.md",
         "source_git_blob": "017b8842b767b393501c198c5233a6aec410358b",
         "source_sha256": "9ac70400d02675a07974bacdcdc8266143b9c6a2025b2d4f86fa6ed74b9fb65d",
-        "staged_sha256": "ca0a3ca4314a8b63a0c609c42d3b1f2981f68d4f67ae0a89529a5a961b6a6ecf",
+        "staged_sha256": "e217102c02ca2fd0bbaf3ef227943824b43eb2baa55314a0951f4b62f9b31e5c",
         "source_scope": "first-party-declared-MIT",
         "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
-        "staging_adapted": true
+        "staging_adapted": true,
+        "documentation_history": [
+          {
+            "date": "2026-11-04",
+            "staged_sha256": "ca0a3ca4314a8b63a0c609c42d3b1f2981f68d4f67ae0a89529a5a961b6a6ecf"
+          }
+        ],
+        "documentation_repair": "README/Wiki wording reviewed against the frozen implementation; original source fields retain their historical identity."
       },
       "wiki/Hotkeys.md": {
         "source_repository": "GakuLoader",
@@ -2270,10 +2383,17 @@
         "source_path": "wiki/Hotkeys.md",
         "source_git_blob": "7d0800ca3253050fa12f1f1369320545090d279f",
         "source_sha256": "81ec42c4c03849146b8b59aedb78566775d90b94e6e179706ba4bd20013b61f9",
-        "staged_sha256": "2d78c4766da557d0d13eba3e587ed0abd10f94f50593e6fad50fb964faa98542",
+        "staged_sha256": "7f9df7437c2c413c311125bdd757a646d02d84eac00f04807517df1a7e08a177",
         "source_scope": "first-party-declared-MIT",
         "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
-        "staging_adapted": true
+        "staging_adapted": true,
+        "documentation_history": [
+          {
+            "date": "2026-11-04",
+            "staged_sha256": "2d78c4766da557d0d13eba3e587ed0abd10f94f50593e6fad50fb964faa98542"
+          }
+        ],
+        "documentation_repair": "README/Wiki wording reviewed against the frozen implementation; original source fields retain their historical identity."
       },
       "wiki/Troubleshooting.md": {
         "source_repository": "GakuLoader",
@@ -2281,10 +2401,17 @@
         "source_path": "wiki/Troubleshooting.md",
         "source_git_blob": "1396ac14c07c1d2a4b37ec95a67272485f99b2b0",
         "source_sha256": "182d26a05e7b864abcbd44053be8cfa09d122d39f191354b633239bf115bf700",
-        "staged_sha256": "4a0b58579bf983825a0c2383359ac5e871f67566ca35b90d4f3978bbe5b10407",
+        "staged_sha256": "916f0bcd2506735dc14fe5515179df98598796c38d1593c10868cee16af8b70f",
         "source_scope": "first-party-declared-MIT",
         "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
-        "staging_adapted": true
+        "staging_adapted": true,
+        "documentation_history": [
+          {
+            "date": "2026-11-04",
+            "staged_sha256": "4a0b58579bf983825a0c2383359ac5e871f67566ca35b90d4f3978bbe5b10407"
+          }
+        ],
+        "documentation_repair": "README/Wiki wording reviewed against the frozen implementation; original source fields retain their historical identity."
       },
       "wiki/UI.md": {
         "source_repository": "GakuLoader",
@@ -2292,10 +2419,17 @@
         "source_path": "wiki/UI.md",
         "source_git_blob": "576f29c189cbde6a8eb98c27ddbd37755a989a32",
         "source_sha256": "f996a2263c9b8507a52edf0f908da3993415e4fd7e43228401e6bbcea5631f23",
-        "staged_sha256": "af6b4b8b55cbfa263b00520e59bf00aa1f98ad34207a686d5bb4be350928423e",
+        "staged_sha256": "89ba0cfe5482db94b502080e153fc9ba35aa028a95f46f9094dbb5f972cba6f7",
         "source_scope": "first-party-declared-MIT",
         "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
-        "staging_adapted": true
+        "staging_adapted": true,
+        "documentation_history": [
+          {
+            "date": "2026-11-04",
+            "staged_sha256": "af6b4b8b55cbfa263b00520e59bf00aa1f98ad34207a686d5bb4be350928423e"
+          }
+        ],
+        "documentation_repair": "README/Wiki wording reviewed against the frozen implementation; original source fields retain their historical identity."
       }
     },
     "preserved_staging_scope": [
@@ -2310,5 +2444,14 @@
     ],
     "validation_record_workspace_relative": "build/staging_refresh_20261104/Loader/validation.json",
     "validation_scope": "final committed clean source build and synthetic checks; no deployment, game or remote operations"
+  },
+  "documentation_repair_20261104": {
+    "date": "2026-11-04",
+    "base_staging_commit": "fed3972e747249867da60e4962053b76da2962a6",
+    "previous_manifest_sha256": "2cc77dd16822abf0903ddaef5c85434bd3bb3a4f330e272d3b56442ecc5cd6aa",
+    "scope": "Authorized README/documentation corrections and humanizer-zh review against this staged code; no runtime, test, algorithm, parameter or vendor changes.",
+    "runtime_rebuilt": false,
+    "game_acceptance_added": false,
+    "remote_updated": false
   }
 }

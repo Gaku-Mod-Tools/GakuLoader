@@ -1,12 +1,12 @@
-# Hooks
+# Hook 机制与 Actor Entry
 
-本页说明如何在插件中使用 GakuLoader 的 Hook 服务，以及如何介入角色更新入口。
+本页说明 GakuLoader 的 MinHook 独占租约机制、批量安装方式、进程生命周期 Hook 保留，以及共享角色更新入口（Actor Entry）的工作原理。
 
 ---
 
 ## MinHook 独占租约 (`gakuloader.hooks`)
 
-GakuLoader 内部使用 MinHook 提供 Hook 能力。为了防止多个插件抢同一个函数导致死循环或互相覆盖，所有 Hook 采用独占租约：
+GakuLoader 内部使用 MinHook 提供原生代码 Detour 能力。为了避免不同插件争抢同一目标函数导致死锁或逻辑覆盖，所有 Hook 均采用**独占租约**机制：
 
 ```cpp
 GakuHookService hooks{};
@@ -17,13 +17,11 @@ const auto status = hooks.acquire(hooks.context, targetFunc, myDetour, &original
 ```
 
 ### 独占规则
-- 一个目标函数地址全进程**只允许被一个插件持有**。
-- 如果目标地址已经被其他插件 Hook 了，`acquire` 会直接返回 `GAKU_E_CONFLICT`。
-- 不要私自调用 `MH_ALL_HOOKS` 或 `MH_Uninitialize`，这些属于进程共享设施，插件退出时宿主会自动停用该插件申请的 Hook。
+- **单一持有者**：目标函数内存地址全进程仅允许被一个插件持有。若已被其他插件占用，`acquire` 会返回 `GAKU_E_CONFLICT`。
+- **生命周期安全**：禁止插件自行调用 `MH_ALL_HOOKS` 或 `MH_Uninitialize` 等全局操作。插件正常退役时，宿主会自动回收并停用该插件持有的 Hook 租约；分配的跳板（Trampoline）内存会维持保留直至进程结束，防止其他线程处于跳板中时发生崩溃。
 
-### 批量 Hook (`acquireBatch`)
-如果要安装大量 Hook（例如汉化插件同时 Hook 几十上百个函数），逐个调 `acquire` 会导致每次都挂起全进程线程，加起来会卡顿数秒。
-使用 `acquireBatch` 可以在单次挂起窗口中一次性全部使能：
+### 批量安装 (`acquireBatch`)
+当插件需要一次性安装大量 Hook 时（例如汉化插件挂接数十个文本解析函数），逐个调用 `acquire` 会因多次挂起全进程线程而产生明显的卡顿。使用 `acquireBatch` 可以在单次线程挂起窗口中完成 1 至 256 个 Hook 的集中使能：
 
 ```cpp
 GakuHookRequest requests[2] = {
@@ -35,13 +33,21 @@ hooks.acquireBatch(hooks.context, 2, requests);
 
 ---
 
+## 进程生命周期 Hook (`gakuloader.process-lifetime-hooks`)
+
+对于需要跨插件生命周期常驻的关键底层拦截（例如崩溃防御、跨插件基础服务），插件可通过 `include/GakuProcessLifetimeHooks.h` 查询 `gakuloader.process-lifetime-hooks` 扩展服务。
+
+调用 `retainOwnedHooks` 可以将本插件已申请并处于使能状态的 Hook 提升为**进程生命周期级别**。提升后的 Hook 在所属插件退役或宿主退出阶段不会被自动卸载，Detour 将持续生效直至进程完全终止。
+
+---
+
 ## 共享 Actor 更新入口 (`gakuloader.actor-entry`)
 
-在《学园偶像大师》中，角色的姿态、骨骼与镜头跟随主要由 `CampusActorController::LateUpdate` 驱动。
+在《学园偶像大师》中，角色的动作姿态、骨骼变换与视线跟随由 `CampusActorController::LateUpdate`（及 `CampusVirtualActorController`）驱动。
 
-这个函数全进程**只允许由 GakuLoader 自身挂接一个独占 Detour**。如果插件直接对它调 `acquire`，必定会返回 `GAKU_E_CONFLICT`。
+该函数由 GakuLoader 宿主独占挂接。插件若直接对其调用 `acquire`，会直接返回 `GAKU_E_CONFLICT`。
 
-如果你需要在角色每帧更新时插入逻辑（例如读取或修改骨骼姿态、同步字幕跟随），必须通过 `gakuloader.actor-entry` 注册为参与者：
+需要介入角色每帧更新的插件（例如姿态捕捉、骨骼重定向或字幕对齐），必须通过 `gakuloader.actor-entry` 服务注册为参与者：
 
 ```cpp
 GakuActorEntryService actorEntry{};
@@ -50,25 +56,32 @@ host->queryService(host->hostContext, GAKU_SERVICE_ACTOR_ENTRY, GAKU_SERVICE_VER
 GakuActorEntryBinding binding{};
 binding.abiVersion = GAKU_ABI_VERSION;
 binding.structSize = sizeof(binding);
-binding.phase = GAKU_ACTOR_ENTRY_AFTER;   // 或者 GAKU_ACTOR_ENTRY_BEFORE
+binding.phase = GAKU_ACTOR_ENTRY_AFTER;   // 角色原生更新后，或 GAKU_ACTOR_ENTRY_BEFORE（原生更新前）
 binding.name = "my-plugin.pose";
 binding.callback = [](void* userData, void* actor) {
-    // 运行在 Unity 主线程，actor 是当前角色的原始指针
+    // 运行在 Unity 主线程，actor 为当前角色的原生实例指针
 };
 binding.userData = state;
 
 actorEntry.registerEntry(actorEntry.context, &binding);
 ```
 
-### 执行时序
-每次游戏调用 `LateUpdate` 时，宿主按以下固定顺序驱动：
-1. 全部 `BEFORE` 参与者（按注册顺序执行）
-2. 原生 `LateUpdate`（恰好执行一次）
-3. 全部 `AFTER` 参与者（按注册顺序执行）
-4. Loader 统一推进 `onTick` 与 `onActorTick`
+### 执行时序链条
+每次游戏执行 `LateUpdate` 时，宿主按以下严格顺序驱动：
+1. **BEFORE 参与者链**：按注册顺序依次调用所有 `GAKU_ACTOR_ENTRY_BEFORE` 回调。
+2. **原生 `LateUpdate`**：执行原版游戏的角色更新（执行且仅执行一次）。
+3. **AFTER 参与者链**：按注册顺序依次调用所有 `GAKU_ACTOR_ENTRY_AFTER` 回调。
+4. **宿主生命周期**：统一推进 `onTick` 与 `onActorTick` 回调。
 
-### 自动互斥保护
-参与者代码与桌面 UI 回调（`onDesktopUi`）都在宿主的互斥门控保护下运行。也就是说，当参与者在读变量时，桌面 UI 线程不可能插进来写；反过来 UI 正在绘制修改数据时，参与者也不会并发读到一半。因此你可以在参与者里直接读取被 UI 复选框修改的开关变量，无需自己额外加互斥锁。
+### 异常隔离与互斥保护
+- **异常隔离**：若某个参与者的回调函数抛出异常，宿主会自动捕获并记录错误日志，不会导致游戏崩溃或影响后续其他参与者执行。
+- **互斥保护**：参与者回调与桌面 UI 回调（`onDesktopUi`）受宿主内部互斥锁保护。UI 正在绘制修改配置时，参与者不会读到中间态；参与者更新时 UI 也不会并发改写，插件无需自行加锁同步简单共享变量。
+
+---
+
+## 退出故障二分排查标记
+
+如果在排查游戏退出卡死时需要确认故障是否由插件的 Hook 引起，可以在 `gakumas-local/` 目录下放置一个名为 `gml_disable_hooks.txt` 的空文本文件（或设置系统环境变量 `GML_DISABLE_HOOKS=1`）。宿主在启动时会跳过所有业务 MinHook 的挂接，仅保留退出防护机制，用于快速定位问题源头。
 
 ---
 

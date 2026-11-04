@@ -1,37 +1,46 @@
-# UI
+# 桌面界面与 UI 规范
 
-本页说明 GakuLoader 的独立控制窗口与 ImGui 绘制方法。
-
----
-
-## 独立伴随窗口
-
-与很多在游戏画面上直接叠加绘制（Hook `IDXGISwapChain::Present`）的加载器不同，GakuLoader 采用**完全独立的 Win32 + Direct3D 11 伴随窗口**：
-
-- 它运行在独立的线程上，有自己的 `HWND` 和 D3D11 交换链，硬件受限时自动回退到微软 WARP 软件光栅化驱动。
-- 它完全不侵入游戏自己的 D3D12 渲染链，游戏切分辨率或全屏切换不会导致控制窗口崩溃。
-- 启动时从系统目录读取中日韩字体（优先 `msyh.ttc`），按 18px × UI Scale × DPI 栅格化。缩放变化时在帧外重建贴图，`FontGlobalScale` 固定为 1；插件不应缓存宿主 `ImFont*` 跨帧使用。
-- 完整字库栅格上限为 54px、256 MiB RGBA，超限保留上次可用缩放。找不到系统中日韩字体时回退至对应像素大小的默认 Latin 字体。
+本页说明 GakuLoader 独立桌面控制窗口的工作机制、F1 交互、ImGui 面板绘制规范以及文件拖放集成方法。
 
 ---
 
-## 窗口操作与 F1 键
+## 独立伴随窗口架构
 
-- 按 **F1** 可以在“打开控制窗口”与“隐藏/最小化”之间切换。F1 走的是 UI 线程内部消息，不占用游戏主线程帧。
-- 点击控制窗口右上角的关闭按钮（`X`）或者在菜单栏选 `File -> Hide controls`，窗口会自动收缩到系统托盘。
-- 托盘图标左键点击可以重新唤出窗口，右键可以弹出菜单。
+与常见的直接在游戏画面上 Hook `Present` 叠加绘制界面的方式不同，GakuLoader 采用完全独立的 **Win32 + Direct3D 11 伴随窗口**：
+
+- **独立渲染线程**：控制窗口运行在专属的 UI 线程上，拥有独立的 Win32 消息循环和 Direct3D 11 交换链。在显卡硬件受限环境下，会自动回退至微软 WARP 软件光栅化驱动。
+- **不侵入游戏管线**：窗口与游戏的 Direct3D 12 渲染链完全解耦。游戏分辨率变化、全屏与窗口化切换或游戏画面暂停均不会影响控制窗口的稳定运行。
+- **高质量字体栅格化**：启动时自动从系统目录加载中日韩字体（优先选择微软雅黑 `msyh.ttc`），按照 `18px × UI Scale × DPI Scale` 的物理像素尺寸栅格化字库。字库单贴图上限为 54px、256 MiB RGBA，超限时自动回落；未找到 CJK 字体时回退到内建 Latin 字体。
 
 ---
 
-## 怎么在 `onDesktopUi` 里画自己的面板
+## 窗口交互与 F1 键
 
-Manager 自身分为 Plugin List、Appearance、Hotkeys、Settings 四个页签，详见 [快速上手](../docs/QUICKSTART.md#manager-设置)。Appearance 的语言选择会向支持 `gakuloader.language` 的插件公开；宿主不会改写第三方插件文案。
+- 按 **F1** 可以在“显示控制窗口”与“隐藏窗口”之间自由切换。F1 键响应走内部消息派发，不占用游戏主线程帧时间。
+- 点击控制窗口右上角的关闭按钮（`X`）或在菜单栏选择 `File -> Hide controls` 时，窗口会自动隐藏并最小化至 Windows 系统任务栏托盘区域。
+- 单击托盘图标可重新唤出控制窗口，右键托盘图标可弹出退出与操作菜单。
 
-当用户在控制窗口左侧导航栏点击你的插件时，宿主会在每次 UI 渲染时调用插件的 `onDesktopUi` 回调。
+---
+
+## Manager 四大页签与职能边界
+
+控制窗口内建四个全局管理页签：
+
+1. **Plugin List**：展示当前已扫描到的所有插件 DLL、名称、版本、作者及状态指示灯（就绪、加载中旋转动画、错误提示）。
+2. **Appearance**：提供 5 套内建色彩主题切换、UI 缩放比例滑块（50% 到 300%）与 4 种界面语言选择。
+   > **职能边界说明**：Manager 的语言切换会通过 `gakuloader.language` 服务向支持该特性的插件同步语言偏好。此设置仅改变加载器与适配插件的控制面板文字；游戏内部的卡面与剧情汉化需由专门的汉化插件实现。
+3. **Hotkeys**：列出当前所有动作快捷键绑定与冲突状态，支持免重启的可视化按键捕获、修改、解绑与恢复默认。
+4. **Settings**：提供实时控制台日志黑窗口开关、崩溃追踪开关，以及各个插件 DLL 的独立启闭选项。
+
+---
+
+## 在 `onDesktopUi` 中绘制插件面板
+
+当用户在控制窗口左侧导航栏中选中你的插件时，宿主会在每次 UI 渲染帧中调用该插件的 `onDesktopUi` 回调：
 
 ```cpp
 void OnDesktopUi(void* pluginState) {
-    // 1. 声明并填写你工程编译使用的 ImGui 指纹结构
+    // 1. 声明并填写插件编译时使用的 ImGui ABI 指纹
     GakuImGuiAbi abi{
         IMGUI_VERSION_NUM,
         sizeof(ImGuiIO),
@@ -41,32 +50,41 @@ void OnDesktopUi(void* pluginState) {
         sizeof(ImWchar)
     };
 
-    // 2. 绑定到宿主
+    // 2. 向宿主发起桌面 UI 绑定
     GakuDesktopUiBinding binding{};
     if (desktop.bind(&abi, sizeof(binding), &binding) != GAKU_OK) return;
 
-    // 3. 将你的 ImGui 模块指向宿主的上下文与分配器
+    // 3. 将当前模块的 ImGui 上下文与内存分配器指向宿主
     ImGui::SetAllocatorFunctions(binding.alloc, binding.free, binding.allocatorUserData);
     ImGui::SetCurrentContext(static_cast<ImGuiContext*>(binding.imguiContext));
 
-    // 4. 直接调用原生 ImGui 控件绘制你的内容
-    ImGui::TextUnformatted("我的插件配置");
+    // 4. 调用原生 ImGui 控件绘制面板内容
+    ImGui::TextUnformatted("我的插件面板");
     ImGui::Separator();
-    static bool enabled = true;
-    ImGui::Checkbox("启用特定功能", &enabled);
+    static bool featureEnabled = true;
+    ImGui::Checkbox("启用特定功能", &featureEnabled);
 }
 ```
 
-### 几个切忌事项
-- **不要自己建上下文或管生命周期**：在 `onDesktopUi` 内部，宿主已经替你调过 `NewFrame()`，并且已经把内容子区域切好了。**绝对不要**在回调里调用 `CreateContext`、`DestroyContext`、`NewFrame`、`Render` 或 `Present`。
-- **不要在 UI 线程里卡着等游戏主线程**：UI 回调是同步在 UI 线程上画的。如果有配置变更要通知游戏，用 `gakuloader.main-thread` 的 `enqueue` 投递过去，不要在这里同步等待返回。
-- **慢面板检测**：如果你的单次回调耗时超过 16 毫秒（相当于 60 帧掉帧），宿主会在日志里打警告：`plugin panel callback <id> blocked the shell for xx ms`。
+### 绘制规范与注意事项
+- **不要自行管理上下文**：宿主在调用 `onDesktopUi` 之前已为你调用了 `NewFrame()` 并规划好绘制子窗口。严禁在回调内部调用 `CreateContext`、`DestroyContext`、`NewFrame`、`Render` 或 `Present`。
+- **避免阻塞主线程**：UI 回调在独立的 UI 线程中同步执行。若面板上的操作需要通知游戏执行，请通过 `gakuloader.main-thread` 的 `enqueue` 异步投递，不要在 UI 线程同步等待。
+- **慢面板检测**：若单次 UI 绘制回调耗时超过 16 毫秒，宿主会在日志中记录警告：`plugin panel callback <id> blocked the shell for xx ms`。
 
 ---
 
-## 文本框防误触
+## 文件拖放集成 (`gakuloader.file-drop`)
 
-当你在控制窗口里的 ImGui 文本框里点鼠标打字时，加载器的热键轮询线程会自动暂停普通字母键和符号键的分发。防止你在输入框里敲 `W`、`A`、`S`、`D` 或快捷键字母时，误触游戏里的 Mod 动作。打完字点一下其他空白处失去焦点即可恢复。
+插件面板支持直接接收外部拖入的文件（如将动作文件或模型文件直接拖入面板加载）：
+
+1. 在 `onDesktopUi` 回调中，调用 `fileDrop.setTarget` 传入当前 ImGui 视口中的接收矩形坐标（`left`, `top`, `right`, `bottom`）。
+2. 调用 `fileDrop.poll` 检查并提取用户拖入的文件路径列表。单次最大支持接收 256 个文件、1MB 路径总长度。
+
+---
+
+## 输入框焦点与按键防误触
+
+当用户在控制窗口的 ImGui 文本输入框中点击打字时，宿主的热键轮询系统会自动置位打字保护标志，暂停分发字母键与标点符号键。这样可以避免在输入文字时意外触发游戏内的 Mod 功能快捷键。光标离开输入框或失焦后自动恢复正常分发。
 
 ---
 

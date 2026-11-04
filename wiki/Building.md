@@ -1,91 +1,104 @@
-# Building
+# 源码构建与测试
 
-## 工具链
+本页说明 GakuLoader 宿主的开发环境准备、源码编译步骤、最小插件构建与测试套件运行方法。
 
-安装 Visual Studio 的“使用 C++ 的桌面开发”工作负载及 Windows SDK，支持：
+---
 
-- VS 2022 / MSVC v143。
-- VS 2026 / MSVC v145。
+## 开发环境准备
 
-根目录的 [GakuLoader.slnx](../GakuLoader.slnx) 用于支持该格式的 IDE；脚本直接构建 `.vcxproj`，
-不要求旧版 VS 2022 识别 `.slnx`。公共参数定义在 [Directory.Build.props](../Directory.Build.props)。
+构建 GakuLoader 需要 Windows 64 位开发环境，支持以下工具链：
 
-宿主使用 C++20、UTF-8 源码、Release `/MT`（Debug `/MTd`）静态 CRT。
-禁止为宿主启用 Control Flow Guard（`/guard:cf`），避免拦截 MinHook 动态 trampoline。
-宿主不支持 MinGW；MinGW 仅用于跨编译器测试夹具。
+- **编译器**：Visual Studio 2022 (MSVC v143) 或 Visual Studio 2026 (MSVC v145)。
+- **工作负载**：在 Visual Studio Installer 中勾选“使用 C++ 的桌面开发”及 Windows 10/11 SDK。
+- **方案文件**：根目录包含 [GakuLoader.slnx](../GakuLoader.slnx)，公共构建属性配置在 [Directory.Build.props](../Directory.Build.props) 中。
+- **编译参数规范**：
+  - C++ 标准：C++20。
+  - 运行时库：Release 采用 `/MT`，Debug 采用 `/MTd`（静态链接 CRT，避免依赖外部 VC++ 运行库）。
+  - 安全选项：禁止开启 Control Flow Guard（`/guard:cf`），避免拦截 MinHook 动态生成的跳板代码。
 
-## 本地构建
+---
 
-构建所需的 ImGui 和 MinHook 源码已包含在 `deps/`，无需初始化子模块或准备相邻仓库。
+## 获取源码与子模块
 
-在仓库根目录执行：
+克隆仓库后，确保初始化并更新所有子模块（包括 MinHook、ImGui 等）：
 
 ```powershell
-# 自动选择已安装的 v143/v145；Release 输出 build/version.dll
+git submodule update --init --recursive
+```
+
+---
+
+## 本地编译步骤
+
+在仓库根目录下运行 PowerShell 构建脚本：
+
+```powershell
+# 自动检测已安装的 MSVC 工具集，编译 Release 版本（输出至 build/version.dll）
 .\build.ps1
 
-# 指定工具集
+# 显式指定使用的工具集版本（v143 或 v145）
 .\build.ps1 -PlatformToolset v143
 
-# Debug 输出 build/debug/version.dll
+# 编译 Debug 调试版本（输出至 build/debug/version.dll）
 .\build.ps1 -Configuration Debug
 
-# 只将候选复制到仓库内指定位置
+# 指定输出 DLL 文件的路径
 .\build.ps1 -OutputDll build/candidate/version.dll
 ```
 
-脚本通过 `vswhere` 定位 MSBuild，并在构建前检查工具集和依赖源码；Windows SDK 是否完整由 MSBuild 校验。
-`build.ps1` 始终只构建本地产物；`-OutputDll` 仅复制候选文件。本仓不接受 `-SkipDeploy` 或 `-DeployPath`，
-也不会根据默认游戏路径安装。整套产品部署由上层发布包负责，见 [Installation](Installation.md)。
+构建脚本通过 `vswhere` 定位 MSBuild，并在编译前检查依赖项完整性。关于编译产物的安装放置与目录布局，参见 [安装与部署](Installation.md)。
 
-## 第一个插件
+---
 
-最小插件使用同一套 MSVC 发现逻辑，不依赖宿主、MinGW 或游戏：
+## 编译最小插件并验证
+
+示例插件 `examples/minimal-plugin/` 拥有独立的构建与验证逻辑，不依赖游戏客户端即可离线验证 ABI 协商与基础功能：
 
 ```powershell
+# 编译示例插件
 .\examples\minimal-plugin\build.ps1
+
+# 运行离线验证（在模拟宿主中测试加载、激活与生命周期日志）
 .\examples\minimal-plugin\verify.ps1
 ```
 
-第二条命令使用合成宿主验证查询、激活和生命周期日志。
-源码及线程规则见 [Writing a Plugin](Writing-a-Plugin.md)。
+插件代码结构与生命周期说明参见 [编写插件](Writing-a-Plugin.md)。
 
-## 测试
+---
 
-MSVC 路径可以独立检查文档、最小插件和本地宿主包：
+## 运行自动化测试
+
+在 MSVC 环境下可以独立运行文档静态检查、打包契约验证以及宿主测试：
 
 ```powershell
-.\tools\test-docs.ps1
+# 验证文档链接完整性、代码块一致性与命令规范
+.\tools\test-docs.ps1 -StaticOnly
+
+# 验证编译产物的导出符号与 CRT 依赖规范
 .\tools\test-package.ps1
+
+# 构建测试套件（跳过外部 MinGW 夹具）
 .\tests\build-tests.ps1 -SkipFixtures
+
+# 运行基础测试套件
 .\tests\run-all.ps1 -SkipBuild -SkipFixtures -Only docs,frame-pump
 ```
 
-`test-package.ps1` 检查本地 `version.dll` 的 x64、代理导出和 CRT 依赖边界，不复制到游戏。
-旧名 `tools/test-deployment.ps1` 仅作为兼容转发，已不表示部署或回滚实测。
-
-完整矩阵另外需要 MinGW 的 `gcc`、`g++`，用于生成异构 DLL；其缺失必须报告为未运行的可选兼容检查，
-不能把不存在的夹具当作宿主契约失败。`run-all.ps1 -SkipFixtures` 明确将依赖夹具的套件标为
-`SKIP_DEPENDENCY`，报告总状态为 `PASS_WITH_SKIPS`，不冒充完整矩阵通过。安装 MinGW 后确保工具在 PATH，或向 `tests/build-fixtures.ps1`
-传入 `-MinGwBin` 指定其 bin 目录。
+若需运行包含异构编译器验证的完整测试矩阵，可安装 MinGW-w64 并将其 `bin` 目录加入 PATH，随后执行：
 
 ```powershell
-# 构建 MSVC 测试及 MinGW 夹具，再执行完整矩阵
+# 构建 MSVC 与 MinGW 测试夹具并执行完整矩阵
 .\tests\run-all.ps1
-
-# 已完成对应构建时，可选跑具体套件
-.\tests\run-all.ps1 -SkipBuild -Only host,frame-pump
 ```
 
-测试报告写入 `build/tests/report.json`。完整矩阵覆盖文档、真实 fixture 加载、无 actor 帧泵、
-诊断边界、原生对话框和 D3D11 WARP 等；窗口相关测试需要可用的 Windows 桌面会话。
-具体未运行项、缺失依赖与失败要分别报告。离线检查不替代实机验收。
+测试报告将生成在 `build/tests/report.json` 中。涉及桌面窗口与 WARP 光栅化的测试需要当前环境具备可用的 Windows 桌面会话。
 
-## 自动验证
+---
 
-[Windows MSVC 工作流](../.github/workflows/windows-msvc.yml) 准备了 VS2022/v143 的宿主、
-MSVC 测试构建、独立插件、文档链接与命令、本地包契约，以及无窗口帧泵、C ABI、MinHook 检查。
-MinGW 异构矩阵和真实桌面窗口检查需要相应的工具链与 Windows 桌面环境。
+## 常见构建问题排查
+
+- **遇到 `LNK1101: 无法打开模块调试源文件 (MSPDB140.DLL)`**：通常是由于杀毒软件占用或符号服务权限受限引起，可尝试将构建目录加入防病毒排除项，或在管理员权限终端中重新构建。
+- **子模块缺失报错**：运行 `git submodule update --init --recursive` 重新拉取完整的第三方依赖库。
 
 ---
 

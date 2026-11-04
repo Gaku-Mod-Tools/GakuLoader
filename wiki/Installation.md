@@ -1,46 +1,54 @@
-# Installation
+# 安装与部署
 
-## 安装与备份
+本页说明 GakuLoader 的安装目录要求、文件放置、配置备份、升级与卸载步骤。
 
-普通用户使用与插件配套的产品发布包；源码开发者可使用本仓构建的 `build/version.dll`。
-不要混搭来自不同阶段的 Loader、插件和导入器文件。
+---
 
-1. 确认游戏已完全退出。
-2. 如果游戏根目录原有 `version.dll`，先备份并确认它属于哪个工具；保留可恢复副本。
-3. 将配套的 `version.dll` 放到与 `gakumas.exe` 同层的位置。
-4. 将配套插件 DLL 放进 `gakumas-local/plugins/`，插件附属文件按对应产品指南放置。
+## 安装步骤
+
+安装前请确认游戏已完全退出。
+
+1. 确认游戏根目录（包含 `gakumas.exe` 的文件夹）。
+2. 如果游戏根目录下已有其他工具的 `version.dll`，请先备份并移走该文件。
+3. 将配套的 `version.dll` 放置在与 `gakumas.exe` 同级的根目录下。
+4. 在游戏根目录下创建 `gakumas-local/plugins/` 目录，将所需插件的 DLL 文件放置在该目录中。
+
+安装后的标准文件布局如下：
 
 ```text
 <游戏根目录>/
 ├── gakumas.exe
-├── version.dll                    GakuLoader
-├── gakuloader.ini                 可选，升级时保留个人配置
-└── gakumas-local/
-    ├── gakuloader.log
-    └── plugins/
-        ├── GakuMotion.dll
-        └── GakuLocalify.dll
+├── version.dll                    GakuLoader 核心代理文件
+├── gakuloader.ini                 宿主配置文件（可选，首次运行若不存在会自动按默认配置运行）
+└── gakumas-local/                 Mod 与插件工作目录
+    ├── gakuloader.log             运行日志文件
+    └── plugins/                   插件存放目录
+        ├── GakuMotion.dll         示例插件：动作播放
+        └── GakuLocalify.dll       示例插件：界面汉化
 ```
 
-启动游戏后按 **F1** 打开控制窗口，并查看 `gakumas-local/gakuloader.log` 中的扫描、
-拒绝原因与 `Activated` 记录。看到宿主窗口不代表每个插件都已激活；插件的使用验收见其产品指南。
+启动游戏后，按 **F1** 键可以呼出 GakuLoader 桌面控制窗口。同时可以查看 `gakumas-local/gakuloader.log`，确认插件是否正常出现 `Activated` 激活日志。
 
-## 升级与卸载
+---
 
-升级前保留旧 `version.dll`、插件配套文件和自己的 `gakuloader.ini`。关闭游戏后整体替换配套文件，
-不要用默认配置覆盖个人开关或空热键绑定。发生问题时退出游戏，再恢复同一组备份。
+## 升级与配置保留
 
-卸载时退出游戏，将根目录的 Loader `version.dll` 移走；若安装前有其它代理，恢复它的原始副本。
-插件、日志和配置可以先保留。移走 Loader 后这些插件不会再由它加载。
+升级 GakuLoader 或插件时，请先完全退出游戏：
 
-## 仓库与部署职责
+1. 保留现有的 `gakuloader.ini` 配置文件，避免自定义的外观、插件开关或修改后的快捷键被重置。
+2. 保留 `gakumas-local/` 下的插件个人数据与配置文件。
+3. 替换游戏根目录下的 `version.dll` 或 `gakumas-local/plugins/` 下的插件 DLL。
+4. 重新启动游戏完成升级。若遇到异常，将备份的文件换回即可恢复。
 
-[GakuLoader](../README.md) 是当前宿主源码入口。本仓 `build.ps1` 只做本地构建，
-安装时按上述文件布局手动放置，或使用业务插件提供的配套安装包。
+---
 
-包含 Loader、GakuMotion 与导入器的产品发布包负责配套版本、备份、校验和回滚流程。
-仓库测试 `tools/test-package.ps1` 只验证本地构建产物；旧名 `tools/test-deployment.ps1`
-仅为兼容转发，不能作为实际安装或回滚成功的证据。
+## 卸载
+
+卸载 GakuLoader 只需要退出游戏，并将游戏根目录下的 `version.dll` 删除或移走即可：
+
+- 移走 `version.dll` 后，游戏恢复为原版启动状态，不再加载任何 Mod 插件。
+- `gakumas-local/` 目录中存放的是日志、配置文件与插件文件，可以根据需要保留或直接删除。
+- 如果安装前有备份其他工具的原版代理 `version.dll`，卸载后将其恢复至游戏根目录。
 
 ---
 

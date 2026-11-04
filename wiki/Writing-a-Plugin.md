@@ -1,22 +1,41 @@
-# Writing a Plugin
+# 编写插件
 
-本页说明如何使用 `include/GakuPlugin.h` 编写一个 GakuLoader 插件。
-
----
-
-## 插件基本规则
-
-1. **只导出一个函数**：插件 DLL 只需要导出 `GakuPlugin_Query`。不要导出非标准的业务符号。
-2. **纯 C 接口**：接口上只传基础类型和结构体指针，不要把 `std::string`、`std::vector` 之类的 C++ 容器传过边界。
-3. **内存谁分配谁释放**：不要跨 DLL 释放另一方分配的内存。
-4. **异常不要抛给宿主**：插件回调内部有任何可能抛异常的代码，必须在自己的回调里 `try ... catch` 捕获。异常漏出来会导致插件被宿主标记为失效（Retire）或引起崩溃。
-5. **在对的时机做对的事**：`activate` 时游戏引擎和 IL2CPP 都还没初始化，绝对不要在这时候调 IL2CPP 函数或建托管对象。
+本页说明如何使用 `include/GakuPlugin.h` 从零开始编写并验证一个符合 C-ABI v1 规范的 GakuLoader 插件。
 
 ---
 
-## 最小可用插件
+## 插件核心规则
 
-以下代码取自仓库 `examples/minimal-plugin/MinimalPlugin.cpp`：
+1. **单一导出函数**：插件 DLL 仅需导出 `GakuPlugin_Query` 一个入口，不需要导出额外的内部符号。
+2. **纯 C ABI 边界**：跨 DLL 调用只传递基础数值类型和普通 C 结构体指针，严禁将 `std::string` 或 `std::vector` 等 STL 容器跨边界传递。
+3. **内存谁分配谁释放**：插件内分配的内存由插件自身释放，宿主分配的资源由宿主回收。
+4. **内部捕获异常**：插件的所有回调函数必须在内部使用 `try ... catch` 捕获异常，绝不能让 C++ 异常泄漏到宿主或 Unity 引擎中。
+5. **遵循时序约束**：在 `activate` 阶段，Unity 引擎与 IL2CPP 尚未完成初始化，此时只能执行本地配置读取与服务注册，禁止调用托管对象或解析 IL2CPP 函数。
+
+---
+
+## 插件开发五步实战
+
+### 第一步：创建工程并引入头文件
+创建一个 Windows x64 DLL 动态链接库项目，将 GakuLoader 仓库中的 `include/GakuPlugin.h` 复制到工程的头文件目录中引用。
+
+### 第二步：定义插件状态与生命周期函数
+实现插件所需的生命周期回调，未使用的回调在描述符中置为 `nullptr` 即可。
+
+### 第三步：编写导出函数 `GakuPlugin_Query`
+实现并导出标准查询函数，完成 ABI 版本协商与元数据填写。
+
+### 第四步：编译为 x64 DLL
+使用 MSVC 编译为 64 位 DLL。推荐在项目属性中使用 `/MT`（静态链接 CRT），避免因用户电脑缺少 VC++ 运行时分发包而导致加载失败。
+
+### 第五步：部署到游戏插件目录并验证
+将编译产出的 DLL 复制到 `<游戏根目录>/gakumas-local/plugins/` 目录下，启动游戏，在 `gakumas-local/gakuloader.log` 中确认加载与激活信息。
+
+---
+
+## 最小可用插件代码
+
+以下代码源自仓库 `examples/minimal-plugin/MinimalPlugin.cpp`，展示了协商 ABI v1、写入日志和记录帧计数的完整流程：
 
 ```cpp
 // Minimal GakuLoader plugin. It negotiates ABI v1, writes to the loader log and
@@ -86,27 +105,17 @@ extern "C" GAKU_PLUGIN_EXPORT GakuStatus GakuPlugin_Query(
 
 ## 独立构建与离线验证
 
-从仓库根目录执行，只需要 VS 2022 / v143 或 VS 2026 / v145 的 MSVC 和 Windows SDK：
+在具备 Visual Studio 2022 (MSVC v143) 或 Visual Studio 2026 (MSVC v145) 的开发环境中，可直接在仓库根目录下运行 PowerShell 脚本进行独立编译与模拟宿主验证，无需启动游戏：
 
 ```powershell
+# 编译示例插件
 .\examples\minimal-plugin\build.ps1
+
+# 运行离线验证（在合成宿主中加载并测试 ABI 握手、激活与日志输出）
 .\examples\minimal-plugin\verify.ps1
 ```
 
-此入口不要求先构建 Loader 或 MinGW 夹具。验证器在合成宿主中加载编译后的 DLL，
-检查 `GakuPlugin_Query`、激活与生命周期日志，不启动游戏。
-构建工具集可以用 `-PlatformToolset v143` 或 `v145` 指定；`-Configuration Debug` 选择调试版本。
-
-真正接入游戏时，先退出游戏，再按产品安装说明放置 `MinimalPlugin.dll`，
-确认 `gakumas-local/gakuloader.log` 中出现 `example.minimal activated`。
-离线验证不代表 actor、UI 或游戏画面已经验收。
-
-## 编译建议
-
-- **平台**：Windows x64 DLL。
-- **运行时库**：建议使用 `/MT`（静态链接 CRT），避免因为使用者机器上缺少特定 VC++ Redistributable 导致插件加载失败。
-- **输出位置**：编译完成后把 DLL 放进 `gakumas-local/plugins/` 目录即可。
-- **头文件更新**：不要保留历史遗留的旧版接口（`GmlPlugin_Query`、`GakumasModPlugin.h`）。旧接口已经被彻底删除，加载器只认导出 `GakuPlugin_Query` 的插件。
+可通过 `-PlatformToolset v143` 或 `v145` 指定工具集，或使用 `-Configuration Debug` 构建调试版本。
 
 ---
 
