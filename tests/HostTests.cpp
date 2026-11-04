@@ -14,6 +14,7 @@
 #include <mutex>
 #include <cstdio>
 #include <cstring>
+#include <cwchar>
 #include <string>
 #include <vector>
 #include <algorithm>
@@ -26,6 +27,8 @@ void Shutdown() {}
 const GakuDesktopUiService* GetService() { return nullptr; }
 const GakuDesktopWindowService* GetWindowService() { return nullptr; }
 const GakuAppearanceService* GetAppearanceService() { return nullptr; }
+GakuStatus SetFileDropTarget(const char*, const GakuFileDropTarget*) { return GAKU_E_UNAVAILABLE; }
+GakuStatus PollFileDrop(const char*, uint32_t, GakuFileDropResult*, uint32_t, char*) { return GAKU_E_UNAVAILABLE; }
 GakuStatus RequestShowPanel(const char*) { return GAKU_E_UNAVAILABLE; }
 void ToggleManager() {}
 bool WantsTextInput() { return false; }
@@ -99,6 +102,176 @@ void DeleteMarker(const std::filesystem::path& pluginDir, const wchar_t* name) {
 size_t ConflictCount() {
     const auto rows = GakuLoader::Hotkeys::Snapshot();
     return static_cast<size_t>(std::count_if(rows.begin(), rows.end(), [](const auto& row) { return row.conflicted; }));
+}
+
+GakuLoader::Hotkeys::Row HotkeyRow(const char* pluginId, const char* actionId) {
+    const auto rows = GakuLoader::Hotkeys::Snapshot();
+    const auto row = std::find_if(rows.begin(), rows.end(), [&](const auto& item) {
+        return item.pluginId == pluginId && item.actionId == actionId;
+    });
+    assert(row != rows.end());
+    return *row;
+}
+
+void TestHotkeyIdentities(const std::filesystem::path& root) {
+    using namespace GakuLoader::Hotkeys;
+    const auto legacyFile = root / L"hotkey-legacy-identities.ini";
+    assert(WritePrivateProfileStringW(L"hotkeys", nullptr, nullptr, legacyFile.c_str()));
+    assert(WritePrivateProfileStringW(L"hotkeys", L"a.b.c", L"Ctrl+F20", legacyFile.c_str()));
+    int ownerA = 0, ownerB = 0;
+    GakuHotkeyBinding a{1, sizeof(a), "c", "A", VK_F13, 0, [](void*) {}, nullptr};
+    GakuHotkeyBinding b{1, sizeof(b), "b.c", "B", VK_F14, 0, [](void*) {}, nullptr};
+    LoadOverrides(legacyFile);
+    assert(Register(&ownerA, "a.b", &a) == GAKU_OK);
+    assert(HotkeyRow("a.b", "c").virtualKey == VK_F20); // unique old alias remains compatible
+    assert(Register(&ownerB, "a", &b) == GAKU_OK);
+    assert(HotkeyRow("a.b", "c").virtualKey == VK_F13 && !HotkeyRow("a.b", "c").overridden);
+    assert(HotkeyRow("a", "b.c").virtualKey == VK_F14 && !HotkeyRow("a", "b.c").overridden);
+    RetireOwner(&ownerB);
+    assert(HotkeyRow("a.b", "c").virtualKey == VK_F20); // uniqueness is restored
+    RetireOwner(&ownerA);
+    LoadOverrides(legacyFile);
+    assert(Register(&ownerB, "a", &b) == GAKU_OK); // reverse order has the same final result
+    assert(HotkeyRow("a", "b.c").virtualKey == VK_F20);
+    assert(Register(&ownerA, "a.b", &a) == GAKU_OK);
+    assert(HotkeyRow("a.b", "c").virtualKey == VK_F13);
+    assert(HotkeyRow("a", "b.c").virtualKey == VK_F14);
+    assert(GakuLoader::ReadConfigValue(legacyFile, L"hotkeys", L"a.b.c") == L"Ctrl+F20");
+
+    const auto identityFile = root / L"hotkey-exact-identities.ini";
+    assert(WritePrivateProfileStringW(L"hotkeys", nullptr, nullptr, identityFile.c_str()));
+    assert(WritePrivateProfileStringW(L"hotkeys", L"a.b.c", L"Ctrl+F20", identityFile.c_str()));
+    LoadOverrides(identityFile);
+    assert(SetOverride(identityFile, "a.b", "c", VK_F15, 0) == GAKU_OK);
+    assert(HotkeyRow("a.b", "c").virtualKey == VK_F15);
+    assert(HotkeyRow("a", "b.c").virtualKey == VK_F14);
+    assert(SetOverride(identityFile, "a", "b.c", VK_F16, GAKU_HOTKEY_MOD_ALT) == GAKU_OK);
+    // Assert the public persistence format with literals, not a copy of its encoder.
+    assert(GakuLoader::ReadConfigValue(identityFile, L"hotkeys", L"v2:612e62:63") == L"F15");
+    assert(GakuLoader::ReadConfigValue(identityFile, L"hotkeys", L"v2:61:622e63") == L"Alt+F16");
+    assert(GakuLoader::ReadConfigValue(identityFile, L"hotkeys", L"a.b.c") == L"Ctrl+F20");
+    PollResult polled;
+    Poll(Context(), polled); // released sample after manager apply
+    Hold(VK_F15); Poll(Context(), polled);
+    assert(polled.actions.size() == 1 && polled.actions[0].owner == &ownerA);
+    Release(VK_F15); Poll(Context(), polled);
+    const auto blocked = root / L"hotkey-identities-directory";
+    std::filesystem::create_directories(blocked);
+    assert(SetOverride(blocked, "a.b", "c", VK_F17, 0) == GAKU_E_INTERNAL);
+    assert(ResetOverride(blocked, "a.b", "c") == GAKU_E_INTERNAL);
+    a.virtualKey = VK_F18;
+    assert(Register(&ownerA, "a.b", &a) == GAKU_OK);
+    assert(HotkeyRow("a.b", "c").virtualKey == VK_F15); // failed writes did not change cache
+    RetireOwner(&ownerA); RetireOwner(&ownerB);
+    LoadOverrides(identityFile);
+    assert(Register(&ownerB, "a", &b) == GAKU_OK);
+    assert(Register(&ownerA, "a.b", &a) == GAKU_OK);
+    assert(HotkeyRow("a.b", "c").virtualKey == VK_F15);
+    assert(HotkeyRow("a", "b.c").virtualKey == VK_F16 &&
+        HotkeyRow("a", "b.c").modifiers == GAKU_HOTKEY_MOD_ALT);
+    assert(ResetOverride(identityFile, "a.b", "c") == GAKU_OK);
+    assert(HotkeyRow("a.b", "c").virtualKey == VK_F18 && !HotkeyRow("a.b", "c").overridden);
+    assert(HotkeyRow("a", "b.c").virtualKey == VK_F16);
+    assert(GakuLoader::ReadConfigValue(identityFile, L"hotkeys", L"v2:612e62:63") == L"<default>");
+    assert(GakuLoader::ReadConfigValue(identityFile, L"hotkeys", L"a.b.c") == L"Ctrl+F20");
+    RetireOwner(&ownerA); RetireOwner(&ownerB);
+    LoadOverrides(identityFile);
+    a.virtualKey = VK_F19;
+    assert(Register(&ownerA, "a.b", &a) == GAKU_OK);
+    assert(HotkeyRow("a.b", "c").virtualKey == VK_F19 && !HotkeyRow("a.b", "c").overridden);
+    // The legacy alias is now unique, but the exact default marker still wins.
+    assert(Register(&ownerB, "a", &b) == GAKU_OK);
+    assert(HotkeyRow("a", "b.c").virtualKey == VK_F16);
+    RetireOwner(&ownerA); RetireOwner(&ownerB);
+
+    const auto caseFile = root / L"hotkey-case-identities.ini";
+    assert(WritePrivateProfileStringW(L"hotkeys", nullptr, nullptr, caseFile.c_str()));
+    assert(WritePrivateProfileStringW(L"hotkeys", L"case.plugin.go", L"F20", caseFile.c_str()));
+    assert(WritePrivateProfileStringW(L"hotkeys", L"case.action.go", L"F21", caseFile.c_str()));
+    int upperOwner = 0, lowerOwner = 0, actionOwner = 0;
+    GakuHotkeyBinding upper{1, sizeof(upper), "go", "Upper plugin", VK_F13, 0, [](void*) {}, nullptr};
+    GakuHotkeyBinding lower{1, sizeof(lower), "go", "Lower plugin", VK_F14, 0, [](void*) {}, nullptr};
+    GakuHotkeyBinding actionUpper{1, sizeof(actionUpper), "Go", "Upper action", VK_F15, 0, [](void*) {}, nullptr};
+    GakuHotkeyBinding actionLower{1, sizeof(actionLower), "go", "Lower action", VK_F16, 0, [](void*) {}, nullptr};
+    LoadOverrides(caseFile);
+    assert(Register(&upperOwner, "Case.Plugin", &upper) == GAKU_OK);
+    assert(HotkeyRow("Case.Plugin", "go").virtualKey == VK_F20);
+    assert(Register(&lowerOwner, "case.plugin", &lower) == GAKU_OK);
+    assert(HotkeyRow("Case.Plugin", "go").virtualKey == VK_F13);
+    assert(HotkeyRow("case.plugin", "go").virtualKey == VK_F14);
+    assert(Register(&actionOwner, "case.action", &actionUpper) == GAKU_OK);
+    assert(HotkeyRow("case.action", "Go").virtualKey == VK_F21);
+    assert(Register(&actionOwner, "case.action", &actionLower) == GAKU_OK);
+    assert(HotkeyRow("case.action", "Go").virtualKey == VK_F15);
+    assert(HotkeyRow("case.action", "go").virtualKey == VK_F16);
+    assert(SetOverride(caseFile, "Case.Plugin", "go", VK_F17, 0) == GAKU_OK);
+    assert(SetOverride(caseFile, "case.plugin", "go", VK_F18, 0) == GAKU_OK);
+    assert(SetOverride(caseFile, "case.action", "Go", VK_F19, 0) == GAKU_OK);
+    assert(SetOverride(caseFile, "case.action", "go", VK_F22, 0) == GAKU_OK);
+    assert(GakuLoader::ReadConfigValue(caseFile, L"hotkeys", L"v2:436173652e506c7567696e:676f") == L"F17");
+    assert(GakuLoader::ReadConfigValue(caseFile, L"hotkeys", L"v2:636173652e706c7567696e:676f") == L"F18");
+    assert(GakuLoader::ReadConfigValue(caseFile, L"hotkeys", L"v2:636173652e616374696f6e:476f") == L"F19");
+    assert(GakuLoader::ReadConfigValue(caseFile, L"hotkeys", L"v2:636173652e616374696f6e:676f") == L"F22");
+    assert(SetOverride(caseFile, "CASE.PLUGIN", "go", VK_F23, 0) == GAKU_E_UNAVAILABLE);
+    assert(ResetOverride(caseFile, "case.action", "GO") == GAKU_E_UNAVAILABLE);
+    assert(ResetOverride(caseFile, "case.action", "Go") == GAKU_OK);
+    assert(HotkeyRow("case.action", "Go").virtualKey == VK_F15);
+    assert(HotkeyRow("case.action", "go").virtualKey == VK_F22);
+    RetireOwner(&upperOwner); RetireOwner(&lowerOwner); RetireOwner(&actionOwner);
+    LoadOverrides(caseFile);
+    assert(Register(&lowerOwner, "case.plugin", &lower) == GAKU_OK);
+    assert(Register(&upperOwner, "Case.Plugin", &upper) == GAKU_OK);
+    assert(Register(&actionOwner, "case.action", &actionLower) == GAKU_OK);
+    actionUpper.virtualKey = VK_F23;
+    assert(Register(&actionOwner, "case.action", &actionUpper) == GAKU_OK);
+    assert(HotkeyRow("Case.Plugin", "go").virtualKey == VK_F17);
+    assert(HotkeyRow("case.plugin", "go").virtualKey == VK_F18);
+    assert(HotkeyRow("case.action", "go").virtualKey == VK_F22);
+    assert(HotkeyRow("case.action", "Go").virtualKey == VK_F23 && !HotkeyRow("case.action", "Go").overridden);
+    assert(GakuLoader::ReadConfigValue(caseFile, L"hotkeys", L"case.plugin.go") == L"F20");
+    assert(GakuLoader::ReadConfigValue(caseFile, L"hotkeys", L"case.action.go") == L"F21");
+    RetireOwner(&upperOwner); RetireOwner(&lowerOwner); RetireOwner(&actionOwner);
+
+    // Hex keys can exceed the old 8192-character section buffer in normal use.
+    const auto longFile = root / L"hotkey-long-identities.ini";
+    assert(WritePrivateProfileStringW(L"hotkeys", nullptr, nullptr, longFile.c_str()));
+    int longOwner = 0, watchOwner = 0;
+    std::vector<std::string> actions;
+    for (int i = 0; i < 45; ++i) actions.push_back(std::string(96, 'x') + std::to_string(i));
+    LoadOverrides(longFile);
+    for (size_t i = 0; i < actions.size(); ++i) {
+        GakuHotkeyBinding item{1, sizeof(item), actions[i].c_str(), "Long identity", VK_F13, 0, [](void*) {}, nullptr};
+        assert(Register(&longOwner, "long.owner", &item) == GAKU_OK);
+        assert(SetOverride(longFile, "long.owner", item.actionId, VK_F14 + static_cast<uint32_t>(i % 11), GAKU_HOTKEY_MOD_ALT) == GAKU_OK);
+    }
+    std::vector<wchar_t> oldBuffer(8192);
+    assert(GetPrivateProfileSectionW(L"hotkeys", oldBuffer.data(), static_cast<DWORD>(oldBuffer.size()), longFile.c_str()) == oldBuffer.size() - 2);
+    RetireOwner(&longOwner);
+    LoadOverrides(longFile);
+    for (size_t i = 0; i < actions.size(); ++i) {
+        GakuHotkeyBinding item{1, sizeof(item), actions[i].c_str(), "Long identity", VK_F13, 0, [](void*) {}, nullptr};
+        assert(Register(&longOwner, "long.owner", &item) == GAKU_OK);
+        const auto row = HotkeyRow("long.owner", item.actionId);
+        assert(row.virtualKey == VK_F14 + i % 11 && row.modifiers == GAKU_HOTKEY_MOD_ALT && row.overridden);
+    }
+    GakuHotkeyBinding watch{1, sizeof(watch), "watch", "Truncation watch", VK_F13, 0, [](void*) {}, nullptr};
+    assert(Register(&watchOwner, "truncation", &watch) == GAKU_OK);
+    assert(SetOverride(longFile, "truncation", "watch", VK_F15, 0) == GAKU_OK);
+    // Overflow must reject the entire section, including its valid first entries.
+    // Use a new path so this native file write never relies on INI cache flushing.
+    const auto overflowFile = root / (L"hotkey-overflow-" + std::to_wstring(GetCurrentProcessId()) + L".ini");
+    FILE* overflow = _wfopen(overflowFile.c_str(), L"w");
+    assert(overflow);
+    std::fprintf(overflow, "[hotkeys]\nv2:7472756e636174696f6e:7761746368=F16\n");
+    const std::string padding(160, 'q');
+    for (int i = 0; i < 200; ++i) std::fprintf(overflow, "padding%d.%s=F20\n", i, padding.c_str());
+    std::fclose(overflow);
+    LoadOverrides(overflowFile);
+    assert(HotkeyRow("truncation", "watch").virtualKey == VK_F15);
+    watch.virtualKey = VK_F14;
+    assert(Register(&watchOwner, "truncation", &watch) == GAKU_OK);
+    assert(HotkeyRow("truncation", "watch").virtualKey == VK_F15); // rejected load kept the old cache too
+    RetireOwner(&longOwner); RetireOwner(&watchOwner);
 }
 
 // --- Shared actor entry ------------------------------------------------------
@@ -327,6 +500,7 @@ int wmain(int argc, wchar_t** argv) {
     // The documented ini key must bind the real Motion owner-local action,
     // without accidentally requiring "gakumotion.gakumotion.show-gui".
     const auto overrideFile = root / L"hotkey-override-test.ini";
+    assert(WritePrivateProfileStringW(L"hotkeys", nullptr, nullptr, overrideFile.c_str()));
     assert(WritePrivateProfileStringW(L"hotkeys", L"gakumotion.show-gui", L"Ctrl+Shift+M", overrideFile.c_str()));
     GakuLoader::Hotkeys::LoadOverrides(overrideFile);
     int temporaryOwner = 0;
@@ -339,6 +513,94 @@ int wmain(int argc, wchar_t** argv) {
     });
     assert(motionBinding != overridden.end() && motionBinding->modifiers ==
         (GAKU_HOTKEY_MOD_CTRL | GAKU_HOTKEY_MOD_SHIFT) && !motionBinding->conflicted);
+
+    // Manager edits write through to the ini and the running registry. A held
+    // capture key cannot become an action press when the binding is changed.
+    const auto editedRow = [&] {
+        const auto rows = GakuLoader::Hotkeys::Snapshot();
+        const auto row = std::find_if(rows.begin(), rows.end(), [](const auto& item) {
+            return item.pluginId == "gakumotion" && item.actionId == "show-gui";
+        });
+        assert(row != rows.end());
+        return *row;
+    };
+    assert(GakuLoader::Hotkeys::SetOverride(overrideFile, "GakuMotion", "Show-Gui", 'K', GAKU_HOTKEY_MOD_CTRL) == GAKU_E_UNAVAILABLE);
+    assert(GakuLoader::Hotkeys::SetOverride(overrideFile, "gakumotion", "show-gui", 'K', GAKU_HOTKEY_MOD_CTRL) == GAKU_OK);
+    assert(editedRow().virtualKey == 'K' && editedRow().overridden);
+    assert(GakuLoader::ReadConfigValue(overrideFile, L"hotkeys", L"v2:67616b756d6f74696f6e:73686f772d677569") == L"Ctrl+K");
+    assert(GakuLoader::ReadConfigValue(overrideFile, L"hotkeys", L"gakumotion.show-gui") == L"Ctrl+Shift+M");
+    GakuLoader::Hotkeys::PollResult editedPoll;
+    Hold(VK_CONTROL); Hold('K');
+    GakuLoader::Hotkeys::Poll(Context(), editedPoll);
+    assert(editedPoll.actions.empty());
+    Release('K'); GakuLoader::Hotkeys::Poll(Context(), editedPoll);
+    Hold('K'); GakuLoader::Hotkeys::Poll(Context(), editedPoll);
+    assert(editedPoll.actions.size() == 1 && editedPoll.actions[0].owner == &temporaryOwner);
+    GakuLoader::Hotkeys::Poll(Context(), editedPoll);
+    assert(editedPoll.actions.empty());
+    GakuLoader::Hotkeys::SetCaptureActive(true);
+    Release('K'); GakuLoader::Hotkeys::Poll(Context(), editedPoll);
+    Hold('K'); Hold(VK_F1); GakuLoader::Hotkeys::Poll(Context(), editedPoll);
+    assert(editedPoll.actions.empty() && !editedPoll.managerToggle);
+    GakuLoader::Hotkeys::SetCaptureActive(false);
+    GakuLoader::Hotkeys::Poll(Context(), editedPoll);
+    assert(editedPoll.actions.empty() && !editedPoll.managerToggle);
+    Release('K'); Release(VK_CONTROL); Release(VK_F1); GakuLoader::Hotkeys::Poll(Context(), editedPoll);
+    Hold(VK_F1); GakuLoader::Hotkeys::Poll(Context(), editedPoll);
+    assert(editedPoll.managerToggle);
+    Release(VK_F1); GakuLoader::Hotkeys::Poll(Context(), editedPoll);
+
+    assert(GakuLoader::Hotkeys::SetOverride(overrideFile, "gakumotion", "show-gui", VK_F1, 0) == GAKU_E_CONFLICT);
+    assert(GakuLoader::Hotkeys::SetOverride(overrideFile, "gakumotion", "show-gui", 300, 0) == GAKU_E_INVALID_ARGUMENT);
+    assert(GakuLoader::Hotkeys::SetOverride(overrideFile, "gakumotion", "show-gui", 'K', 0x80000000) == GAKU_E_INVALID_ARGUMENT);
+    assert(GakuLoader::Hotkeys::SetOverride(overrideFile, "gakumotion", "show-gui", 0, GAKU_HOTKEY_MOD_CTRL) == GAKU_E_INVALID_ARGUMENT);
+    assert(GakuLoader::Hotkeys::SetOverride(overrideFile, "gakumotion", "show-gui", VK_CONTROL, 0) == GAKU_E_INVALID_ARGUMENT);
+    assert(GakuLoader::Hotkeys::SetOverride(overrideFile, "gakumotion", "", 'K', 0) == GAKU_E_INVALID_ARGUMENT);
+    assert(GakuLoader::Hotkeys::SetOverride(overrideFile, "gakumotion", "bad\nkey", 'K', 0) == GAKU_E_UNAVAILABLE);
+    assert(GakuLoader::Hotkeys::SetOverride(overrideFile, "gakumotion", "missing", 'K', 0) == GAKU_E_UNAVAILABLE);
+    assert(editedRow().virtualKey == 'K' && editedRow().modifiers == GAKU_HOTKEY_MOD_CTRL);
+
+    const auto blockedOverride = root / L"hotkey-ini-directory";
+    std::filesystem::create_directories(blockedOverride);
+    assert(GakuLoader::Hotkeys::SetOverride(blockedOverride, "gakumotion", "show-gui", 'P', 0) == GAKU_E_INTERNAL);
+    assert(GakuLoader::Hotkeys::ResetOverride(blockedOverride, "gakumotion", "show-gui") == GAKU_E_INTERNAL);
+    assert(editedRow().virtualKey == 'K' && editedRow().modifiers == GAKU_HOTKEY_MOD_CTRL);
+    // A plugin can update its declared default while the user's override stays
+    // active; reset follows the latest declaration without deleting old aliases.
+    overrideBinding.virtualKey = 'J'; overrideBinding.modifiers = 0;
+    assert(GakuLoader::Hotkeys::Register(&temporaryOwner, "gakumotion", &overrideBinding) == GAKU_OK);
+    assert(editedRow().virtualKey == 'K'); // failed write never changed the cache
+    assert(GakuLoader::Hotkeys::ResetOverride(overrideFile, "gakumotion", "show-gui") == GAKU_OK);
+    assert(editedRow().virtualKey == 'J' && !editedRow().overridden);
+    assert(GakuLoader::ReadConfigValue(overrideFile, L"hotkeys", L"v2:67616b756d6f74696f6e:73686f772d677569") == L"<default>");
+    assert(GakuLoader::ReadConfigValue(overrideFile, L"hotkeys", L"gakumotion.show-gui") == L"Ctrl+Shift+M");
+    assert(GakuLoader::Hotkeys::SetOverride(overrideFile, "gakumotion", "show-gui", 0, 0) == GAKU_OK);
+    assert(editedRow().unbound && editedRow().overridden);
+    GakuLoader::Hotkeys::LoadOverrides(overrideFile);
+    assert(GakuLoader::Hotkeys::Register(&temporaryOwner, "gakumotion", &overrideBinding) == GAKU_OK);
+    assert(editedRow().unbound);
+    assert(GakuLoader::Hotkeys::ResetOverride(overrideFile, "gakumotion", "show-gui") == GAKU_OK);
+
+    int conflictingOwner = 0;
+    GakuHotkeyBinding conflictingBinding{1, sizeof(GakuHotkeyBinding), "same-key", "Same key", 'J', 0, [](void*) {}, nullptr};
+    assert(GakuLoader::Hotkeys::Register(&conflictingOwner, "edit-test", &conflictingBinding) == GAKU_OK);
+    assert(editedRow().conflicted && ConflictCount() == 2);
+    assert(GakuLoader::Hotkeys::SetOverride(overrideFile, "gakumotion", "show-gui", 'K', 0) == GAKU_OK);
+    assert(!editedRow().conflicted && ConflictCount() == 0);
+    assert(GakuLoader::Hotkeys::ResetOverride(overrideFile, "gakumotion", "show-gui") == GAKU_OK);
+    assert(editedRow().conflicted && ConflictCount() == 2);
+    GakuLoader::Hotkeys::RetireOwner(&conflictingOwner);
+    assert(!editedRow().conflicted);
+
+    // A captured key without a common short name round-trips through restart.
+    assert(GakuLoader::Hotkeys::SetOverride(overrideFile, "gakumotion", "show-gui", VK_NUMPAD4, GAKU_HOTKEY_MOD_ALT) == GAKU_OK);
+    GakuLoader::Hotkeys::RetireOwner(&temporaryOwner);
+
+    TestHotkeyIdentities(root);
+    GakuLoader::Hotkeys::LoadOverrides(overrideFile);
+    assert(GakuLoader::Hotkeys::Register(&temporaryOwner, "gakumotion", &overrideBinding) == GAKU_OK);
+    assert(editedRow().virtualKey == VK_NUMPAD4 && editedRow().modifiers == GAKU_HOTKEY_MOD_ALT);
+    assert(GakuLoader::Hotkeys::ResetOverride(overrideFile, "gakumotion", "show-gui") == GAKU_OK);
     GakuLoader::Hotkeys::RetireOwner(&temporaryOwner);
 
     // --- Desktop panel dispatch --------------------------------------------
@@ -698,7 +960,8 @@ int wmain(int argc, wchar_t** argv) {
     puts("PASS: native activation before runtime; worker-thread runtime-ready; actor-free frame pump; FIFO batch; "
          "service ownership; shared actor entry phases/original-once/replacement/immutable-snapshot/containment/"
          "retirement/registration-interleave/desktop-gate-serialization; "
-         "hotkey conflict/edge/focus/text/manager semantics; owned hook batch publication/rollback; "
+         "hotkey conflict/edge/focus/text/manager/rebind/persistence/reset/unbind/capture/write-failure/"
+         "exact-identity/legacy-ambiguity/case/restart/long-section/truncation semantics; owned hook batch publication/rollback; "
          "process-lifetime promotion/validation/atomic-rollback/retirement/exit; whole-frame admission; "
          "pre-reset DLL refusal; main-thread shutdown");
     return 0;

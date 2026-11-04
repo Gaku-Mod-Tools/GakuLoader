@@ -40,7 +40,7 @@ After launching the game, press **F1** to toggle the GakuLoader control window. 
 SomePlugin.dll=false
 
 [hotkeys]
-; Rebind plugin hotkeys in the format <pluginId>.<actionId>=<KeyCombo>
+; Legacy format: <pluginId>.<actionId>=<KeyCombo> (applies only to a unique match)
 gakumotion.show-gui=Ctrl+Shift+M
 ; Leave empty to unbind
 someplugin.action=
@@ -54,7 +54,9 @@ console=false
 trace=false
 ```
 
-Logs are written to `gakumas-local/gakuloader.log`. Runtime hot-reloading is not supported; restart the game for configuration changes or plugin updates to take effect.
+Use **Manager → Hotkeys** to rebind keys. Its saved entries distinguish dots and case in IDs and take precedence over the legacy format; Reset follows the plugin's current default. Legacy entries are preserved; ambiguous matches are ignored and logged. See [Hotkeys](wiki/Hotkeys.md).
+
+Logs are written to `gakumas-local/gakuloader.log`. Restart after manually editing configuration or updating plugins. Manager settings marked as immediate apply directly; plugins do not support hot-reloading.
 
 ## Supported Plugins
 

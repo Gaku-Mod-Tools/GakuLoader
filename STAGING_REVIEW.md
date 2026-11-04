@@ -62,3 +62,13 @@ The refreshed x64 Release DLL, production paths fixtures, C ABI executable, stat
 The new DLL SHA-256 is `A7E848BCAC23DC33E91350D3522D9D22DFF12C0993BD0523D851A7F698B3E43C`.
 Build logs and the validation receipt are in workspace `build/staging_refresh_20261102/Loader`; the earlier ignored `build/version.dll` bytes and timestamp remain unchanged.
 The existing full test matrix, Debug, game/deployment checks and remote CI were not rerun for this refresh. Earlier validation records remain historical evidence.
+
+## Manager, presentation extensions and hotkey identity refresh (2026-11-04)
+
+The public delta from GakuLoader `0426648bd0601486347513af200aa4167a9fa09c` through `ed5ad70819907c0a0f5acc25e804b0aea205fa57` is selected into this independent snapshot. The feature branches `7cb03c3cd26a3ebb08a3ead8c0406ce2c23c308c` (five themes and scoped file drops) and `2745faaabc0f399f483af54df3739aea337032cc` (Manager tabs/settings/languages and font rasterization) use their resolved merge at `a619b98a386fb373eb149f65f472e4410c253274`. The final hotkey identity correction is included. Internal DevAgents/deployment records and game automation tools remain excluded.
+
+Selected code, SDK and tests use the fixed source commit's Git blob bytes. Four public SDK headers use canonical LF; existing struct layouts, function signatures and enum values remain unchanged, with Apple theme values appended. The optional file-drop and language services have separate headers. Hotkey persistence retains the exact original plugin/action identity and accepts a legacy dotted alias only when unique; Reset persists a marker following the plugin's current default. Truncated INI sections are rejected as a whole.
+
+Public documentation retains this snapshot's restored README/Wiki navigation, vendored build instructions and uninstall wording while adding the selected functionality. Its wording distinguishes immediate Manager changes from manual configuration edits requiring restart. Vendored dependencies, complete licenses, source-only instructions and CI layout are retained. The default source validator additionally executes the new language/font/appearance headless suites; it still excludes actual desktop windows and game acceptance.
+
+`SOURCE_SELECTION.json` records the source Git objects, selected/staged hashes and adaptations; `SOURCE_MANIFEST.json` freezes the resulting payload. This refresh must be committed before its final local builds. New build/test receipts are recorded outside the source repository under workspace `build/staging_refresh_20261104/Loader`; older validation and deployment records remain historical. No game behavior or remote CI result is inferred from those local records.

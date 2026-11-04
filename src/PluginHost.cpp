@@ -9,6 +9,7 @@
 #include "CrashTrace.hpp"
 #include "GakuProcessLifetimeHooks.h"
 #include "PluginPaths.hpp"
+#include "LanguageSettings.hpp"
 #include <minhook.h>
 #include <cstdio>
 #include <cstdarg>
@@ -22,6 +23,7 @@
 
 namespace GakuLoader {
 namespace {
+std::vector<std::wstring> g_pluginFiles;
 struct PluginOwner {
     std::string id;
     std::atomic_bool accepting{true};
@@ -363,6 +365,20 @@ GakuStatus RequestPluginPanel(void* context) {
     if (!owner->accepting) return GAKU_E_SHUTTING_DOWN;
     return DesktopUi::RequestShowPanel(owner->id.c_str());
 }
+GakuStatus SetFileDropTarget(void* context, const GakuFileDropTarget* target) {
+    if (!context) return GAKU_E_INVALID_ARGUMENT;
+    auto* owner = static_cast<PluginOwner*>(context);
+    if (!owner->accepting) return GAKU_E_SHUTTING_DOWN;
+    try { return DesktopUi::SetFileDropTarget(owner->id.c_str(), target); }
+    catch (...) { return GAKU_E_INTERNAL; }
+}
+GakuStatus PollFileDrop(void* context, uint32_t size, GakuFileDropResult* result,
+    uint32_t capacity, char* paths) {
+    if (!context) return GAKU_E_INVALID_ARGUMENT;
+    auto* owner = static_cast<PluginOwner*>(context);
+    if (!owner->accepting) return GAKU_E_SHUTTING_DOWN;
+    return DesktopUi::PollFileDrop(owner->id.c_str(), size, result, capacity, paths);
+}
 PluginOwner* FindPathOwner(void* context) {
     // Owner objects live until exit. Only borrow a pointer under the registry
     // lock, then use the owner's own path lock for filesystem operations.
@@ -408,6 +424,9 @@ GakuStatus QueryService(void* context, const char* name, uint32_t version, uint3
             g_localRootW.c_str(), g_pluginsRootW.c_str(), GetGameAssembly};
         return CopyServiceTable(&table, sizeof(table), version, size, output);
     }
+    if (strcmp(name, GAKU_SERVICE_LANGUAGE) == 0) {
+        return CopyServiceTable(&LanguageSettings::kService, sizeof(LanguageSettings::kService), version, size, output);
+    }
     if (strcmp(name, GAKU_SERVICE_PATHS) == 0) {
         try {
             auto* owner = FindPathOwner(context);
@@ -451,6 +470,11 @@ GakuStatus QueryService(void* context, const char* name, uint32_t version, uint3
     }
     if (strcmp(name, GAKU_SERVICE_FILE_DIALOG) == 0) {
         const auto table = DesktopDialogs::ServiceForOwner(context);
+        return CopyServiceTable(&table, sizeof(table), version, size, output);
+    }
+    if (strcmp(name, GAKU_SERVICE_FILE_DROP) == 0) {
+        const GakuFileDropService table{GAKU_FILE_DROP_VERSION, sizeof(GakuFileDropService),
+            context, SetFileDropTarget, PollFileDrop};
         return CopyServiceTable(&table, sizeof(table), version, size, output);
     }
     if (strcmp(name, GAKU_SERVICE_HOTKEYS) == 0) {
@@ -690,6 +714,7 @@ void Initialize(const std::filesystem::path& gameRoot, const std::filesystem::pa
     std::error_code ec;
     std::filesystem::create_directories(pluginsPath, ec);
     g_configPath = gameRoot / L"gakuloader.ini";
+    LanguageSettings::Load(g_configPath);
     Trace::Configure(ReadConfigFlag(g_configPath, L"diagnostics", L"trace", false));
     if (Trace::Enabled()) {
         const auto crashPath = localRoot / "crash.log";
@@ -727,6 +752,8 @@ void ActivatePlugins() {
             paths.push_back(entry.path());
     }
     std::sort(paths.begin(), paths.end());
+    g_pluginFiles.clear();
+    for (const auto& path : paths) g_pluginFiles.push_back(path.filename().wstring());
     for (const auto& path : paths) {
         const auto filename = path.filename().wstring();
         if (!ReadConfigFlag(g_configPath, L"plugins", filename.c_str(), true)) {
@@ -910,6 +937,7 @@ bool SnapshotDesktopHost(DesktopHostSnapshot& output) {
     result.runtimeReady = g_runtimeReady;
     result.activated = g_activated;
     result.shuttingDown = g_shutdownRequested.load(std::memory_order_acquire);
+    result.pluginFiles = g_pluginFiles;
     result.plugins.reserve(g_plugins.size());
     for (const auto& plugin : g_plugins) {
         result.plugins.push_back({plugin.id, plugin.name, plugin.version,

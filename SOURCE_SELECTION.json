@@ -1,9 +1,9 @@
 {
   "schema": "gakuloader.staging-selection/1",
-  "source_revision": "0426648bd0601486347513af200aa4167a9fa09c",
+  "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
   "source_tracked_status": "clean-at-selection",
   "origin": "GakuLoader source checkout (location intentionally not embedded)",
-  "selected_count": 140,
+  "selected_count": 161,
   "selected_files": {
     ".github/workflows/windows-msvc.yml": {
       "source_path": ".github/workflows/windows-msvc.yml",
@@ -32,12 +32,14 @@
     },
     "GakuLoader.vcxproj": {
       "source_repository": "GakuLoader",
-      "source_revision": "0426648bd0601486347513af200aa4167a9fa09c",
+      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
       "source_path": "GakuLoader.vcxproj",
-      "source_sha256": "8eae1cf6cf233bfe90a0317752c1605101b51d3a5c702c0202b1754abe35ff4b",
-      "staged_sha256": "8eae1cf6cf233bfe90a0317752c1605101b51d3a5c702c0202b1754abe35ff4b",
+      "source_git_blob": "9e8916b5464c42a49a142994113cbe6566cc1a48",
+      "source_sha256": "841f127a74d44336eddea3d01a579537680748493000968b945a446185254c96",
+      "staged_sha256": "841f127a74d44336eddea3d01a579537680748493000968b945a446185254c96",
       "source_scope": "first-party-declared-MIT",
-      "review": "current optional paths implementation, example, public guide or synthetic test"
+      "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+      "staging_adapted": false
     },
     "ImGui.vcxproj": {
       "source_path": "ImGui.vcxproj",
@@ -64,28 +66,37 @@
       "staged_sha256": "8a7153a47a2f8d9d019fd61658a8dc1d215a89c77773fd145ccefbdf5284628e"
     },
     "README.en.md": {
+      "source_repository": "GakuLoader",
+      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
       "source_path": "README.en.md",
-      "source_sha256": "dc6559cbf716e79ab62e68a21dae554ecfda45dc16949356608be7ae2012a3c9",
+      "source_git_blob": "73d309e2496af7432fd29755c3ccf87780e3abad",
+      "source_sha256": "df4e5a8e5afc6b336d5b97c38fee7b07041421974deb4a28da6850ae878f78d2",
+      "staged_sha256": "ac5596e869131f98021350c2ebdf292643487179854ef76fb89387f5f72313b5",
       "source_scope": "first-party-declared-MIT",
-      "review": "selected-source-or-public-doc; no binaries/config/materials",
-      "source_revision": "6db0f56440b183d37b57c467d68b452d13eb3d47",
-      "staged_sha256": "70ea1ed6490444f39dc733a19d5fc3d476efe3ecc4ee247d9e0a8e50c0ab262f"
+      "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+      "staging_adapted": true
     },
     "README.ja.md": {
+      "source_repository": "GakuLoader",
+      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
       "source_path": "README.ja.md",
-      "source_sha256": "b6a0bce825cfa445d4f6044f8c5427e2d7c2de2870bff4122eaa9558679ea6c2",
+      "source_git_blob": "8b25b97f6bfa160b3e782133e86868c700415fbf",
+      "source_sha256": "7caace2776d5a7c758b31b5823662d369cd4a8584f94a325043c4b6bae13a2b3",
+      "staged_sha256": "afe21b0ce4c802c0bacfd0c94edd25739171dea991ef9f2591957a3dcdc8a45f",
       "source_scope": "first-party-declared-MIT",
-      "review": "selected-source-or-public-doc; no binaries/config/materials",
-      "source_revision": "6db0f56440b183d37b57c467d68b452d13eb3d47",
-      "staged_sha256": "2cd49faa48ec6f1717eabacf75cbfb3923489356dab8959bdfbf584f4c83f8e9"
+      "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+      "staging_adapted": true
     },
     "README.md": {
+      "source_repository": "GakuLoader",
+      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
       "source_path": "README.md",
-      "source_sha256": "b3c2e08ab8c2c653a707ef744f0b029e8a2bd2782c452ed7cb709269ed00e43d",
+      "source_git_blob": "f2b385e12b8efb8b39738eb768779243ea1b080f",
+      "source_sha256": "dd62f3ba1f1e4f0346c226ada558ec4d70bff0acf9cb0358f999080347fc0a06",
+      "staged_sha256": "076c7f7f472eb2c3b53f908a69d29ede94c8fa2d5bdfecc59615117133814858",
       "source_scope": "first-party-declared-MIT",
-      "review": "selected-source-or-public-doc; no binaries/config/materials",
-      "source_revision": "6db0f56440b183d37b57c467d68b452d13eb3d47",
-      "staged_sha256": "08848156a6322f65dbf28d409d0f21a44259c50947fea2dd8e889244ab006e35"
+      "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+      "staging_adapted": true
     },
     "THIRD_PARTY_NOTICES.md": {
       "source_path": "THIRD_PARTY_NOTICES.md",
@@ -105,20 +116,25 @@
     },
     "docs/PLUGIN_DEVELOPMENT.md": {
       "source_repository": "GakuLoader",
-      "source_revision": "0426648bd0601486347513af200aa4167a9fa09c",
+      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
       "source_path": "docs/PLUGIN_DEVELOPMENT.md",
-      "source_sha256": "38d80827cc4a0041959606a014a8bef00ebca9e73fecc3c2b7b09c9fa786d52b",
-      "staged_sha256": "38d80827cc4a0041959606a014a8bef00ebca9e73fecc3c2b7b09c9fa786d52b",
+      "source_git_blob": "2aad9607395c1ebe535aac87f4801e9c4745c879",
+      "source_sha256": "03578c77ab374608c0576b823d22f3a1e7177819aeba9a35c9cddbb10507ea51",
+      "staged_sha256": "03578c77ab374608c0576b823d22f3a1e7177819aeba9a35c9cddbb10507ea51",
       "source_scope": "first-party-declared-MIT",
-      "review": "current optional paths implementation, example, public guide or synthetic test"
+      "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+      "staging_adapted": false
     },
     "docs/QUICKSTART.md": {
+      "source_repository": "GakuLoader",
+      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
       "source_path": "docs/QUICKSTART.md",
-      "source_sha256": "38560e324be3e0de424d15368a030d8d6bdee0a16e843fd7e679d652e456f4fb",
+      "source_git_blob": "0070cfd78fc33768e5958d7d848524679917c56e",
+      "source_sha256": "d5b4f08cbc663746a550bdf1e67afcd4ca4ee38c7dc9fcca15f74fa5f9bb236f",
+      "staged_sha256": "4e57286b7dc01fd800e0c5f98a6f693e9fb3dd9db1253d6f45bc03dec5a01778",
       "source_scope": "first-party-declared-MIT",
-      "review": "selected-source-or-public-doc; no binaries/config/materials",
-      "source_revision": "6db0f56440b183d37b57c467d68b452d13eb3d47",
-      "staged_sha256": "43864be61c621855e1354986b508f5bab3a4c19e56f17eb92ba319fc76f83f67"
+      "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+      "staging_adapted": true
     },
     "examples/minimal-plugin/MinimalPlugin.cpp": {
       "source_repository": "GakuLoader",
@@ -170,12 +186,15 @@
       "staged_sha256": "ce8e7b2f7797513832c24bdf97136a3ca91efd821c425889bfbc0721eeba1071"
     },
     "include/GakuPlugin.h": {
+      "source_repository": "GakuLoader",
+      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
       "source_path": "include/GakuPlugin.h",
-      "source_sha256": "c02e006180e464a770bd31df52e89f5d539ceaaf4978f4e056734b5a5ca00abd",
+      "source_git_blob": "1f4dff34c9f1c334a59f216df9558710016f4e1b",
+      "source_sha256": "12f4e4db22ff0505990b66cfeaf97b1cae54486c9eb415e7efc3adfd9984867e",
+      "staged_sha256": "12f4e4db22ff0505990b66cfeaf97b1cae54486c9eb415e7efc3adfd9984867e",
       "source_scope": "first-party-declared-MIT",
-      "review": "selected-source-or-public-doc; no binaries/config/materials",
-      "source_revision": "6db0f56440b183d37b57c467d68b452d13eb3d47",
-      "staged_sha256": "c02e006180e464a770bd31df52e89f5d539ceaaf4978f4e056734b5a5ca00abd"
+      "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+      "staging_adapted": false
     },
     "include/GakuProcessLifetimeHooks.h": {
       "source_path": "include/GakuProcessLifetimeHooks.h",
@@ -218,12 +237,15 @@
       "staged_sha256": "f68d560038e717f6ec4dd59480b62b42d729de39ee5c56474202a9d0d0f98e8d"
     },
     "src/DesktopAppearance.hpp": {
+      "source_repository": "GakuLoader",
+      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
       "source_path": "src/DesktopAppearance.hpp",
-      "source_sha256": "4ee0cf803504aee4dbf799037c39e279dac9bb9bc932b24d69d85c63a0da9363",
+      "source_git_blob": "dcbccf4e7595a41ade8a00f829978b1567aed1a7",
+      "source_sha256": "0ed05e5682a6b8b803beda0841b43c618ba273778638fcaa254e6926a99310dc",
+      "staged_sha256": "0ed05e5682a6b8b803beda0841b43c618ba273778638fcaa254e6926a99310dc",
       "source_scope": "first-party-declared-MIT",
-      "review": "selected-source-or-public-doc; no binaries/config/materials",
-      "source_revision": "6db0f56440b183d37b57c467d68b452d13eb3d47",
-      "staged_sha256": "4ee0cf803504aee4dbf799037c39e279dac9bb9bc932b24d69d85c63a0da9363"
+      "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+      "staging_adapted": false
     },
     "src/DesktopDialogs.cpp": {
       "source_path": "src/DesktopDialogs.cpp",
@@ -242,20 +264,26 @@
       "staged_sha256": "2be6e3d62707e22de82325ca98afa99b8dbdf66a51870d9a1d4d21d4e3b9ede5"
     },
     "src/DesktopUi.cpp": {
+      "source_repository": "GakuLoader",
+      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
       "source_path": "src/DesktopUi.cpp",
-      "source_sha256": "1f7fe32ecbc8350f52b13b96727a3cfd1e4e21de5de5a7c5e917e0e31544605a",
+      "source_git_blob": "dc38bdc2aaec13f610d8784d2db2c98619d8ebe2",
+      "source_sha256": "dc9506323e21dc63389b60187346f6c2d22df593187668c0c03ad34b2c7f17e4",
+      "staged_sha256": "dc9506323e21dc63389b60187346f6c2d22df593187668c0c03ad34b2c7f17e4",
       "source_scope": "first-party-declared-MIT",
-      "review": "selected-source-or-public-doc; no binaries/config/materials",
-      "source_revision": "6db0f56440b183d37b57c467d68b452d13eb3d47",
-      "staged_sha256": "1f7fe32ecbc8350f52b13b96727a3cfd1e4e21de5de5a7c5e917e0e31544605a"
+      "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+      "staging_adapted": false
     },
     "src/DesktopUi.hpp": {
+      "source_repository": "GakuLoader",
+      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
       "source_path": "src/DesktopUi.hpp",
-      "source_sha256": "520044f4069635506605d94160afea72a39e033411d246f654d95f23cc6ab4b2",
+      "source_git_blob": "ad6ec22183a4f405819c47f1593164e33048ec73",
+      "source_sha256": "66995d1178321a358f7253b17d3d14095c5e716269149f5f674135003e82c51e",
+      "staged_sha256": "66995d1178321a358f7253b17d3d14095c5e716269149f5f674135003e82c51e",
       "source_scope": "first-party-declared-MIT",
-      "review": "selected-source-or-public-doc; no binaries/config/materials",
-      "source_revision": "6db0f56440b183d37b57c467d68b452d13eb3d47",
-      "staged_sha256": "520044f4069635506605d94160afea72a39e033411d246f654d95f23cc6ab4b2"
+      "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+      "staging_adapted": false
     },
     "src/DiagnosticBoundary.cpp": {
       "source_path": "src/DiagnosticBoundary.cpp",
@@ -306,12 +334,15 @@
       "staged_sha256": "3876399bf79f335aa5c53896412de0b84934da35f753bec124625df87e0e2a81"
     },
     "src/Host.hpp": {
+      "source_repository": "GakuLoader",
+      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
       "source_path": "src/Host.hpp",
-      "source_sha256": "a9c05c46769e36ca5e490bc6e16f75475356d195e2ca72d1bcd840ac363ec9c7",
+      "source_git_blob": "e557ffdd2f02945a0b34fe6f08a5580b3a1471c0",
+      "source_sha256": "06821b9dabc7405d3cea8796a73a4e2793e3483ae49dc1ff45e1a9fde29dc120",
+      "staged_sha256": "06821b9dabc7405d3cea8796a73a4e2793e3483ae49dc1ff45e1a9fde29dc120",
       "source_scope": "first-party-declared-MIT",
-      "review": "selected-source-or-public-doc; no binaries/config/materials",
-      "source_revision": "6db0f56440b183d37b57c467d68b452d13eb3d47",
-      "staged_sha256": "a9c05c46769e36ca5e490bc6e16f75475356d195e2ca72d1bcd840ac363ec9c7"
+      "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+      "staging_adapted": false
     },
     "src/HostConfig.hpp": {
       "source_path": "src/HostConfig.hpp",
@@ -330,20 +361,26 @@
       "staged_sha256": "48d71e432fd11697d7c77ed804cb2a4a2f5959cac4dd3b51fabbe3cd52cb88de"
     },
     "src/Hotkeys.cpp": {
+      "source_repository": "GakuLoader",
+      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
       "source_path": "src/Hotkeys.cpp",
-      "source_sha256": "8ad8fc3266237134718ddfb765fbff608abebd40b31839f73902a195a6781832",
+      "source_git_blob": "ee0fdc3d6a9aaf6dc6db45c35e82cf6acab84dc0",
+      "source_sha256": "dbcf921474a8f819758c9a0a813c5d367b6a17741e9dc1fc5fa7c9f75d403303",
+      "staged_sha256": "dbcf921474a8f819758c9a0a813c5d367b6a17741e9dc1fc5fa7c9f75d403303",
       "source_scope": "first-party-declared-MIT",
-      "review": "selected-source-or-public-doc; no binaries/config/materials",
-      "source_revision": "6db0f56440b183d37b57c467d68b452d13eb3d47",
-      "staged_sha256": "8ad8fc3266237134718ddfb765fbff608abebd40b31839f73902a195a6781832"
+      "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+      "staging_adapted": false
     },
     "src/Hotkeys.hpp": {
+      "source_repository": "GakuLoader",
+      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
       "source_path": "src/Hotkeys.hpp",
-      "source_sha256": "a6e96382d3bd7b97f3f21826cdf8d62fcca42cd367a921e8961268d92d07233d",
+      "source_git_blob": "4f2967af3eab1010b3610f2e010ad55805a40d19",
+      "source_sha256": "0b3a9a076ef017e3641f88fbe94dc01526006400e1338a142a14c5e94da47bf2",
+      "staged_sha256": "0b3a9a076ef017e3641f88fbe94dc01526006400e1338a142a14c5e94da47bf2",
       "source_scope": "first-party-declared-MIT",
-      "review": "selected-source-or-public-doc; no binaries/config/materials",
-      "source_revision": "6db0f56440b183d37b57c467d68b452d13eb3d47",
-      "staged_sha256": "a6e96382d3bd7b97f3f21826cdf8d62fcca42cd367a921e8961268d92d07233d"
+      "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+      "staging_adapted": false
     },
     "src/Main.cpp": {
       "source_path": "src/Main.cpp",
@@ -355,12 +392,14 @@
     },
     "src/PluginHost.cpp": {
       "source_repository": "GakuLoader",
-      "source_revision": "0426648bd0601486347513af200aa4167a9fa09c",
+      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
       "source_path": "src/PluginHost.cpp",
-      "source_sha256": "3ac5424af17aefebb808e97f056fed77b9c2325bb3c98b6bf636ea38d5505545",
-      "staged_sha256": "3ac5424af17aefebb808e97f056fed77b9c2325bb3c98b6bf636ea38d5505545",
+      "source_git_blob": "e01989fc5ec96a16a9768ac035615d003905203b",
+      "source_sha256": "b6ef37564caa164aa5544202e68c8b39da965e36804910c2d9ffcdf8dcd04ced",
+      "staged_sha256": "b6ef37564caa164aa5544202e68c8b39da965e36804910c2d9ffcdf8dcd04ced",
       "source_scope": "first-party-declared-MIT",
-      "review": "current optional paths implementation, example, public guide or synthetic test"
+      "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+      "staging_adapted": false
     },
     "src/Proxy.cpp": {
       "source_path": "src/Proxy.cpp",
@@ -428,12 +467,14 @@
     },
     "tests/CAbiTest.c": {
       "source_repository": "GakuLoader",
-      "source_revision": "0426648bd0601486347513af200aa4167a9fa09c",
+      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
       "source_path": "tests/CAbiTest.c",
-      "source_sha256": "656c8196f16f301b1e0769d653a2e7c9b0c0964b8c9f3769ababc3f42d148881",
-      "staged_sha256": "656c8196f16f301b1e0769d653a2e7c9b0c0964b8c9f3769ababc3f42d148881",
+      "source_git_blob": "23e7750ee8d7dd89f378eca01098be991ba4effc",
+      "source_sha256": "d86c9d57bb7c6d49aad353531da523f84f08a284324d7c98b2514bc37936ddf1",
+      "staged_sha256": "d86c9d57bb7c6d49aad353531da523f84f08a284324d7c98b2514bc37936ddf1",
       "source_scope": "first-party-declared-MIT",
-      "review": "current optional paths implementation, example, public guide or synthetic test"
+      "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+      "staging_adapted": false
     },
     "tests/CAbiTest.vcxproj": {
       "source_path": "tests/CAbiTest.vcxproj",
@@ -476,12 +517,15 @@
       "staged_sha256": "ba54001be74aaaab1f3c14ca10fc54a9332adfdfc5f1765fdd0d7364c32329e7"
     },
     "tests/DesktopUiSmoke.cpp": {
+      "source_repository": "GakuLoader",
+      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
       "source_path": "tests/DesktopUiSmoke.cpp",
-      "source_sha256": "a6205391b359a4a8135f97bc3acea0063e278cc5c1ec42b3b332cf4c15914a6d",
+      "source_git_blob": "28d085987b4b50511d079f13db38f05542b69add",
+      "source_sha256": "515b150a0ea4e78e698a91db7726623e86b6f0eebb4a61e6c1d1b41a94756c5f",
+      "staged_sha256": "515b150a0ea4e78e698a91db7726623e86b6f0eebb4a61e6c1d1b41a94756c5f",
       "source_scope": "first-party-declared-MIT",
-      "review": "selected-source-or-public-doc; no binaries/config/materials",
-      "source_revision": "6db0f56440b183d37b57c467d68b452d13eb3d47",
-      "staged_sha256": "a6205391b359a4a8135f97bc3acea0063e278cc5c1ec42b3b332cf4c15914a6d"
+      "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+      "staging_adapted": false
     },
     "tests/DesktopUiSmoke.vcxproj": {
       "source_path": "tests/DesktopUiSmoke.vcxproj",
@@ -556,12 +600,15 @@
       "staged_sha256": "e875270a96097566479bd2a513193321bfe1b6ce0b700a10a04789740fd300af"
     },
     "tests/HostDialogConcurrency.cpp": {
+      "source_repository": "GakuLoader",
+      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
       "source_path": "tests/HostDialogConcurrency.cpp",
-      "source_sha256": "d3f553fe861f36642c6abd61119637e743a91f1426f9e76d457c7bcba8686605",
+      "source_git_blob": "990237a9fa20d3929fbb188f19df9775edf0232c",
+      "source_sha256": "8910e95ae1a1ef43f8d69be3594101384e6726948499195b4c46bd9a9af1232c",
+      "staged_sha256": "8910e95ae1a1ef43f8d69be3594101384e6726948499195b4c46bd9a9af1232c",
       "source_scope": "first-party-declared-MIT",
-      "review": "selected-source-or-public-doc; no binaries/config/materials",
-      "source_revision": "6db0f56440b183d37b57c467d68b452d13eb3d47",
-      "staged_sha256": "d3f553fe861f36642c6abd61119637e743a91f1426f9e76d457c7bcba8686605"
+      "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+      "staging_adapted": false
     },
     "tests/HostDialogConcurrency.vcxproj": {
       "source_path": "tests/HostDialogConcurrency.vcxproj",
@@ -572,12 +619,15 @@
       "staged_sha256": "9f8136d6880f02bc7fa3f181ada24af623e6f5c4ce20ff8b8ca5788c7ec4aedf"
     },
     "tests/HostTests.cpp": {
+      "source_repository": "GakuLoader",
+      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
       "source_path": "tests/HostTests.cpp",
-      "source_sha256": "8af2c7a5df0e92304a201b7a3eae0d7705884cfca06926d637a71b7f90c31897",
+      "source_git_blob": "6bdd71af0d8d703d178f3ecc6769b64433816fc4",
+      "source_sha256": "8e5c48e89fbc55d4ed5a4dd0299ff6919c52bf4e21e3e6b7ae2e6a1fb02fd5d5",
+      "staged_sha256": "8e5c48e89fbc55d4ed5a4dd0299ff6919c52bf4e21e3e6b7ae2e6a1fb02fd5d5",
       "source_scope": "first-party-declared-MIT",
-      "review": "selected-source-or-public-doc; no binaries/config/materials",
-      "source_revision": "6db0f56440b183d37b57c467d68b452d13eb3d47",
-      "staged_sha256": "8af2c7a5df0e92304a201b7a3eae0d7705884cfca06926d637a71b7f90c31897"
+      "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+      "staging_adapted": false
     },
     "tests/HostTests.vcxproj": {
       "source_path": "tests/HostTests.vcxproj",
@@ -621,21 +671,25 @@
     },
     "tests/build-tests.ps1": {
       "source_repository": "GakuLoader",
-      "source_revision": "0426648bd0601486347513af200aa4167a9fa09c",
+      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
       "source_path": "tests/build-tests.ps1",
-      "source_sha256": "1229d6783454c8217c4d28f9a8373dd706ab5e2c9e137bbaadf583728ca323e7",
-      "staged_sha256": "1229d6783454c8217c4d28f9a8373dd706ab5e2c9e137bbaadf583728ca323e7",
+      "source_git_blob": "a557c6374ba7b56448a7a790105ab2404b755c59",
+      "source_sha256": "5b32d4f8a8dcea4f42acc956ad97c5d6a1113fbf64a588d616b142d5b48f4f7a",
+      "staged_sha256": "5b32d4f8a8dcea4f42acc956ad97c5d6a1113fbf64a588d616b142d5b48f4f7a",
       "source_scope": "first-party-declared-MIT",
-      "review": "current optional paths implementation, example, public guide or synthetic test"
+      "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+      "staging_adapted": false
     },
     "tests/run-all.ps1": {
       "source_repository": "GakuLoader",
-      "source_revision": "0426648bd0601486347513af200aa4167a9fa09c",
+      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
       "source_path": "tests/run-all.ps1",
-      "source_sha256": "8d560a122430982ae162c107a7ebc923f8f3d18e76e4f96cca2bb907a6efc92e",
-      "staged_sha256": "8d560a122430982ae162c107a7ebc923f8f3d18e76e4f96cca2bb907a6efc92e",
+      "source_git_blob": "550e289cb7260f750b862593af93d71a58ec1848",
+      "source_sha256": "727d53c92d17417ea6ef486ae3c78f42622579a61e848edae1722a3e3f7e5ca7",
+      "staged_sha256": "727d53c92d17417ea6ef486ae3c78f42622579a61e848edae1722a3e3f7e5ca7",
       "source_scope": "first-party-declared-MIT",
-      "review": "current optional paths implementation, example, public guide or synthetic test"
+      "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+      "staging_adapted": false
     },
     "tests/run_diagnostic_boundary.ps1": {
       "source_path": "tests/run_diagnostic_boundary.ps1",
@@ -662,20 +716,26 @@
       "staged_sha256": "501ae0ce0ec979540ba126d133d53f5f3dc9b45e268f2d34bf21e270146dae6e"
     },
     "tests/test-host.ps1": {
+      "source_repository": "GakuLoader",
+      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
       "source_path": "tests/test-host.ps1",
-      "source_sha256": "a7a9d9f3712067eab9100c49699ac5a4d9d82a6d9ad378c5314a6da864a98baa",
+      "source_git_blob": "e94976043680939e5a467f0e08155b84834ca30f",
+      "source_sha256": "a6517e3336502e7cc472e487494577cde2381ea442e29d8e64c332f2b300d830",
+      "staged_sha256": "a6517e3336502e7cc472e487494577cde2381ea442e29d8e64c332f2b300d830",
       "source_scope": "first-party-declared-MIT",
-      "review": "selected-source-or-public-doc; no binaries/config/materials",
-      "source_revision": "6db0f56440b183d37b57c467d68b452d13eb3d47",
-      "staged_sha256": "a7a9d9f3712067eab9100c49699ac5a4d9d82a6d9ad378c5314a6da864a98baa"
+      "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+      "staging_adapted": false
     },
     "tests/test_diagnostic_boundary.cpp": {
+      "source_repository": "GakuLoader",
+      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
       "source_path": "tests/test_diagnostic_boundary.cpp",
-      "source_sha256": "b259fae3cb6948f048d8dc7bd6a7f2b18f12810f2d63b020400866c816f07cce",
+      "source_git_blob": "91c4ebd0c98acbddf960046906a184332e4a2f67",
+      "source_sha256": "8dd1ede2d098353d2010777e977f58026a2e199de385a8ada575d10687e29e52",
+      "staged_sha256": "8dd1ede2d098353d2010777e977f58026a2e199de385a8ada575d10687e29e52",
       "source_scope": "first-party-declared-MIT",
-      "review": "selected-source-or-public-doc; no binaries/config/materials",
-      "source_revision": "6db0f56440b183d37b57c467d68b452d13eb3d47",
-      "staged_sha256": "b259fae3cb6948f048d8dc7bd6a7f2b18f12810f2d63b020400866c816f07cce"
+      "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+      "staging_adapted": false
     },
     "tools/msbuild-env.ps1": {
       "source_path": "tools/msbuild-env.ps1",
@@ -750,12 +810,15 @@
       "staged_sha256": "e983293f66a186ef5b7a21d1a44b04d7f2b180055dde7be69005c329bf506d5d"
     },
     "wiki/Configuration.md": {
+      "source_repository": "GakuLoader",
+      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
       "source_path": "wiki/Configuration.md",
-      "source_sha256": "474ff03f2c6be60fe0b2f89f3af86d4ecefa093284c8e3af67d7bece41323b89",
+      "source_git_blob": "017b8842b767b393501c198c5233a6aec410358b",
+      "source_sha256": "9ac70400d02675a07974bacdcdc8266143b9c6a2025b2d4f86fa6ed74b9fb65d",
+      "staged_sha256": "ca0a3ca4314a8b63a0c609c42d3b1f2981f68d4f67ae0a89529a5a961b6a6ecf",
       "source_scope": "first-party-declared-MIT",
-      "review": "selected-source-or-public-doc; no binaries/config/materials",
-      "source_revision": "6db0f56440b183d37b57c467d68b452d13eb3d47",
-      "staged_sha256": "fa3313b862e748c66c388397b3473f595552eb0e68ddd9ef480cb62764d30ae1"
+      "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+      "staging_adapted": true
     },
     "wiki/Home.md": {
       "source_path": "wiki/Home.md",
@@ -774,12 +837,15 @@
       "staged_sha256": "c6da5a97c948658f827e41d62bb521e3b404e94c8f04047c18933f0bddb0dcaa"
     },
     "wiki/Hotkeys.md": {
+      "source_repository": "GakuLoader",
+      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
       "source_path": "wiki/Hotkeys.md",
-      "source_sha256": "20d3988ee4e31c8a0ce815048ec2d23f8bdb02e487b6eafb4264e24c92c36ae2",
+      "source_git_blob": "7d0800ca3253050fa12f1f1369320545090d279f",
+      "source_sha256": "81ec42c4c03849146b8b59aedb78566775d90b94e6e179706ba4bd20013b61f9",
+      "staged_sha256": "2d78c4766da557d0d13eba3e587ed0abd10f94f50593e6fad50fb964faa98542",
       "source_scope": "first-party-declared-MIT",
-      "review": "selected-source-or-public-doc; no binaries/config/materials",
-      "source_revision": "6db0f56440b183d37b57c467d68b452d13eb3d47",
-      "staged_sha256": "681af55a9c971fb9dde0a13e46814eb04925dbb04a0e8b704f439808f375a8d2"
+      "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+      "staging_adapted": true
     },
     "wiki/Installation.md": {
       "source_path": "wiki/Installation.md",
@@ -798,20 +864,26 @@
       "staged_sha256": "9d699e409e0793096b203a80c7e59ac56f0fc85e2d1b742b15b0b9b52daae9ab"
     },
     "wiki/Troubleshooting.md": {
+      "source_repository": "GakuLoader",
+      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
       "source_path": "wiki/Troubleshooting.md",
-      "source_sha256": "29c3816f222a0a8e7ff3c2a99549021b4f4ea2fbb2daa127d365dc2efd24693b",
+      "source_git_blob": "1396ac14c07c1d2a4b37ec95a67272485f99b2b0",
+      "source_sha256": "182d26a05e7b864abcbd44053be8cfa09d122d39f191354b633239bf115bf700",
+      "staged_sha256": "4a0b58579bf983825a0c2383359ac5e871f67566ca35b90d4f3978bbe5b10407",
       "source_scope": "first-party-declared-MIT",
-      "review": "selected-source-or-public-doc; no binaries/config/materials",
-      "source_revision": "6db0f56440b183d37b57c467d68b452d13eb3d47",
-      "staged_sha256": "3dd42249f316cb6bcf6add85d98708dce6a69234c797d420ab1617ddb20b81c2"
+      "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+      "staging_adapted": true
     },
     "wiki/UI.md": {
+      "source_repository": "GakuLoader",
+      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
       "source_path": "wiki/UI.md",
-      "source_sha256": "e76126df8760355c1434680fe57f40a628d6974956236acd04dc09255657dd46",
+      "source_git_blob": "576f29c189cbde6a8eb98c27ddbd37755a989a32",
+      "source_sha256": "f996a2263c9b8507a52edf0f908da3993415e4fd7e43228401e6bbcea5631f23",
+      "staged_sha256": "af6b4b8b55cbfa263b00520e59bf00aa1f98ad34207a686d5bb4be350928423e",
       "source_scope": "first-party-declared-MIT",
-      "review": "selected-source-or-public-doc; no binaries/config/materials",
-      "source_revision": "6db0f56440b183d37b57c467d68b452d13eb3d47",
-      "staged_sha256": "64f29c44ce26ea64af5874cdd77b50af1e9965dfd1645a5033a56e21b11cdb91"
+      "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+      "staging_adapted": true
     },
     "wiki/Writing-a-Plugin.md": {
       "source_path": "wiki/Writing-a-Plugin.md",
@@ -1063,12 +1135,14 @@
     },
     "include/GakuPaths.h": {
       "source_repository": "GakuLoader",
-      "source_revision": "0426648bd0601486347513af200aa4167a9fa09c",
+      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
       "source_path": "include/GakuPaths.h",
+      "source_git_blob": "58bd49055766dabf81e8050dc070e434b13a1e83",
       "source_sha256": "a1182d4903c642299fe28e3687a46ac23c19dfdb40e47a83e84da7af52865ea3",
       "staged_sha256": "a1182d4903c642299fe28e3687a46ac23c19dfdb40e47a83e84da7af52865ea3",
       "source_scope": "first-party-declared-MIT",
-      "review": "current optional paths implementation, example, public guide or synthetic test"
+      "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+      "staging_adapted": false
     },
     "include/GakuPaths.hpp": {
       "source_repository": "GakuLoader",
@@ -1108,12 +1182,14 @@
     },
     "tests/PathsTests.cpp": {
       "source_repository": "GakuLoader",
-      "source_revision": "0426648bd0601486347513af200aa4167a9fa09c",
+      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
       "source_path": "tests/PathsTests.cpp",
-      "source_sha256": "0f8458b5da7ea9875f386bc7b1a995b272f14058b4a00af9862e77369070a869",
-      "staged_sha256": "0f8458b5da7ea9875f386bc7b1a995b272f14058b4a00af9862e77369070a869",
+      "source_git_blob": "68395af24239e2ce322b3546a654d11a39dfa26d",
+      "source_sha256": "b52bf1054690e575239a5d82357e2523b451f7009e90751353e818f6dcdc208b",
+      "staged_sha256": "b52bf1054690e575239a5d82357e2523b451f7009e90751353e818f6dcdc208b",
       "source_scope": "first-party-declared-MIT",
-      "review": "current optional paths implementation, example, public guide or synthetic test"
+      "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+      "staging_adapted": false
     },
     "tests/PathsTests.vcxproj": {
       "source_repository": "GakuLoader",
@@ -1141,6 +1217,237 @@
       "staged_sha256": "74a7c2959f153deb940183397ca2c0eec944c0ca3d9b1cfb1b92666ca2b2d9d1",
       "source_scope": "first-party-declared-MIT",
       "review": "current optional paths implementation, example, public guide or synthetic test"
+    },
+    "include/GakuFileDrop.h": {
+      "source_repository": "GakuLoader",
+      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+      "source_path": "include/GakuFileDrop.h",
+      "source_git_blob": "d3bc93bf670162bd1448c1f713c6f34d0e67dbcb",
+      "source_sha256": "b8f703c34627ecee86d51fe1aa630053b2e224c441430ac6c93779642d6148fd",
+      "staged_sha256": "b8f703c34627ecee86d51fe1aa630053b2e224c441430ac6c93779642d6148fd",
+      "source_scope": "first-party-declared-MIT",
+      "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+      "staging_adapted": false
+    },
+    "include/GakuLanguage.h": {
+      "source_repository": "GakuLoader",
+      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+      "source_path": "include/GakuLanguage.h",
+      "source_git_blob": "1e9bb38fa03ba0d4eee4edd7917f39d380206a79",
+      "source_sha256": "6b1e39362171f9ba3588cec296da31043a9c93c5d4cf68344844bf70e78cd185",
+      "staged_sha256": "6b1e39362171f9ba3588cec296da31043a9c93c5d4cf68344844bf70e78cd185",
+      "source_scope": "first-party-declared-MIT",
+      "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+      "staging_adapted": false
+    },
+    "src/DesktopFileDrop.hpp": {
+      "source_repository": "GakuLoader",
+      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+      "source_path": "src/DesktopFileDrop.hpp",
+      "source_git_blob": "9f2b11ab3d11f6f13b7f8967f22bdb4d83cc030f",
+      "source_sha256": "d1046987fe2ec301c841b6d90e16aa919885b61b816c4fbcf4dce93d3cb87947",
+      "staged_sha256": "d1046987fe2ec301c841b6d90e16aa919885b61b816c4fbcf4dce93d3cb87947",
+      "source_scope": "first-party-declared-MIT",
+      "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+      "staging_adapted": false
+    },
+    "src/DesktopFonts.hpp": {
+      "source_repository": "GakuLoader",
+      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+      "source_path": "src/DesktopFonts.hpp",
+      "source_git_blob": "c43a9e9060fa8e455d61e23e1a08adea06ba5a2a",
+      "source_sha256": "011cf082f1bd51f605d7774ab161d29b30d60935662a7dfa5dd0b3a61ae0d3f8",
+      "staged_sha256": "011cf082f1bd51f605d7774ab161d29b30d60935662a7dfa5dd0b3a61ae0d3f8",
+      "source_scope": "first-party-declared-MIT",
+      "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+      "staging_adapted": false
+    },
+    "src/LanguageSettings.hpp": {
+      "source_repository": "GakuLoader",
+      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+      "source_path": "src/LanguageSettings.hpp",
+      "source_git_blob": "7f9791281d3c4b77cfdc526918f9f6f166c3f66f",
+      "source_sha256": "615e84dfcaab75a5fc17b9e773812a208f38962c6aff9c2080a94e429b1cc317",
+      "staged_sha256": "615e84dfcaab75a5fc17b9e773812a208f38962c6aff9c2080a94e429b1cc317",
+      "source_scope": "first-party-declared-MIT",
+      "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+      "staging_adapted": false
+    },
+    "src/ManagerStrings.hpp": {
+      "source_repository": "GakuLoader",
+      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+      "source_path": "src/ManagerStrings.hpp",
+      "source_git_blob": "2cd34729cfa82f9231b3db74a438682a66e7df75",
+      "source_sha256": "cc02814a0d769b629d33256dae0842585855ca6cbdb8960755561c5ee2fa7fce",
+      "staged_sha256": "cc02814a0d769b629d33256dae0842585855ca6cbdb8960755561c5ee2fa7fce",
+      "source_scope": "first-party-declared-MIT",
+      "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+      "staging_adapted": false
+    },
+    "tests/DesktopAppearanceTests.cpp": {
+      "source_repository": "GakuLoader",
+      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+      "source_path": "tests/DesktopAppearanceTests.cpp",
+      "source_git_blob": "184c34b33624566985e8966fc93147e572c43da4",
+      "source_sha256": "019d0359ec0f18d3895e0fa4dcc316b06e7f8a1dbe7ed8c17741468f00afa44d",
+      "staged_sha256": "019d0359ec0f18d3895e0fa4dcc316b06e7f8a1dbe7ed8c17741468f00afa44d",
+      "source_scope": "first-party-declared-MIT",
+      "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+      "staging_adapted": false
+    },
+    "tests/DesktopAppearanceTests.vcxproj": {
+      "source_repository": "GakuLoader",
+      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+      "source_path": "tests/DesktopAppearanceTests.vcxproj",
+      "source_git_blob": "af92eb479573e0def25f8fbf4e9e367931ee4cc1",
+      "source_sha256": "256dff6fb530973716bcc618e77e4dfac6c11fbb577942c82f1e7b1ad35fab89",
+      "staged_sha256": "256dff6fb530973716bcc618e77e4dfac6c11fbb577942c82f1e7b1ad35fab89",
+      "source_scope": "first-party-declared-MIT",
+      "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+      "staging_adapted": false
+    },
+    "tests/DesktopFileDropTests.cpp": {
+      "source_repository": "GakuLoader",
+      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+      "source_path": "tests/DesktopFileDropTests.cpp",
+      "source_git_blob": "ab762ae005ea817e4eb0a3d9dfb69601cac47b2f",
+      "source_sha256": "4c37f0a351b06e2501990541fe749eb870bf262179d41d086d46212442841f32",
+      "staged_sha256": "4c37f0a351b06e2501990541fe749eb870bf262179d41d086d46212442841f32",
+      "source_scope": "first-party-declared-MIT",
+      "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+      "staging_adapted": false
+    },
+    "tests/DesktopFileDropTests.vcxproj": {
+      "source_repository": "GakuLoader",
+      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+      "source_path": "tests/DesktopFileDropTests.vcxproj",
+      "source_git_blob": "28385608cb19112989d89e16bcb223d52c926308",
+      "source_sha256": "4a41a75119f9a6d37a8b14fa567f2247776634db493d0aee340f98947141fcfc",
+      "staged_sha256": "4a41a75119f9a6d37a8b14fa567f2247776634db493d0aee340f98947141fcfc",
+      "source_scope": "first-party-declared-MIT",
+      "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+      "staging_adapted": false
+    },
+    "tests/DesktopFontsTests.cpp": {
+      "source_repository": "GakuLoader",
+      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+      "source_path": "tests/DesktopFontsTests.cpp",
+      "source_git_blob": "701e3a50d76d597bc5b8ebe64f32400416defd44",
+      "source_sha256": "7707ca6771222f8af8ae0ce42a2d9a277a60ce76f055aeb6cd3743a1d763e905",
+      "staged_sha256": "7707ca6771222f8af8ae0ce42a2d9a277a60ce76f055aeb6cd3743a1d763e905",
+      "source_scope": "first-party-declared-MIT",
+      "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+      "staging_adapted": false
+    },
+    "tests/DesktopFontsTests.vcxproj": {
+      "source_repository": "GakuLoader",
+      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+      "source_path": "tests/DesktopFontsTests.vcxproj",
+      "source_git_blob": "4424c0adabccbbeef8f127c191cd11827c628463",
+      "source_sha256": "cd29a52e6400f42881867a294a317a6c8195a32d5f27e503d122fd4fdc11c81d",
+      "staged_sha256": "cd29a52e6400f42881867a294a317a6c8195a32d5f27e503d122fd4fdc11c81d",
+      "source_scope": "first-party-declared-MIT",
+      "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+      "staging_adapted": false
+    },
+    "tests/LanguageSettingsTests.cpp": {
+      "source_repository": "GakuLoader",
+      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+      "source_path": "tests/LanguageSettingsTests.cpp",
+      "source_git_blob": "526f769793637bb800ee73e72ec7ca71bc29a294",
+      "source_sha256": "381d11c05c999421d7d62055a7d5cb85b63e1a8e2ac4ec4c6265ac0ec3b730cc",
+      "staged_sha256": "381d11c05c999421d7d62055a7d5cb85b63e1a8e2ac4ec4c6265ac0ec3b730cc",
+      "source_scope": "first-party-declared-MIT",
+      "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+      "staging_adapted": false
+    },
+    "tests/LanguageSettingsTests.vcxproj": {
+      "source_repository": "GakuLoader",
+      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+      "source_path": "tests/LanguageSettingsTests.vcxproj",
+      "source_git_blob": "ec38d5f76288469d476e7aa04bf77a0ee4bbc416",
+      "source_sha256": "7983ed401367da7880cb75ec067c34306f692c108b3fe5f8f7076a6e49d7d0ba",
+      "staged_sha256": "7983ed401367da7880cb75ec067c34306f692c108b3fe5f8f7076a6e49d7d0ba",
+      "source_scope": "first-party-declared-MIT",
+      "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+      "staging_adapted": false
+    },
+    "tests/ManagerUiTests.cpp": {
+      "source_repository": "GakuLoader",
+      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+      "source_path": "tests/ManagerUiTests.cpp",
+      "source_git_blob": "521b170ea9b6bcec410d7910a63f833855ad1276",
+      "source_sha256": "7f89191da98e83c29d3356ad0c6f21082be2a395032d2ba16854ed9b7c70c41e",
+      "staged_sha256": "7f89191da98e83c29d3356ad0c6f21082be2a395032d2ba16854ed9b7c70c41e",
+      "source_scope": "first-party-declared-MIT",
+      "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+      "staging_adapted": false
+    },
+    "tests/ManagerUiTests.vcxproj": {
+      "source_repository": "GakuLoader",
+      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+      "source_path": "tests/ManagerUiTests.vcxproj",
+      "source_git_blob": "4001b96acaa16e7ec49ecf028674c5115d50a4f4",
+      "source_sha256": "b913747e77c5fe81bc4f0f787add359364f9288d303ac3ca041ad26fff0d310a",
+      "staged_sha256": "b913747e77c5fe81bc4f0f787add359364f9288d303ac3ca041ad26fff0d310a",
+      "source_scope": "first-party-declared-MIT",
+      "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+      "staging_adapted": false
+    },
+    "tests/test-desktop-file-drop.ps1": {
+      "source_repository": "GakuLoader",
+      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+      "source_path": "tests/test-desktop-file-drop.ps1",
+      "source_git_blob": "50b3888c88f1840e46aaafa911b5d810714aa63b",
+      "source_sha256": "28e0d197fa58b2ff95334580f34942119920d0bce548641801d2b3e85553c38c",
+      "staged_sha256": "28e0d197fa58b2ff95334580f34942119920d0bce548641801d2b3e85553c38c",
+      "source_scope": "first-party-declared-MIT",
+      "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+      "staging_adapted": false
+    },
+    "tests/test-desktop-fonts.ps1": {
+      "source_repository": "GakuLoader",
+      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+      "source_path": "tests/test-desktop-fonts.ps1",
+      "source_git_blob": "4063b22b0ddaabaa99c61cc911ee257c8bf632b7",
+      "source_sha256": "269242f4a071f95e3bff79fb4271eaadb8910ff528c1139de01415144cb16c05",
+      "staged_sha256": "269242f4a071f95e3bff79fb4271eaadb8910ff528c1139de01415144cb16c05",
+      "source_scope": "first-party-declared-MIT",
+      "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+      "staging_adapted": false
+    },
+    "tests/test-language-settings.ps1": {
+      "source_repository": "GakuLoader",
+      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+      "source_path": "tests/test-language-settings.ps1",
+      "source_git_blob": "827966a3bd1b7f84356a02eabb5a068d8fb54f74",
+      "source_sha256": "cfb64602413f6ba7ea4c0ae111b32d35421ded551a697f281f143564338a44c8",
+      "staged_sha256": "cfb64602413f6ba7ea4c0ae111b32d35421ded551a697f281f143564338a44c8",
+      "source_scope": "first-party-declared-MIT",
+      "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+      "staging_adapted": false
+    },
+    "tests/test-manager-ui.ps1": {
+      "source_repository": "GakuLoader",
+      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+      "source_path": "tests/test-manager-ui.ps1",
+      "source_git_blob": "2393f3cced289c56e295d778dd3bbf26ca9e4ab0",
+      "source_sha256": "c9060fdb6a5f4ca5f936fc7f96efdeec3926721f9b59fcc0bca55e737aba10c2",
+      "staged_sha256": "c9060fdb6a5f4ca5f936fc7f96efdeec3926721f9b59fcc0bca55e737aba10c2",
+      "source_scope": "first-party-declared-MIT",
+      "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+      "staging_adapted": false
+    },
+    "tools/test-desktop-appearance.ps1": {
+      "source_repository": "GakuLoader",
+      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+      "source_path": "tools/test-desktop-appearance.ps1",
+      "source_git_blob": "929a3db3056492b34d5367dc1a8c464013dc841a",
+      "source_sha256": "6c96c9be8830d7954047e72bb87f52c9ddacf5e31b92cf3d0cb65ac9067ed5f2",
+      "staged_sha256": "6c96c9be8830d7954047e72bb87f52c9ddacf5e31b92cf3d0cb65ac9067ed5f2",
+      "source_scope": "first-party-declared-MIT",
+      "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+      "staging_adapted": false
     }
   },
   "excluded_groups": [
@@ -1292,7 +1599,7 @@
       }
     }
   },
-  "source_revision_scope": "current optional paths refresh; retained files keep per-file source revision and documentation_restoration provenance",
+  "source_revision_scope": "fixed-commit public Manager/presentation/hotkey refresh; retained files keep per-file origins and earlier provenance",
   "paths_refresh_20261102": {
     "source_revision": "0426648bd0601486347513af200aa4167a9fa09c",
     "baseline_staging_commit": "c4c302f33b765a45fc81556cf5df276da424a70d",
@@ -1443,5 +1750,565 @@
       "tools/validate-source.ps1 adds selected paths suite; vendored build/CI defaults retained"
     ],
     "history_policy": "prior validation/doc restoration records remain historical and unchanged"
+  },
+  "manager_refresh_20261104": {
+    "baseline_staging_commit": "a937652395e5c782e3f9b39584c4f4c546e4fd0a",
+    "baseline_source_commit": "0426648bd0601486347513af200aa4167a9fa09c",
+    "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+    "resolved_feature_merge": "a619b98a386fb373eb149f65f472e4410c253274",
+    "source_bytes": "fixed Git blobs; four SDK headers canonical LF",
+    "imported_files": {
+      "GakuLoader.vcxproj": {
+        "source_repository": "GakuLoader",
+        "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+        "source_path": "GakuLoader.vcxproj",
+        "source_git_blob": "9e8916b5464c42a49a142994113cbe6566cc1a48",
+        "source_sha256": "841f127a74d44336eddea3d01a579537680748493000968b945a446185254c96",
+        "staged_sha256": "841f127a74d44336eddea3d01a579537680748493000968b945a446185254c96",
+        "source_scope": "first-party-declared-MIT",
+        "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+        "staging_adapted": false
+      },
+      "README.en.md": {
+        "source_repository": "GakuLoader",
+        "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+        "source_path": "README.en.md",
+        "source_git_blob": "73d309e2496af7432fd29755c3ccf87780e3abad",
+        "source_sha256": "df4e5a8e5afc6b336d5b97c38fee7b07041421974deb4a28da6850ae878f78d2",
+        "staged_sha256": "ac5596e869131f98021350c2ebdf292643487179854ef76fb89387f5f72313b5",
+        "source_scope": "first-party-declared-MIT",
+        "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+        "staging_adapted": true
+      },
+      "README.ja.md": {
+        "source_repository": "GakuLoader",
+        "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+        "source_path": "README.ja.md",
+        "source_git_blob": "8b25b97f6bfa160b3e782133e86868c700415fbf",
+        "source_sha256": "7caace2776d5a7c758b31b5823662d369cd4a8584f94a325043c4b6bae13a2b3",
+        "staged_sha256": "afe21b0ce4c802c0bacfd0c94edd25739171dea991ef9f2591957a3dcdc8a45f",
+        "source_scope": "first-party-declared-MIT",
+        "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+        "staging_adapted": true
+      },
+      "README.md": {
+        "source_repository": "GakuLoader",
+        "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+        "source_path": "README.md",
+        "source_git_blob": "f2b385e12b8efb8b39738eb768779243ea1b080f",
+        "source_sha256": "dd62f3ba1f1e4f0346c226ada558ec4d70bff0acf9cb0358f999080347fc0a06",
+        "staged_sha256": "076c7f7f472eb2c3b53f908a69d29ede94c8fa2d5bdfecc59615117133814858",
+        "source_scope": "first-party-declared-MIT",
+        "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+        "staging_adapted": true
+      },
+      "docs/PLUGIN_DEVELOPMENT.md": {
+        "source_repository": "GakuLoader",
+        "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+        "source_path": "docs/PLUGIN_DEVELOPMENT.md",
+        "source_git_blob": "2aad9607395c1ebe535aac87f4801e9c4745c879",
+        "source_sha256": "03578c77ab374608c0576b823d22f3a1e7177819aeba9a35c9cddbb10507ea51",
+        "staged_sha256": "03578c77ab374608c0576b823d22f3a1e7177819aeba9a35c9cddbb10507ea51",
+        "source_scope": "first-party-declared-MIT",
+        "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+        "staging_adapted": false
+      },
+      "docs/QUICKSTART.md": {
+        "source_repository": "GakuLoader",
+        "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+        "source_path": "docs/QUICKSTART.md",
+        "source_git_blob": "0070cfd78fc33768e5958d7d848524679917c56e",
+        "source_sha256": "d5b4f08cbc663746a550bdf1e67afcd4ca4ee38c7dc9fcca15f74fa5f9bb236f",
+        "staged_sha256": "4e57286b7dc01fd800e0c5f98a6f693e9fb3dd9db1253d6f45bc03dec5a01778",
+        "source_scope": "first-party-declared-MIT",
+        "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+        "staging_adapted": true
+      },
+      "include/GakuFileDrop.h": {
+        "source_repository": "GakuLoader",
+        "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+        "source_path": "include/GakuFileDrop.h",
+        "source_git_blob": "d3bc93bf670162bd1448c1f713c6f34d0e67dbcb",
+        "source_sha256": "b8f703c34627ecee86d51fe1aa630053b2e224c441430ac6c93779642d6148fd",
+        "staged_sha256": "b8f703c34627ecee86d51fe1aa630053b2e224c441430ac6c93779642d6148fd",
+        "source_scope": "first-party-declared-MIT",
+        "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+        "staging_adapted": false
+      },
+      "include/GakuLanguage.h": {
+        "source_repository": "GakuLoader",
+        "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+        "source_path": "include/GakuLanguage.h",
+        "source_git_blob": "1e9bb38fa03ba0d4eee4edd7917f39d380206a79",
+        "source_sha256": "6b1e39362171f9ba3588cec296da31043a9c93c5d4cf68344844bf70e78cd185",
+        "staged_sha256": "6b1e39362171f9ba3588cec296da31043a9c93c5d4cf68344844bf70e78cd185",
+        "source_scope": "first-party-declared-MIT",
+        "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+        "staging_adapted": false
+      },
+      "include/GakuPaths.h": {
+        "source_repository": "GakuLoader",
+        "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+        "source_path": "include/GakuPaths.h",
+        "source_git_blob": "58bd49055766dabf81e8050dc070e434b13a1e83",
+        "source_sha256": "a1182d4903c642299fe28e3687a46ac23c19dfdb40e47a83e84da7af52865ea3",
+        "staged_sha256": "a1182d4903c642299fe28e3687a46ac23c19dfdb40e47a83e84da7af52865ea3",
+        "source_scope": "first-party-declared-MIT",
+        "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+        "staging_adapted": false
+      },
+      "include/GakuPlugin.h": {
+        "source_repository": "GakuLoader",
+        "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+        "source_path": "include/GakuPlugin.h",
+        "source_git_blob": "1f4dff34c9f1c334a59f216df9558710016f4e1b",
+        "source_sha256": "12f4e4db22ff0505990b66cfeaf97b1cae54486c9eb415e7efc3adfd9984867e",
+        "staged_sha256": "12f4e4db22ff0505990b66cfeaf97b1cae54486c9eb415e7efc3adfd9984867e",
+        "source_scope": "first-party-declared-MIT",
+        "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+        "staging_adapted": false
+      },
+      "src/DesktopAppearance.hpp": {
+        "source_repository": "GakuLoader",
+        "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+        "source_path": "src/DesktopAppearance.hpp",
+        "source_git_blob": "dcbccf4e7595a41ade8a00f829978b1567aed1a7",
+        "source_sha256": "0ed05e5682a6b8b803beda0841b43c618ba273778638fcaa254e6926a99310dc",
+        "staged_sha256": "0ed05e5682a6b8b803beda0841b43c618ba273778638fcaa254e6926a99310dc",
+        "source_scope": "first-party-declared-MIT",
+        "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+        "staging_adapted": false
+      },
+      "src/DesktopFileDrop.hpp": {
+        "source_repository": "GakuLoader",
+        "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+        "source_path": "src/DesktopFileDrop.hpp",
+        "source_git_blob": "9f2b11ab3d11f6f13b7f8967f22bdb4d83cc030f",
+        "source_sha256": "d1046987fe2ec301c841b6d90e16aa919885b61b816c4fbcf4dce93d3cb87947",
+        "staged_sha256": "d1046987fe2ec301c841b6d90e16aa919885b61b816c4fbcf4dce93d3cb87947",
+        "source_scope": "first-party-declared-MIT",
+        "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+        "staging_adapted": false
+      },
+      "src/DesktopFonts.hpp": {
+        "source_repository": "GakuLoader",
+        "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+        "source_path": "src/DesktopFonts.hpp",
+        "source_git_blob": "c43a9e9060fa8e455d61e23e1a08adea06ba5a2a",
+        "source_sha256": "011cf082f1bd51f605d7774ab161d29b30d60935662a7dfa5dd0b3a61ae0d3f8",
+        "staged_sha256": "011cf082f1bd51f605d7774ab161d29b30d60935662a7dfa5dd0b3a61ae0d3f8",
+        "source_scope": "first-party-declared-MIT",
+        "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+        "staging_adapted": false
+      },
+      "src/DesktopUi.cpp": {
+        "source_repository": "GakuLoader",
+        "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+        "source_path": "src/DesktopUi.cpp",
+        "source_git_blob": "dc38bdc2aaec13f610d8784d2db2c98619d8ebe2",
+        "source_sha256": "dc9506323e21dc63389b60187346f6c2d22df593187668c0c03ad34b2c7f17e4",
+        "staged_sha256": "dc9506323e21dc63389b60187346f6c2d22df593187668c0c03ad34b2c7f17e4",
+        "source_scope": "first-party-declared-MIT",
+        "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+        "staging_adapted": false
+      },
+      "src/DesktopUi.hpp": {
+        "source_repository": "GakuLoader",
+        "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+        "source_path": "src/DesktopUi.hpp",
+        "source_git_blob": "ad6ec22183a4f405819c47f1593164e33048ec73",
+        "source_sha256": "66995d1178321a358f7253b17d3d14095c5e716269149f5f674135003e82c51e",
+        "staged_sha256": "66995d1178321a358f7253b17d3d14095c5e716269149f5f674135003e82c51e",
+        "source_scope": "first-party-declared-MIT",
+        "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+        "staging_adapted": false
+      },
+      "src/Host.hpp": {
+        "source_repository": "GakuLoader",
+        "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+        "source_path": "src/Host.hpp",
+        "source_git_blob": "e557ffdd2f02945a0b34fe6f08a5580b3a1471c0",
+        "source_sha256": "06821b9dabc7405d3cea8796a73a4e2793e3483ae49dc1ff45e1a9fde29dc120",
+        "staged_sha256": "06821b9dabc7405d3cea8796a73a4e2793e3483ae49dc1ff45e1a9fde29dc120",
+        "source_scope": "first-party-declared-MIT",
+        "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+        "staging_adapted": false
+      },
+      "src/Hotkeys.cpp": {
+        "source_repository": "GakuLoader",
+        "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+        "source_path": "src/Hotkeys.cpp",
+        "source_git_blob": "ee0fdc3d6a9aaf6dc6db45c35e82cf6acab84dc0",
+        "source_sha256": "dbcf921474a8f819758c9a0a813c5d367b6a17741e9dc1fc5fa7c9f75d403303",
+        "staged_sha256": "dbcf921474a8f819758c9a0a813c5d367b6a17741e9dc1fc5fa7c9f75d403303",
+        "source_scope": "first-party-declared-MIT",
+        "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+        "staging_adapted": false
+      },
+      "src/Hotkeys.hpp": {
+        "source_repository": "GakuLoader",
+        "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+        "source_path": "src/Hotkeys.hpp",
+        "source_git_blob": "4f2967af3eab1010b3610f2e010ad55805a40d19",
+        "source_sha256": "0b3a9a076ef017e3641f88fbe94dc01526006400e1338a142a14c5e94da47bf2",
+        "staged_sha256": "0b3a9a076ef017e3641f88fbe94dc01526006400e1338a142a14c5e94da47bf2",
+        "source_scope": "first-party-declared-MIT",
+        "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+        "staging_adapted": false
+      },
+      "src/LanguageSettings.hpp": {
+        "source_repository": "GakuLoader",
+        "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+        "source_path": "src/LanguageSettings.hpp",
+        "source_git_blob": "7f9791281d3c4b77cfdc526918f9f6f166c3f66f",
+        "source_sha256": "615e84dfcaab75a5fc17b9e773812a208f38962c6aff9c2080a94e429b1cc317",
+        "staged_sha256": "615e84dfcaab75a5fc17b9e773812a208f38962c6aff9c2080a94e429b1cc317",
+        "source_scope": "first-party-declared-MIT",
+        "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+        "staging_adapted": false
+      },
+      "src/ManagerStrings.hpp": {
+        "source_repository": "GakuLoader",
+        "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+        "source_path": "src/ManagerStrings.hpp",
+        "source_git_blob": "2cd34729cfa82f9231b3db74a438682a66e7df75",
+        "source_sha256": "cc02814a0d769b629d33256dae0842585855ca6cbdb8960755561c5ee2fa7fce",
+        "staged_sha256": "cc02814a0d769b629d33256dae0842585855ca6cbdb8960755561c5ee2fa7fce",
+        "source_scope": "first-party-declared-MIT",
+        "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+        "staging_adapted": false
+      },
+      "src/PluginHost.cpp": {
+        "source_repository": "GakuLoader",
+        "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+        "source_path": "src/PluginHost.cpp",
+        "source_git_blob": "e01989fc5ec96a16a9768ac035615d003905203b",
+        "source_sha256": "b6ef37564caa164aa5544202e68c8b39da965e36804910c2d9ffcdf8dcd04ced",
+        "staged_sha256": "b6ef37564caa164aa5544202e68c8b39da965e36804910c2d9ffcdf8dcd04ced",
+        "source_scope": "first-party-declared-MIT",
+        "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+        "staging_adapted": false
+      },
+      "tests/CAbiTest.c": {
+        "source_repository": "GakuLoader",
+        "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+        "source_path": "tests/CAbiTest.c",
+        "source_git_blob": "23e7750ee8d7dd89f378eca01098be991ba4effc",
+        "source_sha256": "d86c9d57bb7c6d49aad353531da523f84f08a284324d7c98b2514bc37936ddf1",
+        "staged_sha256": "d86c9d57bb7c6d49aad353531da523f84f08a284324d7c98b2514bc37936ddf1",
+        "source_scope": "first-party-declared-MIT",
+        "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+        "staging_adapted": false
+      },
+      "tests/DesktopAppearanceTests.cpp": {
+        "source_repository": "GakuLoader",
+        "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+        "source_path": "tests/DesktopAppearanceTests.cpp",
+        "source_git_blob": "184c34b33624566985e8966fc93147e572c43da4",
+        "source_sha256": "019d0359ec0f18d3895e0fa4dcc316b06e7f8a1dbe7ed8c17741468f00afa44d",
+        "staged_sha256": "019d0359ec0f18d3895e0fa4dcc316b06e7f8a1dbe7ed8c17741468f00afa44d",
+        "source_scope": "first-party-declared-MIT",
+        "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+        "staging_adapted": false
+      },
+      "tests/DesktopAppearanceTests.vcxproj": {
+        "source_repository": "GakuLoader",
+        "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+        "source_path": "tests/DesktopAppearanceTests.vcxproj",
+        "source_git_blob": "af92eb479573e0def25f8fbf4e9e367931ee4cc1",
+        "source_sha256": "256dff6fb530973716bcc618e77e4dfac6c11fbb577942c82f1e7b1ad35fab89",
+        "staged_sha256": "256dff6fb530973716bcc618e77e4dfac6c11fbb577942c82f1e7b1ad35fab89",
+        "source_scope": "first-party-declared-MIT",
+        "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+        "staging_adapted": false
+      },
+      "tests/DesktopFileDropTests.cpp": {
+        "source_repository": "GakuLoader",
+        "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+        "source_path": "tests/DesktopFileDropTests.cpp",
+        "source_git_blob": "ab762ae005ea817e4eb0a3d9dfb69601cac47b2f",
+        "source_sha256": "4c37f0a351b06e2501990541fe749eb870bf262179d41d086d46212442841f32",
+        "staged_sha256": "4c37f0a351b06e2501990541fe749eb870bf262179d41d086d46212442841f32",
+        "source_scope": "first-party-declared-MIT",
+        "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+        "staging_adapted": false
+      },
+      "tests/DesktopFileDropTests.vcxproj": {
+        "source_repository": "GakuLoader",
+        "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+        "source_path": "tests/DesktopFileDropTests.vcxproj",
+        "source_git_blob": "28385608cb19112989d89e16bcb223d52c926308",
+        "source_sha256": "4a41a75119f9a6d37a8b14fa567f2247776634db493d0aee340f98947141fcfc",
+        "staged_sha256": "4a41a75119f9a6d37a8b14fa567f2247776634db493d0aee340f98947141fcfc",
+        "source_scope": "first-party-declared-MIT",
+        "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+        "staging_adapted": false
+      },
+      "tests/DesktopFontsTests.cpp": {
+        "source_repository": "GakuLoader",
+        "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+        "source_path": "tests/DesktopFontsTests.cpp",
+        "source_git_blob": "701e3a50d76d597bc5b8ebe64f32400416defd44",
+        "source_sha256": "7707ca6771222f8af8ae0ce42a2d9a277a60ce76f055aeb6cd3743a1d763e905",
+        "staged_sha256": "7707ca6771222f8af8ae0ce42a2d9a277a60ce76f055aeb6cd3743a1d763e905",
+        "source_scope": "first-party-declared-MIT",
+        "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+        "staging_adapted": false
+      },
+      "tests/DesktopFontsTests.vcxproj": {
+        "source_repository": "GakuLoader",
+        "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+        "source_path": "tests/DesktopFontsTests.vcxproj",
+        "source_git_blob": "4424c0adabccbbeef8f127c191cd11827c628463",
+        "source_sha256": "cd29a52e6400f42881867a294a317a6c8195a32d5f27e503d122fd4fdc11c81d",
+        "staged_sha256": "cd29a52e6400f42881867a294a317a6c8195a32d5f27e503d122fd4fdc11c81d",
+        "source_scope": "first-party-declared-MIT",
+        "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+        "staging_adapted": false
+      },
+      "tests/DesktopUiSmoke.cpp": {
+        "source_repository": "GakuLoader",
+        "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+        "source_path": "tests/DesktopUiSmoke.cpp",
+        "source_git_blob": "28d085987b4b50511d079f13db38f05542b69add",
+        "source_sha256": "515b150a0ea4e78e698a91db7726623e86b6f0eebb4a61e6c1d1b41a94756c5f",
+        "staged_sha256": "515b150a0ea4e78e698a91db7726623e86b6f0eebb4a61e6c1d1b41a94756c5f",
+        "source_scope": "first-party-declared-MIT",
+        "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+        "staging_adapted": false
+      },
+      "tests/HostDialogConcurrency.cpp": {
+        "source_repository": "GakuLoader",
+        "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+        "source_path": "tests/HostDialogConcurrency.cpp",
+        "source_git_blob": "990237a9fa20d3929fbb188f19df9775edf0232c",
+        "source_sha256": "8910e95ae1a1ef43f8d69be3594101384e6726948499195b4c46bd9a9af1232c",
+        "staged_sha256": "8910e95ae1a1ef43f8d69be3594101384e6726948499195b4c46bd9a9af1232c",
+        "source_scope": "first-party-declared-MIT",
+        "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+        "staging_adapted": false
+      },
+      "tests/HostTests.cpp": {
+        "source_repository": "GakuLoader",
+        "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+        "source_path": "tests/HostTests.cpp",
+        "source_git_blob": "6bdd71af0d8d703d178f3ecc6769b64433816fc4",
+        "source_sha256": "8e5c48e89fbc55d4ed5a4dd0299ff6919c52bf4e21e3e6b7ae2e6a1fb02fd5d5",
+        "staged_sha256": "8e5c48e89fbc55d4ed5a4dd0299ff6919c52bf4e21e3e6b7ae2e6a1fb02fd5d5",
+        "source_scope": "first-party-declared-MIT",
+        "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+        "staging_adapted": false
+      },
+      "tests/LanguageSettingsTests.cpp": {
+        "source_repository": "GakuLoader",
+        "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+        "source_path": "tests/LanguageSettingsTests.cpp",
+        "source_git_blob": "526f769793637bb800ee73e72ec7ca71bc29a294",
+        "source_sha256": "381d11c05c999421d7d62055a7d5cb85b63e1a8e2ac4ec4c6265ac0ec3b730cc",
+        "staged_sha256": "381d11c05c999421d7d62055a7d5cb85b63e1a8e2ac4ec4c6265ac0ec3b730cc",
+        "source_scope": "first-party-declared-MIT",
+        "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+        "staging_adapted": false
+      },
+      "tests/LanguageSettingsTests.vcxproj": {
+        "source_repository": "GakuLoader",
+        "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+        "source_path": "tests/LanguageSettingsTests.vcxproj",
+        "source_git_blob": "ec38d5f76288469d476e7aa04bf77a0ee4bbc416",
+        "source_sha256": "7983ed401367da7880cb75ec067c34306f692c108b3fe5f8f7076a6e49d7d0ba",
+        "staged_sha256": "7983ed401367da7880cb75ec067c34306f692c108b3fe5f8f7076a6e49d7d0ba",
+        "source_scope": "first-party-declared-MIT",
+        "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+        "staging_adapted": false
+      },
+      "tests/ManagerUiTests.cpp": {
+        "source_repository": "GakuLoader",
+        "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+        "source_path": "tests/ManagerUiTests.cpp",
+        "source_git_blob": "521b170ea9b6bcec410d7910a63f833855ad1276",
+        "source_sha256": "7f89191da98e83c29d3356ad0c6f21082be2a395032d2ba16854ed9b7c70c41e",
+        "staged_sha256": "7f89191da98e83c29d3356ad0c6f21082be2a395032d2ba16854ed9b7c70c41e",
+        "source_scope": "first-party-declared-MIT",
+        "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+        "staging_adapted": false
+      },
+      "tests/ManagerUiTests.vcxproj": {
+        "source_repository": "GakuLoader",
+        "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+        "source_path": "tests/ManagerUiTests.vcxproj",
+        "source_git_blob": "4001b96acaa16e7ec49ecf028674c5115d50a4f4",
+        "source_sha256": "b913747e77c5fe81bc4f0f787add359364f9288d303ac3ca041ad26fff0d310a",
+        "staged_sha256": "b913747e77c5fe81bc4f0f787add359364f9288d303ac3ca041ad26fff0d310a",
+        "source_scope": "first-party-declared-MIT",
+        "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+        "staging_adapted": false
+      },
+      "tests/PathsTests.cpp": {
+        "source_repository": "GakuLoader",
+        "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+        "source_path": "tests/PathsTests.cpp",
+        "source_git_blob": "68395af24239e2ce322b3546a654d11a39dfa26d",
+        "source_sha256": "b52bf1054690e575239a5d82357e2523b451f7009e90751353e818f6dcdc208b",
+        "staged_sha256": "b52bf1054690e575239a5d82357e2523b451f7009e90751353e818f6dcdc208b",
+        "source_scope": "first-party-declared-MIT",
+        "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+        "staging_adapted": false
+      },
+      "tests/build-tests.ps1": {
+        "source_repository": "GakuLoader",
+        "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+        "source_path": "tests/build-tests.ps1",
+        "source_git_blob": "a557c6374ba7b56448a7a790105ab2404b755c59",
+        "source_sha256": "5b32d4f8a8dcea4f42acc956ad97c5d6a1113fbf64a588d616b142d5b48f4f7a",
+        "staged_sha256": "5b32d4f8a8dcea4f42acc956ad97c5d6a1113fbf64a588d616b142d5b48f4f7a",
+        "source_scope": "first-party-declared-MIT",
+        "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+        "staging_adapted": false
+      },
+      "tests/run-all.ps1": {
+        "source_repository": "GakuLoader",
+        "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+        "source_path": "tests/run-all.ps1",
+        "source_git_blob": "550e289cb7260f750b862593af93d71a58ec1848",
+        "source_sha256": "727d53c92d17417ea6ef486ae3c78f42622579a61e848edae1722a3e3f7e5ca7",
+        "staged_sha256": "727d53c92d17417ea6ef486ae3c78f42622579a61e848edae1722a3e3f7e5ca7",
+        "source_scope": "first-party-declared-MIT",
+        "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+        "staging_adapted": false
+      },
+      "tests/test-desktop-file-drop.ps1": {
+        "source_repository": "GakuLoader",
+        "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+        "source_path": "tests/test-desktop-file-drop.ps1",
+        "source_git_blob": "50b3888c88f1840e46aaafa911b5d810714aa63b",
+        "source_sha256": "28e0d197fa58b2ff95334580f34942119920d0bce548641801d2b3e85553c38c",
+        "staged_sha256": "28e0d197fa58b2ff95334580f34942119920d0bce548641801d2b3e85553c38c",
+        "source_scope": "first-party-declared-MIT",
+        "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+        "staging_adapted": false
+      },
+      "tests/test-desktop-fonts.ps1": {
+        "source_repository": "GakuLoader",
+        "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+        "source_path": "tests/test-desktop-fonts.ps1",
+        "source_git_blob": "4063b22b0ddaabaa99c61cc911ee257c8bf632b7",
+        "source_sha256": "269242f4a071f95e3bff79fb4271eaadb8910ff528c1139de01415144cb16c05",
+        "staged_sha256": "269242f4a071f95e3bff79fb4271eaadb8910ff528c1139de01415144cb16c05",
+        "source_scope": "first-party-declared-MIT",
+        "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+        "staging_adapted": false
+      },
+      "tests/test-host.ps1": {
+        "source_repository": "GakuLoader",
+        "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+        "source_path": "tests/test-host.ps1",
+        "source_git_blob": "e94976043680939e5a467f0e08155b84834ca30f",
+        "source_sha256": "a6517e3336502e7cc472e487494577cde2381ea442e29d8e64c332f2b300d830",
+        "staged_sha256": "a6517e3336502e7cc472e487494577cde2381ea442e29d8e64c332f2b300d830",
+        "source_scope": "first-party-declared-MIT",
+        "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+        "staging_adapted": false
+      },
+      "tests/test-language-settings.ps1": {
+        "source_repository": "GakuLoader",
+        "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+        "source_path": "tests/test-language-settings.ps1",
+        "source_git_blob": "827966a3bd1b7f84356a02eabb5a068d8fb54f74",
+        "source_sha256": "cfb64602413f6ba7ea4c0ae111b32d35421ded551a697f281f143564338a44c8",
+        "staged_sha256": "cfb64602413f6ba7ea4c0ae111b32d35421ded551a697f281f143564338a44c8",
+        "source_scope": "first-party-declared-MIT",
+        "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+        "staging_adapted": false
+      },
+      "tests/test-manager-ui.ps1": {
+        "source_repository": "GakuLoader",
+        "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+        "source_path": "tests/test-manager-ui.ps1",
+        "source_git_blob": "2393f3cced289c56e295d778dd3bbf26ca9e4ab0",
+        "source_sha256": "c9060fdb6a5f4ca5f936fc7f96efdeec3926721f9b59fcc0bca55e737aba10c2",
+        "staged_sha256": "c9060fdb6a5f4ca5f936fc7f96efdeec3926721f9b59fcc0bca55e737aba10c2",
+        "source_scope": "first-party-declared-MIT",
+        "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+        "staging_adapted": false
+      },
+      "tests/test_diagnostic_boundary.cpp": {
+        "source_repository": "GakuLoader",
+        "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+        "source_path": "tests/test_diagnostic_boundary.cpp",
+        "source_git_blob": "91c4ebd0c98acbddf960046906a184332e4a2f67",
+        "source_sha256": "8dd1ede2d098353d2010777e977f58026a2e199de385a8ada575d10687e29e52",
+        "staged_sha256": "8dd1ede2d098353d2010777e977f58026a2e199de385a8ada575d10687e29e52",
+        "source_scope": "first-party-declared-MIT",
+        "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+        "staging_adapted": false
+      },
+      "tools/test-desktop-appearance.ps1": {
+        "source_repository": "GakuLoader",
+        "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+        "source_path": "tools/test-desktop-appearance.ps1",
+        "source_git_blob": "929a3db3056492b34d5367dc1a8c464013dc841a",
+        "source_sha256": "6c96c9be8830d7954047e72bb87f52c9ddacf5e31b92cf3d0cb65ac9067ed5f2",
+        "staged_sha256": "6c96c9be8830d7954047e72bb87f52c9ddacf5e31b92cf3d0cb65ac9067ed5f2",
+        "source_scope": "first-party-declared-MIT",
+        "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+        "staging_adapted": false
+      },
+      "wiki/Configuration.md": {
+        "source_repository": "GakuLoader",
+        "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+        "source_path": "wiki/Configuration.md",
+        "source_git_blob": "017b8842b767b393501c198c5233a6aec410358b",
+        "source_sha256": "9ac70400d02675a07974bacdcdc8266143b9c6a2025b2d4f86fa6ed74b9fb65d",
+        "staged_sha256": "ca0a3ca4314a8b63a0c609c42d3b1f2981f68d4f67ae0a89529a5a961b6a6ecf",
+        "source_scope": "first-party-declared-MIT",
+        "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+        "staging_adapted": true
+      },
+      "wiki/Hotkeys.md": {
+        "source_repository": "GakuLoader",
+        "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+        "source_path": "wiki/Hotkeys.md",
+        "source_git_blob": "7d0800ca3253050fa12f1f1369320545090d279f",
+        "source_sha256": "81ec42c4c03849146b8b59aedb78566775d90b94e6e179706ba4bd20013b61f9",
+        "staged_sha256": "2d78c4766da557d0d13eba3e587ed0abd10f94f50593e6fad50fb964faa98542",
+        "source_scope": "first-party-declared-MIT",
+        "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+        "staging_adapted": true
+      },
+      "wiki/Troubleshooting.md": {
+        "source_repository": "GakuLoader",
+        "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+        "source_path": "wiki/Troubleshooting.md",
+        "source_git_blob": "1396ac14c07c1d2a4b37ec95a67272485f99b2b0",
+        "source_sha256": "182d26a05e7b864abcbd44053be8cfa09d122d39f191354b633239bf115bf700",
+        "staged_sha256": "4a0b58579bf983825a0c2383359ac5e871f67566ca35b90d4f3978bbe5b10407",
+        "source_scope": "first-party-declared-MIT",
+        "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+        "staging_adapted": true
+      },
+      "wiki/UI.md": {
+        "source_repository": "GakuLoader",
+        "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
+        "source_path": "wiki/UI.md",
+        "source_git_blob": "576f29c189cbde6a8eb98c27ddbd37755a989a32",
+        "source_sha256": "f996a2263c9b8507a52edf0f908da3993415e4fd7e43228401e6bbcea5631f23",
+        "staged_sha256": "af6b4b8b55cbfa263b00520e59bf00aa1f98ad34207a686d5bb4be350928423e",
+        "source_scope": "first-party-declared-MIT",
+        "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
+        "staging_adapted": true
+      }
+    },
+    "preserved_staging_scope": [
+      "vendored dependencies and complete license texts",
+      "source-only AGENTS and independent CI/build adaptation",
+      "restored public README/Wiki navigation and uninstall wording",
+      "earlier source-selection, paths and documentation history"
+    ],
+    "staging_adaptations": [
+      "public documentation wording and existing repository navigation retained",
+      "tools/validate-source.ps1 adds language/font/appearance headless checks without opening windows"
+    ],
+    "validation_record_workspace_relative": "build/staging_refresh_20261104/Loader/validation.json",
+    "validation_scope": "final committed clean source build and synthetic checks; no deployment, game or remote operations"
   }
 }

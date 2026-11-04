@@ -58,6 +58,7 @@ struct DesktopPluginPanel {
 struct DesktopHostSnapshot {
     std::vector<DesktopPluginPanel> plugins;
     bool runtimeReady{false}, shuttingDown{false}, activated{false};
+    std::vector<std::wstring> pluginFiles; // discovered DLL filenames, including disabled/rejected DLLs
 };
 // Non-blocking copies and selected-panel dispatch; UI never borrows the list.
 bool SnapshotDesktopHost(DesktopHostSnapshot& output);

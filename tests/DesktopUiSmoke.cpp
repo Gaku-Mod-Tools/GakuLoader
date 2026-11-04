@@ -4,6 +4,8 @@
 #include "DesktopDialogs.hpp"
 #include "Host.hpp"
 #include <windows.h>
+#include <shellapi.h>
+#include <shlobj.h>
 #include <d3d11.h>
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -14,6 +16,7 @@
 #include <mutex>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 namespace {
 std::atomic_uint frames{0}, inspectedFrames{0}, gameCloses{0};
@@ -24,6 +27,9 @@ std::atomic_bool expectPluginPixels{false};
 std::atomic_bool buildingFrame{false}, requestPasteCheck{false}, requestCopy{false};
 std::atomic_bool blockClipboard{false}, clipboardEntered{false}, releaseClipboard{false};
 std::atomic_uint clipboardGets{0}, clipboardSets{0}, clipboardSequence{1}, pasteChecks{0};
+std::atomic_bool fileDropArmed{false};
+std::atomic_uint fileDropTargetFrames{0}, nativeDropBatches{0};
+std::atomic_int fileDropX{0}, fileDropY{0};
 std::mutex clipboardMutex;
 std::string clipboardText = "initial simulated clipboard";
 std::atomic_bool keySeen{false}, callbackRunning{false}, stopped{false};
@@ -56,6 +62,33 @@ void FakeClipboardSet(void*, const char* text) {
 }
 void ChangeClipboard(const char* text) {
     std::lock_guard lock(clipboardMutex); clipboardText = text; ++clipboardSequence;
+}
+const std::vector<std::wstring> kDropFiles{L"曲库/动作 🎵.vmd", L"曲库/カメラ.gkcamera", L"曲库/song.wav"};
+const std::string kExpectedDropBytes = [] {
+    std::string packed;
+    for (const auto* path : {"曲库/动作 🎵.vmd", "曲库/カメラ.gkcamera", "曲库/song.wav"}) {
+        packed.append(path); packed.push_back('\0');
+    }
+    return packed;
+}();
+void SendNativeDrop(HWND window, POINT clientPoint) {
+    size_t characterCount = 1;
+    for (const auto& path : kDropFiles) characterCount += path.size() + 1;
+    const HGLOBAL memory = GlobalAlloc(GHND, sizeof(DROPFILES) + characterCount * sizeof(wchar_t));
+    Check(memory != nullptr, "native file-drop allocation");
+    auto* drop = static_cast<DROPFILES*>(GlobalLock(memory));
+    if (!drop) { GlobalFree(memory); Check(false, "native file-drop lock"); }
+    drop->pFiles = sizeof(DROPFILES); drop->pt = clientPoint; drop->fNC = FALSE; drop->fWide = TRUE;
+    auto* next = reinterpret_cast<wchar_t*>(reinterpret_cast<char*>(drop) + sizeof(DROPFILES));
+    for (const auto& path : kDropFiles) {
+        std::memcpy(next, path.c_str(), (path.size() + 1) * sizeof(wchar_t));
+        next += path.size() + 1;
+    }
+    *next = L'\0';
+    GlobalUnlock(memory);
+    // Production WM_DROPFILES owns the HDROP and must DragFinish it even when
+    // the hit is rejected. No real files, Explorer automation or imports occur.
+    SendMessageW(window, WM_DROPFILES, reinterpret_cast<WPARAM>(memory), 0);
 }
 template<class T> void Release(T*& value) { if (value) { value->Release(); value = nullptr; } }
 void Pump() {
@@ -186,6 +219,35 @@ void DispatchDesktopPanel(const char* id) {
             ++pasteChecks;
         }
         if (requestCopy.exchange(false)) ImGui::SetClipboardText("copied from plugin panel");
+        if (fileDropArmed) {
+            ImGui::Dummy(ImVec2(180.0f, 60.0f));
+            const ImVec2 minimum = ImGui::GetItemRectMin(), maximum = ImGui::GetItemRectMax();
+            const GakuFileDropTarget target{GAKU_FILE_DROP_VERSION, sizeof(GakuFileDropTarget),
+                minimum.x, minimum.y, maximum.x, maximum.y};
+            Check(DesktopUi::SetFileDropTarget(id, &target) == GAKU_OK, "native file-drop target registration");
+            Check(DesktopUi::SetFileDropTarget("gaku.other", &target) == GAKU_E_UNAVAILABLE,
+                "another panel could set the selected owner's file-drop target");
+            GakuFileDropResult drop{};
+            Check(DesktopUi::PollFileDrop("gaku.other", sizeof(drop), &drop, 0, nullptr) == GAKU_E_UNAVAILABLE,
+                "another panel could poll the selected owner's file-drop batch");
+            Check(DesktopUi::PollFileDrop(id, sizeof(drop), &drop, 0, nullptr) == GAKU_OK,
+                "native file-drop metadata poll");
+            if (drop.fileCount) {
+                Check(drop.fileCount == kDropFiles.size() && drop.requiredBytes == kExpectedDropBytes.size(),
+                    "native file-drop count or Unicode byte size");
+                std::vector<char> output(drop.requiredBytes);
+                Check(DesktopUi::PollFileDrop(id, sizeof(drop), &drop,
+                    static_cast<uint32_t>(output.size()), output.data()) == GAKU_OK, "native file-drop copy");
+                Check(std::memcmp(output.data(), kExpectedDropBytes.data(), output.size()) == 0,
+                    "native file-drop changed Unicode paths or batch order");
+                ++nativeDropBatches;
+            }
+            fileDropX = static_cast<int>((minimum.x + maximum.x) * 0.5f);
+            fileDropY = static_cast<int>((minimum.y + maximum.y) * 0.5f);
+            ++fileDropTargetFrames;
+        } else {
+            Check(DesktopUi::SetFileDropTarget(id, nullptr) == GAKU_OK, "disable file-drop target");
+        }
         void* memory = binding.alloc(16, binding.allocatorUserData); Check(memory != nullptr, "allocator");
         binding.free(memory, binding.allocatorUserData);
         GakuDesktopUiBinding untouched; std::memset(&untouched, 0xA5, sizeof(untouched)); const auto before = untouched;
@@ -271,6 +333,29 @@ int main(int argc, char** argv) {
         Check(!IsWindowVisible(desktop), "test desktop should start hidden");
         puts("PASS: independent top-level desktop HWND/device/UI thread, plugin pixels, context/allocator ABI, game WndProc untouched");
         if (consumerDraw) puts("PASS: MinGW-built ImGui consumer renders pixels in the MSVC host");
+
+        Check(GakuLoader::DesktopUi::SetFileDropTarget("gaku.test", nullptr) == GAKU_E_UNAVAILABLE,
+            "file-drop target accepted outside the UI callback");
+        GakuFileDropResult outsideDrop{};
+        Check(GakuLoader::DesktopUi::PollFileDrop("gaku.test", sizeof(outsideDrop), &outsideDrop, 0, nullptr) == GAKU_E_UNAVAILABLE,
+            "file-drop poll accepted outside the UI callback");
+        SetWindowPos(desktop, nullptr, 310, 180, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+        fileDropArmed = true;
+        WaitUntil([] { return fileDropTargetFrames >= 2; }, "native file-drop target was not rendered");
+        POINT screenOrigin{};
+        Check(ClientToScreen(desktop, &screenOrigin) && screenOrigin.x != 0 && screenOrigin.y != 0,
+            "native file-drop fixture needs a nonzero window origin");
+        SendNativeDrop(desktop, POINT{5, 5});
+        const auto outsideDropFrame = presentedFrames.load();
+        WaitUntil([&] { return presentedFrames >= outsideDropFrame + 3; }, "outside file-drop observation frames");
+        Check(nativeDropBatches == 0, "native file-drop outside the registered content was accepted");
+        SendNativeDrop(desktop, POINT{fileDropX.load(), fileDropY.load()});
+        WaitUntil([] { return nativeDropBatches == 1; }, "native file-drop inside the content did not arrive");
+        const auto deliveredDropFrame = presentedFrames.load();
+        WaitUntil([&] { return presentedFrames >= deliveredDropFrame + 3; }, "exactly-once file-drop observation frames");
+        Check(nativeDropBatches == 1, "native file-drop batch was delivered more than once");
+        fileDropArmed = false;
+        puts("PASS: production WM_DROPFILES at offset HWND routes Unicode multi-file batch to content once; outside bounds/callback/owner refused");
 
         rejectFrames = true;
         WaitUntil([] { return rejectedFrames >= 1; }, "busy-frame denial not exercised");

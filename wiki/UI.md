@@ -10,7 +10,8 @@
 
 - 它运行在独立的线程上，有自己的 `HWND` 和 D3D11 交换链，硬件受限时自动回退到微软 WARP 软件光栅化驱动。
 - 它完全不侵入游戏自己的 D3D12 渲染链，游戏切分辨率或全屏切换不会导致控制窗口崩溃。
-- 启动时自动从系统目录加载微软雅黑字体（`msyh.ttc`，18px），插件不需要自己打包字体文件。
+- 启动时从系统目录读取中日韩字体（优先 `msyh.ttc`），按 18px × UI Scale × DPI 栅格化。缩放变化时在帧外重建贴图，`FontGlobalScale` 固定为 1；插件不应缓存宿主 `ImFont*` 跨帧使用。
+- 完整字库栅格上限为 54px、256 MiB RGBA，超限保留上次可用缩放。找不到系统中日韩字体时回退至对应像素大小的默认 Latin 字体。
 
 ---
 
@@ -23,6 +24,8 @@
 ---
 
 ## 怎么在 `onDesktopUi` 里画自己的面板
+
+Manager 自身分为 Plugin List、Appearance、Hotkeys、Settings 四个页签，详见 [快速上手](../docs/QUICKSTART.md#manager-设置)。Appearance 的语言选择会向支持 `gakuloader.language` 的插件公开；宿主不会改写第三方插件文案。
 
 当用户在控制窗口左侧导航栏点击你的插件时，宿主会在每次 UI 渲染时调用插件的 `onDesktopUi` 回调。
 

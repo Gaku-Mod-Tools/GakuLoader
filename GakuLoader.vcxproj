@@ -66,8 +66,13 @@
 
   <ItemGroup>
     <ClInclude Include="include\GakuPlugin.h" />
+    <ClInclude Include="include\GakuFileDrop.h" />
     <ClInclude Include="include\GakuPaths.h" />
     <ClInclude Include="include\GakuPaths.hpp" />
+    <ClInclude Include="include\GakuLanguage.h" />
+    <ClInclude Include="src\DesktopFonts.hpp" />
+    <ClInclude Include="src\LanguageSettings.hpp" />
+    <ClInclude Include="src\ManagerStrings.hpp" />
     <ClInclude Include="src\PluginPaths.hpp" />
     <ClInclude Include="src\Host.hpp" />
     <ClInclude Include="src\HostConfig.hpp" />
@@ -80,6 +85,8 @@
     <ClInclude Include="src\ExitDiagnosis.hpp" />
     <ClInclude Include="src\GameHook.hpp" />
     <ClInclude Include="src\DesktopUi.hpp" />
+    <ClInclude Include="src\DesktopAppearance.hpp" />
+    <ClInclude Include="src\DesktopFileDrop.hpp" />
     <ClInclude Include="src\DesktopDialogs.hpp" />
     <ClInclude Include="src\DiagnosticBoundary.hpp" />
     <ClInclude Include="src\ActorEntry.hpp" />

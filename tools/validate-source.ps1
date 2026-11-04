@@ -34,7 +34,7 @@ try {
     Invoke-ValidationStep 'release-build' 'build.ps1 -Configuration Release' { & (Join-Path $repo 'build.ps1') -Configuration Release -PlatformToolset $PlatformToolset }
     Invoke-ValidationStep 'debug-build' 'build.ps1 -Configuration Debug' { & (Join-Path $repo 'build.ps1') -Configuration Debug -PlatformToolset $PlatformToolset }
     Invoke-ValidationStep 'msvc-test-build' 'tests/build-tests.ps1 -SkipFixtures' { & (Join-Path $repo 'tests\build-tests.ps1') -SkipFixtures -PlatformToolset $PlatformToolset }
-    Invoke-ValidationStep 'headless-suites' 'tests/run-all.ps1 -SkipBuild -SkipFixtures -Only docs,paths,frame-pump' { & (Join-Path $repo 'tests\run-all.ps1') -SkipBuild -SkipFixtures -Only @('docs', 'paths', 'frame-pump') }
+    Invoke-ValidationStep 'headless-suites' 'tests/run-all.ps1 -SkipBuild -SkipFixtures -Only language-settings,desktop-fonts,desktop-appearance,docs,paths,frame-pump' { & (Join-Path $repo 'tests\run-all.ps1') -SkipBuild -SkipFixtures -Only @('language-settings', 'desktop-fonts', 'desktop-appearance', 'docs', 'paths', 'frame-pump') }
     Invoke-ValidationStep 'c-abi' 'build/tests/Release/c-abi-test.exe' { & (Join-Path $repo 'build\tests\Release\c-abi-test.exe') }
     Invoke-ValidationStep 'minhook-isolation' 'build/tests/Release/minhook-isolation.exe' { & (Join-Path $repo 'build\tests\Release\minhook-isolation.exe') }
     Invoke-ValidationStep 'minimal-plugin' 'examples/minimal-plugin/verify.ps1' { & (Join-Path $repo 'examples\minimal-plugin\verify.ps1') -PlatformToolset $PlatformToolset }

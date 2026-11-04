@@ -1,6 +1,7 @@
 // Built twice: a native GameAssembly fixture DLL, then an executable linking
 // the actual DiagnosticBoundary.cpp, PluginHost.cpp and MinHook implementation.
 #include "GakuTestCompat.hpp"
+#include "GakuFileDrop.h"
 #include <windows.h>
 #include <stdint.h>
 #include <cstring>
@@ -157,6 +158,8 @@ void Shutdown() {}
 const GakuDesktopUiService* GetService() { return nullptr; }
 const GakuDesktopWindowService* GetWindowService() { return nullptr; }
 const GakuAppearanceService* GetAppearanceService() { return nullptr; }
+GakuStatus SetFileDropTarget(const char*, const GakuFileDropTarget*) { return GAKU_E_UNAVAILABLE; }
+GakuStatus PollFileDrop(const char*, uint32_t, GakuFileDropResult*, uint32_t, char*) { return GAKU_E_UNAVAILABLE; }
 GakuStatus RequestShowPanel(const char*) { return GAKU_E_UNAVAILABLE; }
 void ToggleManager() {}
 bool WantsTextInput() { return false; }

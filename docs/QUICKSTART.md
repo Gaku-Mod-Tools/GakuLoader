@@ -26,7 +26,7 @@ GakuLoader 是《Gakumas》的原生插件宿主：游戏根目录的 `version.d
 SomePlugin.dll=false
 
 [hotkeys]
-; 键名为 <pluginId>.<actionId>；空值表示解绑
+; 兼容旧键名 <pluginId>.<actionId>；唯一匹配时生效，空值表示解绑
 gakumotion.show-gui=Ctrl+Shift+M
 
 [diagnostics]
@@ -36,12 +36,40 @@ trace=false
 [host]
 ; 需要独立控制台时打开
 console=false
+
+[appearance]
+theme=Dark
+scale=100
+; en / zh-Hans / zh-Hant / ja；缺省使用 Windows 界面语言
+language=zh-Hans
 ```
 
-缺省值就是上面的行为。修改后重启游戏生效，插件不支持 hot reload。`[plugins]` 在 `LoadLibrary` 前跳过禁用项，文件原样保留；支持 `true/false`、`yes/no`、`1/0`，空值保持默认允许。`[hotkeys]` 是物理键绑定：同一组合被两个 owner 认领时，两者一起失效并在 F1 管理器里显示冲突，不会静默双触发；F1 由 Loader 保留。若存在旧 `gml-host.ini` 且没有 `gakuloader.ini`，首次启动会**复制一次**作为配置迁移——这是配置导入，不是二进制兼容。
+手工编辑配置后重启游戏生效；Manager 中注明即时生效的设置可直接应用。插件不支持 hot reload。`[plugins]` 在 `LoadLibrary` 前跳过禁用项，文件原样保留；支持 `true/false`、`yes/no`、`1/0`，空值保持默认允许。`[hotkeys]` 是物理键绑定：同一组合被两个 owner 认领时，两者一起失效并在 F1 管理器里显示冲突，不会静默双触发；F1 由 Loader 保留。若存在旧 `gml-host.ini` 且没有 `gakuloader.ini`，首次启动会**复制一次**作为配置迁移——这是配置导入，不是二进制兼容。
 
 首次安装前备份已有的 `version.dll` 和配置。卸载时退出游戏并移走 Loader 的 `version.dll`；
 若安装前已有其它代理，恢复其原始备份。插件与配置可以保留。
+
+## Manager 设置
+
+F1 打开管理器，依次提供四页：
+
+- **Plugin List**：当前注册插件、版本、生命周期状态和面板。尚未 runtime ready 的条目在状态后显示随主题配色的旋转指示；`failed` 仍表示失败，不代表会自动重试。
+- **Appearance**：主题、UI Scale、简体中文／繁體中文／日本語／English，立即应用并保存。语言通过可选服务传递给接入的插件；未接入的插件保持自身界面语言。GakuLocalify 配套版本已接入，游戏译文与资源集选择保持独立。
+- **Hotkeys**：点击 Combo 或修改按钮，可输入组合键或录入实际按键；支持解除绑定和恢复插件默认值。修改立即生效并保存，F1 保留，冲突项暂停触发直到重新分配。保存项能区分 ID 中的点和大小写，优先于旧 `pluginId.actionId` 项；旧项匹配多个动作时忽略并记入日志。“恢复默认”跟随插件当前声明的默认值，不删除旧项。手工编辑 ini 的热键需要重启加载，格式见 [热键配置](../wiki/Configuration.md#hotkeys-段)。
+- **Settings**：控制台、诊断跟踪以及已发现 DLL 的启用开关，均在下次游戏启动时生效，包括被禁用或拒绝加载的 DLL。
+
+UI Scale 和显示器 DPI 改变时，字体在帧外按实际像素重新栅格化。完整中日韩字体贴图限制为 54px、256 MiB RGBA；超限时保留上次可用缩放并显示提示。语言服务不会自动翻译第三方插件的文案。
+
+## 外观
+
+F1 管理器的 Manager → Appearance → Theme 可选择 `Dark`、`Sapphire`、`Paper & Ink`、`Apple Light` 或 `Apple Dark`。
+外观和缩放即时生效，并保存到 `gakuloader.ini` 的 `[appearance]`；Apple 两款对应 `theme=AppleLight` / `theme=AppleDark`，缩放以百分比保存为 `scale=100`。
+插件共享宿主的 ImGui 主题，因此 GakuMotion 也会随之切换。
+
+Apple 风格皮肤参考 [Apple 设计资源](https://developer.apple.com/cn/design/resources/)与
+[apple-design skill](https://github.com/emilkowalski/skills/tree/main/skills/apple-design)：
+使用中性色分层、蓝色强调、圆角控件、清晰的悬停/按下反馈和随 DPI 缩放的间距。
+当前为 ImGui 绘制的实色表面；没有背景模糊或 Liquid Glass 渲染，也不附带 SF Pro / SF Symbols 资源。
 
 ## 确认宿主启动
 

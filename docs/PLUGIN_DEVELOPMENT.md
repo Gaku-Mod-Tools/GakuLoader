@@ -139,8 +139,11 @@ const auto status = host->queryService(host->hostContext, GAKU_SERVICE_LOG,
 | `gakuloader.desktop-ui` | 在 `onDesktopUi` 内校验 ImGui 指纹并绑定 context/allocator |
 | `gakuloader.desktop-window` | 宿主窗口 HWND、异步 `requestShow()`、`presentationKind`；不可销毁或 subclass |
 | `gakuloader.file-dialog` | `beginOpen` 立即复制参数返回 ticket；UI 帧里 `poll`；`release` 释放。每 owner 一个未释放 ticket |
+| `gakuloader.file-drop` | 可选 v1，独立 `GakuFileDrop.h`；选中面板在 `onDesktopUi` 每帧注册可见矩形并读取一批 UTF-8 文件路径。旧 v1 表布局保持不变 |
 | `gakuloader.hotkeys` | 物理键边沿分发，只在主线程回调；同一组合被两个 owner 认领时两者一起失效并报冲突；F1 归 Loader |
 | `gakuloader.actor-entry` | 共享 actor 更新入口的 before/after 参与者，见下节 |
+
+文件拖入扩展的 `setTarget` 使用当前单视口 ImGui 的客户端像素坐标。目标每个已完成 UI 帧失效，应与实际可见裁剪区域相交；弹窗或业务忙碌时传 `NULL` 关闭目标。`poll(0, NULL)` 查询字节数，随后用足够的缓冲一次读取 `fileCount` 条以 NUL 结尾的 UTF-8 路径并消费；短缓冲不消费。批次上限为 256 个文件 / 1 MiB。服务只传递路径，文件类型判断、表单与导入确认由插件负责。宿主采用 Windows `WM_DROPFILES`，不提供拖动过程中的悬停预览。
 
 自定义服务用 `registerService(hostContext, name, tableSize, table)` 发布：宿主复制字节，不接管指针指向的资源；`gakuloader.` 前缀保留；名字最长 127 字节、进程最多 64 个自定义服务、table 最大 64 KiB。owner 退役（shutdown，或某个回调抛异常导致该 owner 被退役）时宿主一并撤下它的服务、任务、热键、participant 和 hook 租约，provider 不需要自己反注册。没有依赖排序，不要依赖扫描顺序。
 
@@ -179,6 +182,14 @@ ImGui::SetCurrentContext(static_cast<ImGuiContext*>(binding.imguiContext));
 ```
 
 `bind` 只在当前选中插件的桌面回调期间成功，ABI 不匹配时不返回 context。控件触发的 Unity 修改应投递到 `gakuloader.main-thread`；不要在回调里等待原生模态窗口或主线程结果。
+
+## 可选界面语言服务
+
+独立头文件 [GakuLanguage.h](../include/GakuLanguage.h) 定义 `gakuloader.language` v1，不修改冻结的原 C ABI。插件在 activate 时按版本和完整表尺寸查询 `GakuLanguageServiceV1`；旧宿主返回不可用时保留自身默认语言。
+
+服务的 `getLanguage(sizeof(GakuUiLanguageV1), &value)` 可在任意线程轮询；成功时返回完整 POD 快照：`0` English、`1` 简体中文、`2` 繁體中文、`3` 日本語，`reserved=0`。空指针返回 INVALID_ARGUMENT，短输出返回 SIZE 且不改写输出。调用侧只在成功后使用结果并校验版本、尺寸和语言范围。建议在每次 `onDesktopUi` 绘制文案前读取，切换自身持有的静态词典；没有跨模块字符串、内存所有权或语言变更回调。
+
+宿主偏好是界面语言，不自动选择游戏译文、字幕或资源包。GakuLocalify 配套版本复用原有四语言 GUI 词典接入本服务，其它插件可以逐个接入。切换 UI Scale／DPI 时宿主会重建字体；使用当前回调的默认字体，不缓存宿主字体指针跨帧。
 
 ## 退出与模块
 

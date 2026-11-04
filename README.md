@@ -38,7 +38,7 @@
 SomePlugin.dll=false
 
 [hotkeys]
-; 重新绑定插件热键，格式是 <pluginId>.<actionId>=<按键>
+; 兼容旧格式：<pluginId>.<actionId>=<按键>（唯一匹配时生效）
 gakumotion.show-gui=Ctrl+Shift+M
 ; 留空表示解绑
 someplugin.action=
@@ -52,7 +52,9 @@ console=false
 trace=false
 ```
 
-日志默认写在 `gakumas-local/gakuloader.log`。不支持热重载，修改配置或增删插件需要重启游戏生效。
+建议在 **Manager → Hotkeys** 改键：保存项能区分 ID 中的点和大小写，优先于旧格式；“恢复默认”会跟随插件当前声明的默认值。旧项原样保留，若匹配多个动作则忽略并记入日志。详见 [热键配置](wiki/Hotkeys.md)。
+
+日志默认写在 `gakumas-local/gakuloader.log`。手工修改配置或增删插件后需要重启游戏；Manager 中注明即时生效的设置可直接应用。插件不支持热重载。
 
 ## 它现在能加载什么插件？
 

@@ -40,7 +40,7 @@
 SomePlugin.dll=false
 
 [hotkeys]
-; プラグインのホットキーを再割り当て（形式：<pluginId>.<actionId>=<キー>）
+; 旧形式：<pluginId>.<actionId>=<キー>（一意に一致する場合のみ適用）
 gakumotion.show-gui=Ctrl+Shift+M
 ; 空欄にすると割り当てを解除します
 someplugin.action=
@@ -54,7 +54,9 @@ console=false
 trace=false
 ```
 
-ログはデフォルトで `gakumas-local/gakuloader.log` に出力されます。ホットリロードには非対応のため、設定変更やプラグインの追加・削除後はゲームの再起動が必要です。
+キーの変更には **Manager → Hotkeys** を使用してください。保存される項目は ID 内のドットと大文字小文字を区別し、旧形式より優先されます。「デフォルトに戻す」はプラグインが現在指定する既定値に従います。旧項目は保持され、複数の操作に一致する場合は無視されてログに記録されます。詳しくは [Hotkeys](wiki/Hotkeys.md) を参照してください。
+
+ログはデフォルトで `gakumas-local/gakuloader.log` に出力されます。設定ファイルの手動編集やプラグインの追加・削除後はゲームを再起動してください。Manager で即時反映と明示された設定はその場で適用されます。プラグインのホットリロードには非対応です。
 
 ## 現在対応しているプラグイン
 

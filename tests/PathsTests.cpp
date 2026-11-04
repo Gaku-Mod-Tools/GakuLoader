@@ -3,6 +3,8 @@
 #include "GakuPaths.h"
 #include "GakuPaths.hpp"
 #include "PluginPaths.hpp"
+#include "GakuLanguage.h"
+#include "LanguageSettings.hpp"
 #include <algorithm>
 #include <array>
 #include <cassert>
@@ -20,6 +22,8 @@ void Shutdown() {}
 const GakuDesktopUiService* GetService() { return nullptr; }
 const GakuDesktopWindowService* GetWindowService() { return nullptr; }
 const GakuAppearanceService* GetAppearanceService() { return nullptr; }
+GakuStatus SetFileDropTarget(const char*, const GakuFileDropTarget*) { return GAKU_E_UNAVAILABLE; }
+GakuStatus PollFileDrop(const char*, uint32_t, GakuFileDropResult*, uint32_t, char*) { return GAKU_E_UNAVAILABLE; }
 GakuStatus RequestShowPanel(const char*) { return GAKU_E_UNAVAILABLE; }
 void ToggleManager() {}
 bool WantsTextInput() { return false; }
@@ -201,6 +205,7 @@ const GakuLoader::LoadedPlugin& Find(const char* id) {
 
 void HostChecks(const std::filesystem::path& root) {
     const auto local = root / L"gakumas-local";
+    assert(WritePrivateProfileStringW(L"appearance", L"language", L"zh-Hant", (root / L"gakuloader.ini").c_str()));
     GakuLoader::DisableHotkeyPollerForTest();
     GakuLoader::Initialize(root, local);
     GakuLoader::ActivatePlugins();
@@ -209,6 +214,35 @@ void HostChecks(const std::filesystem::path& root) {
     const auto& beta = Find("paths.beta");
     const auto& uppercase = Find("Paths.Alpha");
     for (const auto& plugin : GakuLoader::GetLoadedPlugins()) assert(plugin.activated && !plugin.failed);
+
+    // An old-ABI plugin can opt into the language extension without changing
+    // its original host or descriptor layout. Negotiation preserves caller
+    // storage on failure, and the copied table observes later UI changes.
+    struct LanguageBuffer { GakuLanguageServiceV1 table; uint64_t guard; } languageOutput;
+    std::memset(&languageOutput, 0x7b, sizeof(languageOutput));
+    const auto languageSentinel = languageOutput;
+    auto queryLanguage = [&alpha](uint32_t version, uint32_t size, void* out) {
+        return alpha.host.queryService(alpha.host.hostContext, GAKU_SERVICE_LANGUAGE, version, size, out);
+    };
+    assert(queryLanguage(2, sizeof(languageOutput), &languageOutput) == GAKU_E_VERSION);
+    assert(std::memcmp(&languageOutput, &languageSentinel, sizeof(languageOutput)) == 0);
+    assert(queryLanguage(1, sizeof(GakuLanguageServiceV1) - 1, &languageOutput) == GAKU_E_SIZE);
+    assert(std::memcmp(&languageOutput, &languageSentinel, sizeof(languageOutput)) == 0);
+    assert(queryLanguage(1, sizeof(languageOutput), &languageOutput) == GAKU_OK);
+    assert(languageOutput.guard == languageSentinel.guard);
+    assert(languageOutput.table.abiVersion == GAKU_LANGUAGE_VERSION &&
+        languageOutput.table.structSize == sizeof(GakuLanguageServiceV1) && languageOutput.table.getLanguage);
+    GakuUiLanguageV1 languageValue{};
+    assert(languageOutput.table.getLanguage(sizeof(languageValue), &languageValue) == GAKU_OK);
+    assert(languageValue.language == GAKU_LANGUAGE_TRADITIONAL_CHINESE && languageValue.reserved == 0);
+    GakuLanguageServiceV1 betaLanguage{};
+    assert(beta.host.queryService(beta.host.hostContext, GAKU_SERVICE_LANGUAGE, 1,
+        sizeof(betaLanguage), &betaLanguage) == GAKU_OK);
+    assert(GakuLoader::LanguageSettings::Save(GakuLoader::ConfigPath(), GAKU_LANGUAGE_JAPANESE));
+    assert(languageOutput.table.getLanguage(sizeof(languageValue), &languageValue) == GAKU_OK);
+    assert(languageValue.language == GAKU_LANGUAGE_JAPANESE);
+    assert(betaLanguage.getLanguage(sizeof(languageValue), &languageValue) == GAKU_OK);
+    assert(languageValue.language == GAKU_LANGUAGE_JAPANESE);
 
     struct Buffer { GakuPathsV1 table; uint64_t guard; } output;
     std::memset(&output, 0x7b, sizeof(output));
@@ -304,6 +338,6 @@ int wmain(int argc, wchar_t** argv) {
     std::puts("PASS: optional paths service; original ABI fixtures still activate; owner isolation; "
         "UTF-16/Unicode/space roots independent of cwd; pure queries; exact/short/large buffers; "
         "invalid namespace and arguments preserve outputs; lazy/idempotent creation; filesystem "
-        "failure; owner retirement and shutdown");
+        "failure; owner retirement and shutdown; optional language service negotiation and live shared preference");
     return 0;
 }

@@ -1,5 +1,6 @@
 #pragma once
 #include "GakuPlugin.h"
+#include "GakuFileDrop.h"
 
 namespace GakuLoader::DesktopUi {
 // Starts the standalone Win32/D3D11 desktop window. Never call from DllMain.
@@ -9,6 +10,9 @@ void Shutdown();
 const GakuDesktopUiService* GetService();
 const GakuDesktopWindowService* GetWindowService();
 const GakuAppearanceService* GetAppearanceService();
+GakuStatus SetFileDropTarget(const char* pluginId, const GakuFileDropTarget* target);
+GakuStatus PollFileDrop(const char* pluginId, uint32_t resultSize, GakuFileDropResult* result,
+    uint32_t capacity, char* paths);
 // Owner identity is supplied by the host service wrapper. Copies the id before
 // posting and selects that plugin's panel even when another panel is selected.
 GakuStatus RequestShowPanel(const char* pluginId);
@@ -29,6 +33,7 @@ struct TestHooks {
     void (*clipboardSet)(void*, const char*) = nullptr;
     uint32_t (*clipboardSequence)() = nullptr;
     void* clipboardUserData = nullptr;
+    void (*inspectUiItem)(const char* key, const char* value, float left, float top, float right, float bottom) = nullptr;
 };
 void ConfigureTest(const TestHooks& hooks);
 #endif

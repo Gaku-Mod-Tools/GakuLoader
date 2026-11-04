@@ -29,12 +29,17 @@ New-Item -ItemType Directory -Path $logDir -Force | Out-Null
 # Cheap and deterministic first; the windowed UI suites last so an interactive failure
 # does not hide the headless results.
 $suites = @(
+    [ordered]@{ name = 'language-settings'; script = 'tests\test-language-settings.ps1'; evidence = @() }
+    [ordered]@{ name = 'desktop-fonts'; script = 'tests\test-desktop-fonts.ps1'; evidence = @('build\desktop-fonts-tests.log') }
+    [ordered]@{ name = 'manager-ui'; script = 'tests\test-manager-ui.ps1'; evidence = @('build\manager-ui-tests\manager-ui-tests.log') }
     [ordered]@{ name = 'docs'; script = 'tools\test-docs.ps1'; evidence = @() }
+    [ordered]@{ name = 'desktop-appearance'; script = 'tools\test-desktop-appearance.ps1'; evidence = @('build\desktop-appearance-tests.log') }
     [ordered]@{ name = 'host'; script = 'tests\test-host.ps1'; evidence = @('build\host-contract-tests\report.json') }
     [ordered]@{ name = 'frame-pump'; script = 'tests\test-frame-pump.ps1'; evidence = @('build\frame-pump-tests\frame-pump-tests.log') }
     [ordered]@{ name = 'paths'; script = 'tests\test-paths.ps1'; evidence = @('build\paths-tests\report.json') }
     [ordered]@{ name = 'diagnostic-boundary'; script = 'tests\run_diagnostic_boundary.ps1'; evidence = @() }
     [ordered]@{ name = 'desktop-dialogs'; script = 'tools\test-desktop-dialogs.ps1'; evidence = @('build\desktop-dialogs-tests\report.json') }
+    [ordered]@{ name = 'desktop-file-drop'; script = 'tests\test-desktop-file-drop.ps1'; evidence = @('build\desktop-file-drop-tests\report.json') }
     [ordered]@{ name = 'host-dialog-concurrency'; script = 'tools\test-host-dialog-concurrency.ps1'; evidence = @('build\host-dialog-concurrency\report.json') }
     [ordered]@{ name = 'desktop-ui'; script = 'tools\test-desktop-ui.ps1'; evidence = @('build\desktop-ui-smoke.log') }
     [ordered]@{ name = 'desktop-ui-cross-dll'; script = 'tools\test-desktop-ui-cross-dll.ps1'; evidence = @('build\desktop-ui-cross-dll-report.json') }

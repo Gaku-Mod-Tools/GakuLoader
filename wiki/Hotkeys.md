@@ -52,22 +52,28 @@ hotkeys.registerHotkey(hotkeys.context, &binding);
   [Hotkeys] conflict: pluginA.action1 (Ctrl+M), pluginB.action2 (Ctrl+M); conflicting bindings do not dispatch.
   ```
 - 按 F1 打开控制窗口，在 Hotkeys 表格里这两项的状态会显示为 `conflict`。
-- 解决办法很简单：在 `gakuloader.ini` 里面给其中一个换个按键，冲突解除后即可正常使用。
+- 解决办法很简单：在 Manager → Hotkeys 给其中一个换个按键，冲突解除后即可立即使用。手工修改 `gakuloader.ini` 后需要重启。
 
 ---
 
 ## 在 `gakuloader.ini` 里改热键
 
-玩家不需要修改插件源码，在游戏根目录的 `gakuloader.ini` 就可以给任何插件换按键：
+建议在 **Manager → Hotkeys** 点击 Combo 或“修改”：手动输入组合键或录入按键后应用，立即生效并写入 ini。“解除绑定”保存空值，“恢复默认”保存跟随插件默认值的标记，包括插件以后更新的默认值。编辑期间暂停热键分发，离开窗口或最小化后恢复；保存失败时保留原绑定并显示错误。冲突解除后立即恢复，不需要重启。
+
+Manager 保存的项区分原始插件 ID、动作 ID 中的点和大小写，并优先于旧格式；旧项原样保留。旧项只有在当前已注册动作中唯一匹配时才生效，多个动作匹配同一旧键时会忽略该覆盖并记入日志，避免改错其他插件的动作。
+
+玩家不需要修改插件源码。游戏根目录的 `gakuloader.ini` 仍兼容以下旧格式，手工修改后重启生效；如果 Manager 已生成该动作的新键，应修改新键的值或继续使用 Manager：
 
 ```ini
 [hotkeys]
-; 格式：<pluginId>.<actionId>=<新按键>
+; 兼容旧格式：<pluginId>.<actionId>=<新按键>（唯一匹配时生效）
 gakumotion.show-gui=Ctrl+Shift+F11
 
 ; 留空表示完全解绑该功能
 example.action=
 ```
+
+新键的编码与 `<default>` 标记见 [Configuration](Configuration.md#hotkeys-段)。通常无需手工生成新键。
 
 > **注意**：F1 键被加载器保留用于切换控制窗口，任何插件注册 F1 都会被直接拒绝。
 

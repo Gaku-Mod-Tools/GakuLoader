@@ -45,7 +45,8 @@ if ($redirectedOutput -match '\[GakuLoader|\[Plugin|literal %s %n fixture log') 
 $privateOutput = Get-Content -LiteralPath (Join-Path $testRoot 'gakumas-local\gakuloader.log') -Raw
 if (-not $privateOutput.Contains('literal %s %n fixture log')) { throw 'Private log did not receive the literal plugin diagnostic' }
 foreach ($marker in @('[Shutdown] begin plugin=Fixture A', '[Shutdown] end plugin=Fixture A callback_ms=',
-        '[Shutdown] begin plugin=Fixture B', 'Rejected legacy-fixture.dll')) {
+        '[Shutdown] begin plugin=Fixture B', 'Rejected legacy-fixture.dll',
+        '[Hotkeys] ambiguous legacy override a.b.c ignored', 'no partial overrides loaded')) {
     if (-not $privateOutput.Contains($marker)) { throw "Log marker missing: $marker" }
 }
 
