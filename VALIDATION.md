@@ -38,3 +38,38 @@ Observed artifact hashes:
 - Third-party base revisions are declarations plus retained local variants; upstream pristine parity and independent ownership are not certified. Complete licenses and per-file selected/staged hashes are included.
 - This is an unsigned observed local build, not a reproducibility, publication or game-behavior attestation. No game, real material, neighboring checkout or remote service was used by validation.
 - This results document is explicitly outside the source manifest payload; adding it does not alter the 140 hash-listed source files or their built inputs.
+
+## File-drop refresh observed validation (2026-11-05)
+
+Status: **PASS** for the selected local source and synthetic file-drop scope.
+The earlier results above remain historical; the refreshed manifest contains 172 files.
+
+- Clean source checkpoint: `8ff4b53ad784e67b165658b37686aa6346d84c07`.
+- Selected source fixes: `038bd02fe326f767f0afd55b0ee5bc83196ba9fd` and `6c8938990b2b08cc6079c61f3cefe29b67acd698`.
+- Source manifest SHA256: `21e421081f17f38e37ce17fe00880ab34062b5d070b2073ece7bc5bb58da1c60`.
+- Exact default entry: `tools/validate-source.ps1`; its receipt is `build/validation/receipt-file-drop-20261105.json`.
+- Additional exact entry: `tests/run-all.ps1 -Configuration Release -SkipBuild -SkipFixtures -Only desktop-file-drop,desktop-ui`.
+- Independent blob/hash review confirmed that only the four selected source/test files and the associated selection/review metadata changed. ABI headers, projects and vendored dependencies retained their existing bytes.
+
+| Actual check | Observed result | Local evidence |
+| --- | --- | --- |
+| Release and Debug host builds | Both PASS with MSVC | `build/validation/release-build.log`, `build/validation/debug-build.log` |
+| MSVC test project build, `-SkipFixtures` | PASS; compilation is distinct from suite execution | `build/validation/msvc-test-build.log` |
+| Default language, font, appearance, docs, paths and frame-pump suites | 6 PASS, 0 skipped | `build/tests/report-source-validation-file-drop-20261105.json` |
+| C ABI, MinHook isolation, minimal plugin and DLL package checks | All PASS | `build/validation/receipt-file-drop-20261105.json` and its per-step logs |
+| File-drop broker contracts | 9 groups PASS, including rejection reasons and pending-batch preservation | `build/desktop-file-drop-tests/desktop-file-drop-tests.log` |
+| Standalone hidden WARP desktop smoke and startup-failure cancellation | PASS; two scoped UIPI exceptions, other-window isolation, Unicode batch routing, outside-target rejection and exactly-once consumption observed | `build/desktop-ui-smoke.log` |
+| Additional file-drop suite report | 2 PASS, 0 skipped | `build/tests/report-file-drop-refresh-20261105.json` |
+| Frozen source check before and after default validation | 172 files PASS, no unreviewed payload | `tools/check-source-manifest.ps1` |
+
+| Artifact (ignored local output) | Bytes | SHA256 |
+| --- | ---: | --- |
+| `build/version.dll` | 932864 | `09d7526770af8b9743b01a89c24245ee094bc87c8db09e2a4fdbe72c3cab7151` |
+| `build/debug/version.dll` | 5652480 | `2d7be934fcd4891c4375a2786ef8e5406cc8183e915d28132fdab7a94d0abd46` |
+
+The default source validator remained headless; the separately requested file-drop smoke used only a
+synthetic hidden standalone window and generated path strings, with no game or real user asset.
+Actual Explorer dragging, game loading, deployment, MinGW heterogeneous fixtures and remote CI were
+not executed by this refresh. The unadopted third-message `WM_COPYDATA` experiment is excluded.
+These are unsigned local build/test observations, not reproducibility or game-acceptance claims.
+Previous default validation evidence was retained under `build/validation-before-file-drop-20261105/`.
