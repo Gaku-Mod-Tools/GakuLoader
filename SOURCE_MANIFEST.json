@@ -1,14 +1,14 @@
 {
   "schema": "gakuloader.frozen-source-manifest/1",
-  "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
-  "scope": "fixed Git-blob public Manager/presentation/hotkey delta; earlier paths, mature docs and independent vendored adaptations retained",
+  "source_revision": "6c8938990b2b08cc6079c61f3cefe29b67acd698",
+  "scope": "minimal fixed-Git-blob file-drop UIPI/diagnostic repair; prior paths, Manager, mature docs and independent vendored adaptations retained",
   "excludes": [
     "SOURCE_MANIFEST.json (self)",
     "VALIDATION.md (historical observed results)",
     ".git/",
     "build/"
   ],
-  "content_tree_sha256": "2a558ff8c0a019b89d3310f0485bb7f6cb1f68862249edfef68670d3b29321bb",
+  "content_tree_sha256": "f12ffd05fd35987a87acf8aaa02f248d101fa46c7fb7a1887c39dc20e363b5b1",
   "files": [
     {
       "path": ".gitattributes",
@@ -133,8 +133,8 @@
     },
     {
       "path": "SOURCE_SELECTION.json",
-      "size": 143014,
-      "sha256": "57e4e841a555f4c3fba5526becc5f0b2fa465a2d4cd629cfe8b35c0131346a1a",
+      "size": 150924,
+      "sha256": "40d0830d4ca63a1f51d3e1d41c845d43282aa1439fc807146e4753717c38eb77",
       "generated_for_staging": true,
       "documentation_history": [
         {
@@ -154,8 +154,8 @@
     },
     {
       "path": "STAGING_REVIEW.md",
-      "size": 7954,
-      "sha256": "116ded019f9f3bc1d2569a1ff07ba39df92f2a5d4d9baab3859c86d3295a3bba",
+      "size": 9982,
+      "sha256": "2c64f960b2481eb3821fd15a200f00966e29141c79b0059455d2172569f8282d",
       "generated_for_staging": true,
       "staging_adapted": true
     },
@@ -568,12 +568,15 @@
     },
     {
       "path": "src/DesktopFileDrop.hpp",
-      "size": 3137,
-      "sha256": "d1046987fe2ec301c841b6d90e16aa919885b61b816c4fbcf4dce93d3cb87947",
-      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
-      "source_git_blob": "9f2b11ab3d11f6f13b7f8967f22bdb4d83cc030f",
-      "source_sha256": "d1046987fe2ec301c841b6d90e16aa919885b61b816c4fbcf4dce93d3cb87947",
-      "staging_adapted": false
+      "size": 4950,
+      "sha256": "ad9201b47914f792b718b88f6b8c98df65f978e23c490651d40b6fe762e04283",
+      "source_revision": "6c8938990b2b08cc6079c61f3cefe29b67acd698",
+      "source_git_blob": "7517ef87152ff601870dbf0fc22f7082d9cdd1d0",
+      "source_sha256": "ad9201b47914f792b718b88f6b8c98df65f978e23c490651d40b6fe762e04283",
+      "staging_adapted": false,
+      "originating_fix_commits": [
+        "6c8938990b2b08cc6079c61f3cefe29b67acd698"
+      ]
     },
     {
       "path": "src/DesktopFonts.hpp",
@@ -586,12 +589,16 @@
     },
     {
       "path": "src/DesktopUi.cpp",
-      "size": 47897,
-      "sha256": "dc9506323e21dc63389b60187346f6c2d22df593187668c0c03ad34b2c7f17e4",
-      "source_sha256": "dc9506323e21dc63389b60187346f6c2d22df593187668c0c03ad34b2c7f17e4",
+      "size": 50607,
+      "sha256": "0b0c4d30fc5281c22060c632e2c8cd297a92d661a57c917be5c9ffb197654c3b",
+      "source_sha256": "0b0c4d30fc5281c22060c632e2c8cd297a92d661a57c917be5c9ffb197654c3b",
       "staging_adapted": false,
-      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
-      "source_git_blob": "dc38bdc2aaec13f610d8784d2db2c98619d8ebe2"
+      "source_revision": "6c8938990b2b08cc6079c61f3cefe29b67acd698",
+      "source_git_blob": "0590e142a00721a8a9772ec97a96531ec9eaad8c",
+      "originating_fix_commits": [
+        "038bd02fe326f767f0afd55b0ee5bc83196ba9fd",
+        "6c8938990b2b08cc6079c61f3cefe29b67acd698"
+      ]
     },
     {
       "path": "src/DesktopUi.hpp",
@@ -840,12 +847,15 @@
     },
     {
       "path": "tests/DesktopFileDropTests.cpp",
-      "size": 8969,
-      "sha256": "4c37f0a351b06e2501990541fe749eb870bf262179d41d086d46212442841f32",
-      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
-      "source_git_blob": "ab762ae005ea817e4eb0a3d9dfb69601cac47b2f",
-      "source_sha256": "4c37f0a351b06e2501990541fe749eb870bf262179d41d086d46212442841f32",
-      "staging_adapted": false
+      "size": 10302,
+      "sha256": "590f3b4a6dc01f741505c12f0d0c82e8b922ae2457515816128969cd50b2ecc4",
+      "source_revision": "6c8938990b2b08cc6079c61f3cefe29b67acd698",
+      "source_git_blob": "0b9d75da86920df4e803160047d3daf973f7f7d8",
+      "source_sha256": "590f3b4a6dc01f741505c12f0d0c82e8b922ae2457515816128969cd50b2ecc4",
+      "staging_adapted": false,
+      "originating_fix_commits": [
+        "6c8938990b2b08cc6079c61f3cefe29b67acd698"
+      ]
     },
     {
       "path": "tests/DesktopFileDropTests.vcxproj",
@@ -883,12 +893,15 @@
     },
     {
       "path": "tests/DesktopUiSmoke.cpp",
-      "size": 28945,
-      "sha256": "515b150a0ea4e78e698a91db7726623e86b6f0eebb4a61e6c1d1b41a94756c5f",
-      "source_sha256": "515b150a0ea4e78e698a91db7726623e86b6f0eebb4a61e6c1d1b41a94756c5f",
+      "size": 31375,
+      "sha256": "e0facd0ea900329434636d1bc8ab99ba05c3acd577da59635d0a9ec7f1facf85",
+      "source_sha256": "e0facd0ea900329434636d1bc8ab99ba05c3acd577da59635d0a9ec7f1facf85",
       "staging_adapted": false,
-      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
-      "source_git_blob": "28d085987b4b50511d079f13db38f05542b69add"
+      "source_revision": "6c8938990b2b08cc6079c61f3cefe29b67acd698",
+      "source_git_blob": "72aeb6b00ecb7958b1730d95d036043c3dc954e6",
+      "originating_fix_commits": [
+        "038bd02fe326f767f0afd55b0ee5bc83196ba9fd"
+      ]
     },
     {
       "path": "tests/DesktopUiSmoke.vcxproj",
@@ -1573,5 +1586,21 @@
       "wiki/Writing-a-Plugin.md",
       "wiki/_Sidebar.md"
     ]
+  },
+  "file_drop_refresh_20261105": {
+    "selected_snapshot_commit": "6c8938990b2b08cc6079c61f3cefe29b67acd698",
+    "source_fix_commits": [
+      "038bd02fe326f767f0afd55b0ee5bc83196ba9fd",
+      "6c8938990b2b08cc6079c61f3cefe29b67acd698"
+    ],
+    "record": "STAGING_REVIEW.md",
+    "selection_record": "SOURCE_SELECTION.json",
+    "imported_files": [
+      "src/DesktopFileDrop.hpp",
+      "src/DesktopUi.cpp",
+      "tests/DesktopFileDropTests.cpp",
+      "tests/DesktopUiSmoke.cpp"
+    ],
+    "previous_manifest_sha256": "d8c4fa80cdc9945ab8a02d71dd2b7e037b2a5e6ff955aeb7152b836494489c3f"
   }
 }

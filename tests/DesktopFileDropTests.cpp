@@ -181,6 +181,24 @@ void MalformedAndOverflow() {
     assert(box.Accept(kOwner, 150, 250, {std::string(GAKU_FILE_DROP_MAX_BYTES - 1, 'x')}));
     assert(Peek(box).requiredBytes == GAKU_FILE_DROP_MAX_BYTES);
 }
+void DiagnosticReasonsPreserveBatch() {
+    using GakuLoader::DesktopFileDrop::AcceptResult;
+    Mailbox box;
+    assert(box.AcceptDetailed(kOwner, 150, 250, {"file.vmd"}) == AcceptResult::NoTarget);
+    assert(box.SetTarget(kOwner, &kTarget) == GAKU_OK);
+    assert(std::strcmp(box.TargetOwner(), kOwner) == 0 && box.Target().left == kTarget.left);
+    assert(box.AcceptDetailed(kOtherOwner, 150, 250, {"file.vmd"}) == AcceptResult::OwnerMismatch);
+    assert(box.AcceptDetailed(kOwner, 5, 5, {"file.vmd"}) == AcceptResult::OutsideTarget);
+    assert(box.AcceptDetailed(kOwner, 150, 250, {std::string(GAKU_FILE_DROP_MAX_BYTES, 'x')}) == AcceptResult::PayloadTooLarge);
+    assert(Peek(box).fileCount == 0); // rejected diagnostics never enqueue a batch
+    assert(box.AcceptDetailed(kOwner, 150, 250, {"first.vmd"}) == AcceptResult::Accepted);
+    assert(box.AcceptDetailed(kOwner, 150, 250, {"second.vmd"}) == AcceptResult::BatchPending);
+    GakuFileDropResult result{};
+    char output[32]{};
+    assert(box.Poll(kOwner, sizeof(result), &result, sizeof(output), output) == GAKU_OK);
+    assert(result.fileCount == 1 && std::strcmp(output, "first.vmd") == 0);
+    assert(box.Accept(kOwner, 150, 250, {"next.vmd"})); // existing bool API keeps its semantics
+}
 }
 
 int main() {
@@ -192,6 +210,7 @@ int main() {
     FrameRenewalAndExpiry();
     DisableAndClear();
     MalformedAndOverflow();
-    std::puts("PASS: 8 desktop file-drop broker contract groups (offline only).");
+    DiagnosticReasonsPreserveBatch();
+    std::puts("PASS: 9 desktop file-drop broker contract groups, including rejection diagnostics (offline only).");
     return 0;
 }

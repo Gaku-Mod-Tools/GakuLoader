@@ -72,3 +72,29 @@ Selected code, SDK and tests use the fixed source commit's Git blob bytes. Four 
 Public documentation retains this snapshot's restored README/Wiki navigation, vendored build instructions and uninstall wording while adding the selected functionality. Its wording distinguishes immediate Manager changes from manual configuration edits requiring restart. Vendored dependencies, complete licenses, source-only instructions and CI layout are retained. The default source validator additionally executes the new language/font/appearance headless suites; it still excludes actual desktop windows and game acceptance.
 
 `SOURCE_SELECTION.json` records the source Git objects, selected/staged hashes and adaptations; `SOURCE_MANIFEST.json` freezes the resulting payload. This refresh must be committed before its final local builds. New build/test receipts are recorded outside the source repository under workspace `build/staging_refresh_20261104/Loader`; older validation and deployment records remain historical. No game behavior or remote CI result is inferred from those local records.
+
+## File-drop UIPI and diagnostic refresh (2026-11-05)
+
+Only four existing public source/test files are selected byte-for-byte from fixed GakuLoader snapshot
+`6c8938990b2b08cc6079c61f3cefe29b67acd698`, containing repairs `038bd02fe326f767f0afd55b0ee5bc83196ba9fd`
+and `6c8938990b2b08cc6079c61f3cefe29b67acd698`. The baseline staged blobs were checked against their
+previous selected source. This is a minimal repair selection, not a repository/history merge.
+
+The standalone control HWND permits `WM_DROPFILES` and Shell global-memory transport `0x0049` across
+the UIPI boundary, with per-message configuration results. Drop diagnostics report entry coordinates,
+file counts, target/owner acceptance or rejection reasons, and successful batch consumption. They do not
+print file paths or empty per-frame polls. Mailbox ownership, bounds, limits and one-time consumption
+remain intact; the existing Boolean accept method and frozen plugin ABI are preserved.
+
+Synthetic regressions cover the two per-HWND message exceptions and unrelated-window isolation,
+Unicode multi-file routing, rejection diagnostics, and preservation of a pending batch. The discarded
+third-message `WM_COPYDATA` experiment is excluded; it has no demonstrated causal role in this repair.
+The game-side import-queue fix belongs to GakuMotion and is outside this Loader source selection.
+
+`SOURCE_SELECTION.json` preserves the four previous selection records and records the exact fixed
+source commits, Git blobs and selected/staged hashes. `SOURCE_MANIFEST.json` re-freezes the resulting
+172-file payload. SDK headers, projects, dependencies, licenses, public navigation and independent
+staging/build adaptations are unchanged. The source checkpoint is committed before final validation,
+as required by `tools/validate-source.ps1`; current observed results are appended to `VALIDATION.md`.
+Validation uses only this source repository and synthetic fixtures. No game, real user asset, deployment,
+remote write or package ZIP operation is part of this refresh.

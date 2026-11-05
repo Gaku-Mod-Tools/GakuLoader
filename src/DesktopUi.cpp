@@ -30,6 +30,24 @@ constexpr wchar_t kWindowClass[] = L"GakuModLoader.DesktopControl";
 constexpr UINT kShow = WM_APP + 81, kStop = WM_APP + 82, kTray = WM_APP + 83, kToggleManager = WM_APP + 84;
 constexpr const char* kManagerPanel = "gakuloader.manager";
 constexpr UINT kTrayShow = 1;
+// Shell HDROP transport uses this system message to copy its global memory.
+// It is not named in the public Windows SDK headers.
+constexpr UINT kCopyGlobalData = 0x0049;
+void AllowShellFileDrops(HWND window) {
+    // Explorer normally runs at medium integrity while DMM may launch the game
+    // elevated. DragAcceptFiles alone cannot pass that UIPI boundary. Limit the
+    // exception to the independent control HWND and the two Shell drop messages.
+    for (const UINT message : {static_cast<UINT>(WM_DROPFILES), kCopyGlobalData}) {
+        CHANGEFILTERSTRUCT filter{sizeof(filter)};
+        if (!ChangeWindowMessageFilterEx(window, message, MSGFLT_ALLOW, &filter)) {
+            LogWarn("[DesktopUI] file-drop UIPI filter failed hwnd=%p message=0x%04x error=%lu",
+                window, message, GetLastError());
+        } else {
+            LogInfo("[DesktopUI] file-drop UIPI filter allowed hwnd=%p message=0x%04x status=%lu",
+                window, message, filter.ExtStatus);
+        }
+    }
+}
 std::atomic_bool g_stop{true};
 std::atomic_bool g_wantsTextInput{false};
 std::atomic<HWND> g_window{nullptr};
@@ -241,26 +259,48 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wparam, LPARAM lpa
         POINT point{};
         // This host uses a single ImGui viewport at client (0,0), matching the
         // bundled Win32 backend's mouse coordinates. Do not add HWND's desktop offset.
-        if (!DragQueryPoint(drop, &point)) return 0;
+        const bool inClient = DragQueryPoint(drop, &point) != FALSE;
         const UINT count = DragQueryFileW(drop, 0xFFFFFFFF, nullptr, 0);
-        if (!count || count > GAKU_FILE_DROP_MAX_FILES) return 0;
+        LogInfo("[DesktopUI][FileDrop] received hwnd=%p owner=%s client=%d point=%ld,%ld files=%u",
+            window, g_selectedPlugin.c_str(), inClient ? 1 : 0, point.x, point.y, count);
+        if (!inClient) {
+            LogWarn("[DesktopUI][FileDrop] rejected reason=non-client"); return 0;
+        }
+        if (!count || count > GAKU_FILE_DROP_MAX_FILES) {
+            LogWarn("[DesktopUI][FileDrop] rejected reason=%s", count ? "too-many-files" : "empty-batch"); return 0;
+        }
         std::vector<std::string> paths;
         size_t totalBytes = 0;
         for (UINT i = 0; i < count; ++i) {
             const UINT length = DragQueryFileW(drop, i, nullptr, 0);
-            if (!length || length > 32767) return 0;
+            if (!length || length > 32767) {
+                LogWarn("[DesktopUI][FileDrop] rejected reason=invalid-path-length index=%u length=%u", i, length); return 0;
+            }
             std::wstring wide(static_cast<size_t>(length) + 1, L'\0');
-            if (DragQueryFileW(drop, i, wide.data(), length + 1) != length) return 0;
+            if (DragQueryFileW(drop, i, wide.data(), length + 1) != length) {
+                LogWarn("[DesktopUI][FileDrop] rejected reason=path-copy-failed index=%u", i); return 0;
+            }
             const int bytes = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wide.data(),
                 static_cast<int>(length), nullptr, 0, nullptr, nullptr);
-            if (bytes <= 0 || totalBytes + bytes + 1 > GAKU_FILE_DROP_MAX_BYTES) return 0;
+            if (bytes <= 0) {
+                LogWarn("[DesktopUI][FileDrop] rejected reason=invalid-unicode index=%u error=%lu", i, GetLastError()); return 0;
+            }
+            if (totalBytes + bytes + 1 > GAKU_FILE_DROP_MAX_BYTES) {
+                LogWarn("[DesktopUI][FileDrop] rejected reason=payload-too-large index=%u", i); return 0;
+            }
             std::string path(static_cast<size_t>(bytes), '\0');
             if (!WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wide.data(),
-                static_cast<int>(length), path.data(), bytes, nullptr, nullptr)) return 0;
+                static_cast<int>(length), path.data(), bytes, nullptr, nullptr)) {
+                LogWarn("[DesktopUI][FileDrop] rejected reason=utf8-copy-failed index=%u error=%lu", i, GetLastError()); return 0;
+            }
             totalBytes += bytes + 1; paths.push_back(std::move(path));
         }
-        g_fileDrop.Accept(g_selectedPlugin.c_str(), static_cast<float>(point.x),
+        const auto result = g_fileDrop.AcceptDetailed(g_selectedPlugin.c_str(), static_cast<float>(point.x),
             static_cast<float>(point.y), paths);
+        const auto& target = g_fileDrop.Target();
+        LogInfo("[DesktopUI][FileDrop] result=%s targetOwner=%s target=%.1f,%.1f,%.1f,%.1f bytes=%zu",
+            DesktopFileDrop::AcceptResultName(result), g_fileDrop.TargetOwner(),
+            target.left, target.top, target.right, target.bottom, totalBytes);
         return 0;
     }
     case kShow:
@@ -818,6 +858,7 @@ DWORD WorkerBody() {
         g_stop = true; DesktopDialogs::Shutdown(); DestroyPresentation(window, instance); return 0;
     }
     g_window.store(window, std::memory_order_release); UpdateTray(window, true);
+    AllowShellFileDrops(window);
     DragAcceptFiles(window, TRUE);
 #if defined(GAKULOADER_DESKTOP_UI_TEST)
     if (!g_testHooks.startHidden) ShowWindow(window, SW_SHOW);
@@ -903,7 +944,11 @@ GakuStatus PollFileDrop(const char* pluginId, uint32_t size, GakuFileDropResult*
     if (!pluginId || !pluginId[0]) return GAKU_E_INVALID_ARGUMENT;
     if (g_stop || GetCurrentThreadId() != g_uiThread || !g_inCallback || g_selectedPlugin != pluginId)
         return GAKU_E_UNAVAILABLE;
-    return g_fileDrop.Poll(pluginId, size, result, capacity, paths);
+    const auto status = g_fileDrop.Poll(pluginId, size, result, capacity, paths);
+    if (status == GAKU_OK && capacity && result->fileCount)
+        LogInfo("[DesktopUI][FileDrop] consumed owner=%s files=%u bytes=%u",
+            pluginId, result->fileCount, result->requiredBytes);
+    return status;
 }
 GakuStatus RequestShowPanel(const char* pluginId) {
     if (!pluginId || !pluginId[0]) return GAKU_E_INVALID_ARGUMENT;

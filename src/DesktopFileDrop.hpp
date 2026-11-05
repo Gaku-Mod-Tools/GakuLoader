@@ -6,6 +6,27 @@
 #include <vector>
 
 namespace GakuLoader::DesktopFileDrop {
+enum class AcceptResult {
+    Accepted, MissingOwner, NoTarget, OwnerMismatch, BatchPending, InvalidPoint,
+    OutsideTarget, EmptyBatch, TooManyFiles, EmptyPath, EmbeddedNul, PayloadTooLarge
+};
+inline const char* AcceptResultName(AcceptResult result) {
+    switch (result) {
+    case AcceptResult::Accepted: return "accepted";
+    case AcceptResult::MissingOwner: return "missing-owner";
+    case AcceptResult::NoTarget: return "no-target";
+    case AcceptResult::OwnerMismatch: return "owner-mismatch";
+    case AcceptResult::BatchPending: return "batch-pending";
+    case AcceptResult::InvalidPoint: return "invalid-point";
+    case AcceptResult::OutsideTarget: return "outside-target";
+    case AcceptResult::EmptyBatch: return "empty-batch";
+    case AcceptResult::TooManyFiles: return "too-many-files";
+    case AcceptResult::EmptyPath: return "empty-path";
+    case AcceptResult::EmbeddedNul: return "embedded-nul";
+    case AcceptResult::PayloadTooLarge: return "payload-too-large";
+    }
+    return "unknown";
+}
 // UI-thread-only mailbox. No plugin memory or callbacks are retained.
 class Mailbox {
     std::string targetOwner_, batchOwner_, paths_;
@@ -27,21 +48,32 @@ public:
         targetOwner_ = owner; target_ = *target;
         return GAKU_OK;
     }
-    bool Accept(const char* selectedOwner, float x, float y, const std::vector<std::string>& paths) {
-        if (!selectedOwner || targetOwner_ != selectedOwner || targetOwner_.empty() || count_ ||
-            !std::isfinite(x) || !std::isfinite(y) ||
-            x < target_.left || x >= target_.right || y < target_.top || y >= target_.bottom ||
-            paths.empty() || paths.size() > GAKU_FILE_DROP_MAX_FILES) return false;
+    const char* TargetOwner() const { return targetOwner_.c_str(); }
+    const GakuFileDropTarget& Target() const { return target_; }
+    AcceptResult AcceptDetailed(const char* selectedOwner, float x, float y, const std::vector<std::string>& paths) {
+        if (!selectedOwner || !selectedOwner[0]) return AcceptResult::MissingOwner;
+        if (targetOwner_.empty()) return AcceptResult::NoTarget;
+        if (targetOwner_ != selectedOwner) return AcceptResult::OwnerMismatch;
+        if (count_) return AcceptResult::BatchPending;
+        if (!std::isfinite(x) || !std::isfinite(y)) return AcceptResult::InvalidPoint;
+        if (x < target_.left || x >= target_.right || y < target_.top || y >= target_.bottom)
+            return AcceptResult::OutsideTarget;
+        if (paths.empty()) return AcceptResult::EmptyBatch;
+        if (paths.size() > GAKU_FILE_DROP_MAX_FILES) return AcceptResult::TooManyFiles;
         size_t bytes = 0;
         for (const auto& path : paths) {
-            if (path.empty() || path.find('\0') != std::string::npos ||
-                path.size() >= GAKU_FILE_DROP_MAX_BYTES - bytes) return false;
+            if (path.empty()) return AcceptResult::EmptyPath;
+            if (path.find('\0') != std::string::npos) return AcceptResult::EmbeddedNul;
+            if (path.size() >= GAKU_FILE_DROP_MAX_BYTES - bytes) return AcceptResult::PayloadTooLarge;
             bytes += path.size() + 1;
         }
         std::string packed; packed.reserve(bytes);
         for (const auto& path : paths) { packed.append(path); packed.push_back('\0'); }
         batchOwner_ = selectedOwner; paths_.swap(packed); count_ = static_cast<uint32_t>(paths.size());
-        return true;
+        return AcceptResult::Accepted;
+    }
+    bool Accept(const char* selectedOwner, float x, float y, const std::vector<std::string>& paths) {
+        return AcceptDetailed(selectedOwner, x, y, paths) == AcceptResult::Accepted;
     }
     GakuStatus Poll(const char* owner, uint32_t size, GakuFileDropResult* result,
         uint32_t capacity, char* output) {

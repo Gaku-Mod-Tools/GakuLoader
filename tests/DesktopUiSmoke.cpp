@@ -90,6 +90,37 @@ void SendNativeDrop(HWND window, POINT clientPoint) {
     // the hit is rejected. No real files, Explorer automation or imports occur.
     SendMessageW(window, WM_DROPFILES, reinterpret_cast<WPARAM>(memory), 0);
 }
+void CheckShellDropFilters(HWND desktop, HWND untouchedWindow) {
+    // Repeating ALLOW reports whether production startup actually configured
+    // the per-window filter. A same-process WM_DROPFILES alone bypasses UIPI,
+    // so the existing native-drop test could pass without either exception.
+    for (const UINT message : {static_cast<UINT>(WM_DROPFILES), 0x0049u}) {
+        CHANGEFILTERSTRUCT desktopFilter{sizeof(desktopFilter)};
+        Check(ChangeWindowMessageFilterEx(desktop, message, MSGFLT_ALLOW, &desktopFilter) != FALSE,
+            "could not inspect desktop Shell file-drop UIPI filter");
+        Check(desktopFilter.ExtStatus == MSGFLTINFO_ALREADYALLOWED_FORWND,
+            "desktop startup omitted a per-window Shell file-drop UIPI exception");
+        // DISALLOW distinguishes the untouched default (already disallowed)
+        // from an exception allowed by this HWND or at process/global scope.
+        CHANGEFILTERSTRUCT untouchedFilter{sizeof(untouchedFilter)};
+        Check(ChangeWindowMessageFilterEx(untouchedWindow, message, MSGFLT_DISALLOW, &untouchedFilter) != FALSE,
+            "could not inspect unrelated-window Shell file-drop UIPI scope");
+        Check(untouchedFilter.ExtStatus == MSGFLTINFO_ALREADYDISALLOWED_FORWND,
+            "Shell file-drop UIPI exception escaped the independent desktop HWND");
+        // Exercise a first ALLOW and restore the synthetic window's default.
+        CHANGEFILTERSTRUCT otherFilter{sizeof(otherFilter)};
+        Check(ChangeWindowMessageFilterEx(untouchedWindow, message, MSGFLT_ALLOW, &otherFilter) != FALSE,
+            "could not inspect unrelated-window Shell file-drop UIPI filter");
+        Check(otherFilter.ExtStatus == MSGFLTINFO_NONE,
+            "Shell file-drop UIPI exception escaped the independent desktop HWND");
+        // RESET resets the complete HWND filter and requires message == 0.
+        CHANGEFILTERSTRUCT resetFilter{sizeof(resetFilter)};
+        Check(ChangeWindowMessageFilterEx(untouchedWindow, 0, MSGFLT_RESET, &resetFilter) != FALSE,
+            "could not reset unrelated-window Shell file-drop filter probe");
+        Check(resetFilter.ExtStatus == MSGFLTINFO_NONE,
+            "unrelated-window Shell file-drop filter reset returned an unexpected status");
+    }
+}
 template<class T> void Release(T*& value) { if (value) { value->Release(); value = nullptr; } }
 void Pump() {
     MSG message{};
@@ -333,6 +364,9 @@ int main(int argc, char** argv) {
         Check(!IsWindowVisible(desktop), "test desktop should start hidden");
         puts("PASS: independent top-level desktop HWND/device/UI thread, plugin pixels, context/allocator ABI, game WndProc untouched");
         if (consumerDraw) puts("PASS: MinGW-built ImGui consumer renders pixels in the MSVC host");
+
+        CheckShellDropFilters(desktop, game);
+        puts("PASS: both Shell file-drop UIPI exceptions are configured on the desktop HWND only");
 
         Check(GakuLoader::DesktopUi::SetFileDropTarget("gaku.test", nullptr) == GAKU_E_UNAVAILABLE,
             "file-drop target accepted outside the UI callback");
