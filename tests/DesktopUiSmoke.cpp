@@ -71,14 +71,15 @@ const std::string kExpectedDropBytes = [] {
     }
     return packed;
 }();
-void SendNativeDrop(HWND window, POINT clientPoint) {
+void SendNativeDrop(HWND window, POINT clientPoint, bool reportedNonClient = false) {
+    if (reportedNonClient) Check(ClientToScreen(window, &clientPoint) != FALSE, "screen coordinates for fNC test");
     size_t characterCount = 1;
     for (const auto& path : kDropFiles) characterCount += path.size() + 1;
     const HGLOBAL memory = GlobalAlloc(GHND, sizeof(DROPFILES) + characterCount * sizeof(wchar_t));
     Check(memory != nullptr, "native file-drop allocation");
     auto* drop = static_cast<DROPFILES*>(GlobalLock(memory));
     if (!drop) { GlobalFree(memory); Check(false, "native file-drop lock"); }
-    drop->pFiles = sizeof(DROPFILES); drop->pt = clientPoint; drop->fNC = FALSE; drop->fWide = TRUE;
+    drop->pFiles = sizeof(DROPFILES); drop->pt = clientPoint; drop->fNC = reportedNonClient ? TRUE : FALSE; drop->fWide = TRUE;
     auto* next = reinterpret_cast<wchar_t*>(reinterpret_cast<char*>(drop) + sizeof(DROPFILES));
     for (const auto& path : kDropFiles) {
         std::memcpy(next, path.c_str(), (path.size() + 1) * sizeof(wchar_t));
@@ -388,8 +389,17 @@ int main(int argc, char** argv) {
         const auto deliveredDropFrame = presentedFrames.load();
         WaitUntil([&] { return presentedFrames >= deliveredDropFrame + 3; }, "exactly-once file-drop observation frames");
         Check(nativeDropBatches == 1, "native file-drop batch was delivered more than once");
+        SendNativeDrop(desktop, POINT{-5, -5}, true);
+        const auto outsideNcFrame = presentedFrames.load();
+        WaitUntil([&] { return presentedFrames >= outsideNcFrame + 3; }, "outside non-client drop observation frames");
+        Check(nativeDropBatches == 1, "outside screen-coordinate drop was accepted");
+        SendNativeDrop(desktop, POINT{fileDropX.load(), fileDropY.load()}, true);
+        WaitUntil([] { return nativeDropBatches == 2; }, "screen-coordinate drop inside target did not arrive");
+        const auto deliveredNcFrame = presentedFrames.load();
+        WaitUntil([&] { return presentedFrames >= deliveredNcFrame + 3; }, "non-client exactly-once observation frames");
+        Check(nativeDropBatches == 2, "screen-coordinate batch was delivered more than once");
         fileDropArmed = false;
-        puts("PASS: production WM_DROPFILES at offset HWND routes Unicode multi-file batch to content once; outside bounds/callback/owner refused");
+        puts("PASS: production WM_DROPFILES routes client and screen coordinates once; outside client/target refused");
 
         expectPluginPixels = false;
         rejectFrames = true;

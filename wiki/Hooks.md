@@ -81,7 +81,7 @@ actorEntry.registerEntry(actorEntry.context, &binding);
 
 ## 退出故障二分排查标记
 
-如果在排查游戏退出卡死时需要确认故障是否由插件的 Hook 引起，可以在 `gakumas-local/` 目录下放置一个名为 `gml_disable_hooks.txt` 的空文本文件（或设置系统环境变量 `GML_DISABLE_HOOKS=1`）。宿主在启动时会跳过所有业务 MinHook 的挂接，仅保留退出防护机制，用于快速定位问题源头。
+如果在排查游戏退出卡死时需要确认故障是否由插件的 Hook 引起，可以在 `GakuLoader/` 目录下放置一个名为 `gml_disable_hooks.txt` 的空文本文件（或设置系统环境变量 `GML_DISABLE_HOOKS=1`）。宿主在启动时会跳过所有业务 MinHook 的挂接，仅保留退出防护机制，用于快速定位问题源头。
 
 ---
 

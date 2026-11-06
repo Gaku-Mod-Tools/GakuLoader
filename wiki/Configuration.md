@@ -1,6 +1,6 @@
 # 配置文件
 
-`gakuloader.ini` 位于游戏根目录下，用于设置界面外观、插件启闭、热键绑定与调试选项。所有段落与键值均为可选，文件不存在时加载器完全按默认值运行。
+`GakuLoader/Configs/gakuloader.ini` 位于 Loader 数据根的 Configs 目录，用于设置界面外观、插件启闭、热键绑定与调试选项。所有段落与键值均为可选，文件不存在时加载器完全按默认值运行。
 
 ---
 
@@ -35,7 +35,7 @@ example.action=
 console=false
 
 [diagnostics]
-; 设为 true 会开启崩溃追踪，并在发生崩溃时生成 gakumas-local/crash.log（默认 false）
+; 设为 true 会开启崩溃追踪，并在发生崩溃时生成 GakuLoader/Logs/crash.log（默认 false）
 trace=false
 ```
 
@@ -93,13 +93,13 @@ trace=false
 ### `[host]` 与 `[diagnostics]` 段
 
 - `[host] console`：设为 `true` 时，会在游戏启动时通过 `AllocConsole()` 弹出一个名为 `GakuLoader` 的黑窗口，实时输出加载器与各插件的合并日志，便于即时调试。
-- `[diagnostics] trace`：设为 `true` 时开启追踪记录。若运行中发生崩溃，会在 `gakumas-local/crash.log` 记录异常发生时的线程堆栈与寄存器上下文。
+- `[diagnostics] trace`：设为 `true` 时开启追踪记录。若运行中发生崩溃，会在 `GakuLoader/Logs/crash.log` 记录异常发生时的线程堆栈与寄存器上下文。
 
 ---
 
 ## 旧版配置迁移
 
-若游戏根目录下存在旧版的 `gml-host.ini` 且当前没有 `gakuloader.ini`，加载器在首次启动时会自动将其复制并重命名为 `gakuloader.ini`，保留用户先前已停用的插件设置。
+旧版配置和数据不会自动导入；需要迁移时先备份，再显式复制配置并按各插件迁移指南处理数据。
 
 ---
 

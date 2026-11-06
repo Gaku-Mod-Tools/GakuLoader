@@ -17,7 +17,7 @@ $repo = Split-Path -Parent $PSScriptRoot
 . (Join-Path $PSScriptRoot 'test-common.ps1')
 
 $testRoot = Initialize-GakuTestRoot (Join-Path $repo 'build\host-contract-tests')
-$pluginDir = Join-Path $testRoot 'gakumas-local\plugins'
+$pluginDir = Join-Path $testRoot 'GakuLoader\plugins'
 Assert-GakuPluginDir $pluginDir @('fixture-a.dll', 'fixture-b.dll', 'legacy-fixture.dll') | Out-Null
 
 # Both halves of the C ABI check: the same header must describe the same layout under
@@ -36,13 +36,14 @@ $isolation = Get-GakuTestBinary $repo 'minhook-isolation.exe' $Configuration
 if ($LASTEXITCODE -ne 0) { throw "MinHook batch isolation failed: $LASTEXITCODE" }
 
 $outputPath = Join-Path $testRoot 'test-output.txt'
-[IO.File]::WriteAllText((Join-Path $testRoot 'gakumas-local\gakuloader.log'), '')
+New-Item -ItemType Directory -Force -Path (Join-Path $testRoot 'GakuLoader\Logs') | Out-Null
+[IO.File]::WriteAllText((Join-Path $testRoot 'GakuLoader\Logs\gakuloader.log'), '')
 $hostTests = Get-GakuTestBinary $repo 'host-tests.exe' $Configuration
 & $hostTests $testRoot | Tee-Object -FilePath $outputPath
 if ($LASTEXITCODE -ne 0) { throw "Host contract test failed: $LASTEXITCODE" }
 $redirectedOutput = Get-Content -LiteralPath $outputPath -Raw
 if ($redirectedOutput -match '\[GakuLoader|\[Plugin|literal %s %n fixture log') { throw 'Loader diagnostics leaked into redirected stdout' }
-$privateOutput = Get-Content -LiteralPath (Join-Path $testRoot 'gakumas-local\gakuloader.log') -Raw
+$privateOutput = Get-Content -LiteralPath (Join-Path $testRoot 'GakuLoader\Logs\gakuloader.log') -Raw
 if (-not $privateOutput.Contains('literal %s %n fixture log')) { throw 'Private log did not receive the literal plugin diagnostic' }
 foreach ($marker in @('[Shutdown] begin plugin=Fixture A', '[Shutdown] end plugin=Fixture A callback_ms=',
         '[Shutdown] begin plugin=Fixture B', 'Rejected legacy-fixture.dll',
@@ -53,10 +54,15 @@ foreach ($marker in @('[Shutdown] begin plugin=Fixture A', '[Shutdown] end plugi
 # A disabled filename must be skipped before LoadLibrary, so the pre-reset DLL
 # never runs its DllMain and no legacy entry point is probed.
 $filteredRoot = Join-Path $testRoot 'filtered'
-$filteredPlugins = Join-Path $filteredRoot 'gakumas-local\plugins'
-Assert-GakuPluginDir $filteredPlugins @('fixture-a.dll', 'fixture-b.dll', 'legacy-fixture.dll') | Out-Null
+$filteredPlugins = Join-Path $filteredRoot 'GakuLoader\plugins'
+Assert-GakuPluginDir $filteredPlugins @('fixture-a.dll', 'fixture-b.dll', 'legacy-fixture.dll', 'GakuBurstBridge.dll', 'GakuMotion.VmdImporter.Native.dll') | Out-Null
 Copy-GakuFixtures $repo $filteredPlugins @('fixture-a.dll', 'fixture-b.dll', 'legacy-fixture.dll') | Out-Null
-[IO.File]::WriteAllText((Join-Path $filteredRoot 'gakuloader.ini'), "[plugins]`r`nLEGACY-FIXTURE.DLL=FaLsE`r`n")
+# The legacy fixture writes a marker in DllMain. Auxiliary names must be skipped
+# before LoadLibrary, while ordinary incompatible plugins remain diagnosed.
+Copy-Item -LiteralPath (Join-Path $filteredPlugins 'legacy-fixture.dll') -Destination (Join-Path $filteredPlugins 'GakuBurstBridge.dll') -Force
+Copy-Item -LiteralPath (Join-Path $filteredPlugins 'legacy-fixture.dll') -Destination (Join-Path $filteredPlugins 'GakuMotion.VmdImporter.Native.dll') -Force
+New-Item -ItemType Directory -Force -Path (Join-Path $filteredRoot 'GakuLoader\Configs') | Out-Null
+[IO.File]::WriteAllText((Join-Path $filteredRoot 'GakuLoader\Configs\gakuloader.ini'), "[plugins]`r`nLEGACY-FIXTURE.DLL=FaLsE`r`n")
 & $hostTests $filteredRoot 'filtered'
 if ($LASTEXITCODE -ne 0) { throw 'Plugin filename filter failed' }
 
@@ -71,7 +77,7 @@ $report = [ordered]@{
     configuration = $Configuration
     completedUtc = [DateTime]::UtcNow.ToString('o')
     output = $outputPath
-    privateLog = Join-Path $testRoot 'gakumas-local\gakuloader.log'
+    privateLog = Join-Path $testRoot 'GakuLoader\Logs\gakuloader.log'
     executable = $hostTests
     executableSha256 = Get-GakuFileHash $hostTests
     fixtureSha256 = Get-GakuFileHash (Join-Path $pluginDir 'fixture-a.dll')

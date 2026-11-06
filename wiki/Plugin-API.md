@@ -32,7 +32,7 @@ host->queryService(host->hostContext, GAKU_SERVICE_LOG, GAKU_SERVICE_VERSION, si
 
 | 服务标识符 | 所在头文件 | 接口结构体 | 核心功能与用途 |
 |---|---|---|---|
-| `gakuloader.log` | `GakuPlugin.h` | `GakuLogService` | 统一日志写入，输出至 `gakumas-local/gakuloader.log` |
+| `gakuloader.log` | `GakuPlugin.h` | `GakuLogService` | 统一日志写入，输出至 `GakuLoader/Logs/gakuloader.log` |
 | `gakuloader.runtime` | `GakuPlugin.h` | `GakuRuntimeService` | 获取游戏根目录、本地数据目录路径及 `GameAssembly.dll` 模块句柄 |
 | `gakuloader.main-thread` | `GakuPlugin.h` | `GakuMainThreadService` | 向 Unity 主线程投递异步排队任务，检测当前是否为主线程 |
 | `gakuloader.hooks` | `GakuPlugin.h` | `GakuHookService` | MinHook 独占租约申请、释放与单次挂起批量安装（1-256 个） |
@@ -52,7 +52,7 @@ host->queryService(host->hostContext, GAKU_SERVICE_LOG, GAKU_SERVICE_VERSION, si
 ## 重点服务使用说明
 
 ### 1. `gakuloader.log`（日志输出）
-写日志到 `gakumas-local/gakuloader.log`：
+写日志到 `GakuLoader/Logs/gakuloader.log`：
 ```cpp
 log.write(log.context, GAKU_LOG_INFO, "hello from plugin");
 ```
@@ -61,8 +61,8 @@ log.write(log.context, GAKU_LOG_INFO, "hello from plugin");
 ### 2. `gakuloader.runtime`（运行环境）
 提供游戏各级目录与模块句柄：
 - `gameRoot`：游戏根目录绝对路径（宽字符）。
-- `localRoot`：`gakumas-local` 根目录绝对路径（宽字符）。
-- `pluginsRoot`：`gakumas-local/plugins` 目录绝对路径（宽字符）。
+- `localRoot`：`GakuLoader` 根目录绝对路径（宽字符）。
+- `pluginsRoot`：`GakuLoader/plugins` 目录绝对路径（宽字符）。
 - `getGameAssembly()`：获取 `GameAssembly.dll` 模块句柄（加载完成前返回 `NULL`）。
 
 ### 3. `gakuloader.main-thread`（主线程任务调度）

@@ -29,7 +29,7 @@
 使用 MSVC 编译为 64 位 DLL。推荐在项目属性中使用 `/MT`（静态链接 CRT），避免因用户电脑缺少 VC++ 运行时分发包而导致加载失败。
 
 ### 第五步：部署到游戏插件目录并验证
-将编译产出的 DLL 复制到 `<游戏根目录>/gakumas-local/plugins/` 目录下，启动游戏，在 `gakumas-local/gakuloader.log` 中确认加载与激活信息。
+将编译产出的 DLL 复制到 `<游戏根目录>/GakuLoader/plugins/` 目录下，启动游戏，在 `GakuLoader/Logs/gakuloader.log` 中确认加载与激活信息。
 
 ---
 

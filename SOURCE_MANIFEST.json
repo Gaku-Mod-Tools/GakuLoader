@@ -8,7 +8,7 @@
     ".git/",
     "build/"
   ],
-  "content_tree_sha256": "b5f935e88a1f9f47808890a779fb33b17b0305e9db68206cf6175829ee4902de",
+  "content_tree_sha256": "48ab0b0be17b9ac4284a5e05a685eb71289036ecf36fcc28a8f0aa2c65a62125",
   "files": [
     {
       "path": ".gitattributes",
@@ -88,26 +88,28 @@
     },
     {
       "path": "README.en.md",
-      "size": 5928,
-      "sha256": "ac5596e869131f98021350c2ebdf292643487179854ef76fb89387f5f72313b5",
+      "size": 5923,
+      "sha256": "5ba6e08947900cc5001ec37f004c0a0cf731dfe6596600e53c0840210070fb40",
       "source_sha256": "df4e5a8e5afc6b336d5b97c38fee7b07041421974deb4a28da6850ae878f78d2",
       "staging_adapted": true,
       "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
-      "source_git_blob": "73d309e2496af7432fd29755c3ccf87780e3abad"
+      "source_git_blob": "73d309e2496af7432fd29755c3ccf87780e3abad",
+      "root_layout_refresh_20261106": "Authorized host root, status, drop and explicit migration update; no ABI change"
     },
     {
       "path": "README.ja.md",
-      "size": 7644,
-      "sha256": "afe21b0ce4c802c0bacfd0c94edd25739171dea991ef9f2591957a3dcdc8a45f",
+      "size": 7620,
+      "sha256": "f888428ac3ec5635ffc5b0b0b94abcdc1948de4f9d04fe0e8a364b68d7cada2d",
       "source_sha256": "7caace2776d5a7c758b31b5823662d369cd4a8584f94a325043c4b6bae13a2b3",
       "staging_adapted": true,
       "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
-      "source_git_blob": "8b25b97f6bfa160b3e782133e86868c700415fbf"
+      "source_git_blob": "8b25b97f6bfa160b3e782133e86868c700415fbf",
+      "root_layout_refresh_20261106": "Authorized host root, status, drop and explicit migration update; no ABI change"
     },
     {
       "path": "README.md",
-      "size": 6942,
-      "sha256": "3a4a03cb652ad4d3a38dd23da5790a26cc0ef43546a61891353336332eb421c9",
+      "size": 6986,
+      "sha256": "71e8c288a23c8f49c1ff75e5f8a1ed8cdacee1c7fe64cdb36e56ce0cd743f096",
       "source_sha256": "dd62f3ba1f1e4f0346c226ada558ec4d70bff0acf9cb0358f999080347fc0a06",
       "staging_adapted": true,
       "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
@@ -129,12 +131,13 @@
       "documentation_repair": {
         "review": "Reviewed technical facts and conditions against current staged code; humanizer-zh expression pass.",
         "runtime_changed": false
-      }
+      },
+      "root_layout_refresh_20261106": "Authorized host root, status, drop and explicit migration update; no ABI change"
     },
     {
       "path": "SOURCE_SELECTION.json",
-      "size": 172482,
-      "sha256": "2ee5e07d6d8759f3d69d6c5966bcdfaf5aee71bbab80180e8bb13a1601358c4f",
+      "size": 179301,
+      "sha256": "6a2bfb0405d27885d121d28d25dcf1fa898e69411008791f146feb6a9933ce0a",
       "generated_for_staging": true,
       "documentation_history": [
         {
@@ -150,7 +153,9 @@
       "documentation_repair": {
         "review": "Reviewed technical facts and conditions against current staged code; humanizer-zh expression pass.",
         "runtime_changed": false
-      }
+      },
+      "staging_adapted": true,
+      "root_layout_refresh_20261106": "Authorized host root, status, drop and explicit migration update; no ABI change"
     },
     {
       "path": "STAGING_REVIEW.md",
@@ -390,29 +395,32 @@
     },
     {
       "path": "docs/PLUGIN_DEVELOPMENT.md",
-      "size": 15341,
-      "sha256": "aaaa6de61808dab4758be2346faad844e6a4803f1d97942000a81a839528b8c7",
+      "size": 15340,
+      "sha256": "1942c2fc8cd5c2aed701b2945e5be9b6c31c24cef8c9be3b23157cf51d484390",
       "source_sha256": "aaaa6de61808dab4758be2346faad844e6a4803f1d97942000a81a839528b8c7",
-      "staging_adapted": false,
+      "staging_adapted": true,
       "source_revision": "6c4ce365d731f491f129c84f2abb9ccf9c116754",
-      "source_git_blob": "54cb3aca12eb96b52cb1c9fd786d32de78043cd8"
+      "source_git_blob": "54cb3aca12eb96b52cb1c9fd786d32de78043cd8",
+      "root_layout_refresh_20261106": "Authorized host root, status, drop and explicit migration update; no ABI change"
     },
     {
       "path": "docs/PLUGIN_PATHS.md",
-      "size": 5842,
-      "sha256": "74a7c2959f153deb940183397ca2c0eec944c0ca3d9b1cfb1b92666ca2b2d9d1",
+      "size": 5839,
+      "sha256": "627f746c16cb106441707c28d3beba950c0befa5319ee2415620ea6603043e7c",
       "source_revision": "0426648bd0601486347513af200aa4167a9fa09c",
       "source_sha256": "74a7c2959f153deb940183397ca2c0eec944c0ca3d9b1cfb1b92666ca2b2d9d1",
-      "staging_adapted": false
+      "staging_adapted": true,
+      "root_layout_refresh_20261106": "Authorized host root, status, drop and explicit migration update; no ABI change"
     },
     {
       "path": "docs/QUICKSTART.md",
-      "size": 7995,
-      "sha256": "4e57286b7dc01fd800e0c5f98a6f693e9fb3dd9db1253d6f45bc03dec5a01778",
+      "size": 7983,
+      "sha256": "743fa745d69116b6fe3238e94abb657523a13ef8fc0a0712e0ec5e68f7142b89",
       "source_sha256": "d5b4f08cbc663746a550bdf1e67afcd4ca4ee38c7dc9fcca15f74fa5f9bb236f",
       "staging_adapted": true,
       "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
-      "source_git_blob": "0070cfd78fc33768e5958d7d848524679917c56e"
+      "source_git_blob": "0070cfd78fc33768e5958d7d848524679917c56e",
+      "root_layout_refresh_20261106": "Authorized host root, status, drop and explicit migration update; no ABI change"
     },
     {
       "path": "docs/README.md",
@@ -598,16 +606,17 @@
     },
     {
       "path": "src/DesktopUi.cpp",
-      "size": 51521,
-      "sha256": "d5b1f04d944b3393f3bda8b8d7cb01be0b95623ebe3890cd1673e872e3217cd5",
+      "size": 51968,
+      "sha256": "de981edf8bedfebc315687795134d1151de9da47e7c0cec22fdcab16527125f3",
       "source_sha256": "d5b1f04d944b3393f3bda8b8d7cb01be0b95623ebe3890cd1673e872e3217cd5",
-      "staging_adapted": false,
+      "staging_adapted": true,
       "source_revision": "6c4ce365d731f491f129c84f2abb9ccf9c116754",
       "source_git_blob": "28d7d50e42e7ae6efebae4c64a8a6207a84e6e72",
       "originating_fix_commits": [
         "038bd02fe326f767f0afd55b0ee5bc83196ba9fd",
         "6c8938990b2b08cc6079c61f3cefe29b67acd698"
-      ]
+      ],
+      "root_layout_refresh_20261106": "Authorized host root, status, drop and explicit migration update; no ABI change"
     },
     {
       "path": "src/DesktopUi.hpp",
@@ -634,10 +643,11 @@
     },
     {
       "path": "src/ExitDiagnosis.cpp",
-      "size": 3257,
-      "sha256": "37733525a14ba1c5e0202c3a2c4f2ebf11fa548e1df1c60b63d84d86f3a756ee",
+      "size": 3248,
+      "sha256": "912c5c43ddbecaaad5414b7a546a0d0339cbab7787c8bc01876d9e9e70a19e04",
       "source_sha256": "37733525a14ba1c5e0202c3a2c4f2ebf11fa548e1df1c60b63d84d86f3a756ee",
-      "staging_adapted": false
+      "staging_adapted": true,
+      "root_layout_refresh_20261106": "Authorized host root, status, drop and explicit migration update; no ABI change"
     },
     {
       "path": "src/ExitDiagnosis.hpp",
@@ -721,28 +731,31 @@
     },
     {
       "path": "src/Main.cpp",
-      "size": 3432,
-      "sha256": "dd3a10b35aab923547ef9974e73e9a0e538047c5c84526f358413401a4e906bd",
+      "size": 3482,
+      "sha256": "52267d908de800eb0584d7eabf5f8ce996d2a33917bc468602c92552b5713c83",
       "source_sha256": "dd3a10b35aab923547ef9974e73e9a0e538047c5c84526f358413401a4e906bd",
-      "staging_adapted": false
+      "staging_adapted": true,
+      "root_layout_refresh_20261106": "Authorized host root, status, drop and explicit migration update; no ABI change"
     },
     {
       "path": "src/ManagerStrings.hpp",
-      "size": 8150,
-      "sha256": "cc02814a0d769b629d33256dae0842585855ca6cbdb8960755561c5ee2fa7fce",
+      "size": 8327,
+      "sha256": "1a9c589694ec64f6f2d90e280528f0e0a3ec86b8be1808e93403d102c57215f4",
       "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
       "source_git_blob": "2cd34729cfa82f9231b3db74a438682a66e7df75",
       "source_sha256": "cc02814a0d769b629d33256dae0842585855ca6cbdb8960755561c5ee2fa7fce",
-      "staging_adapted": false
+      "staging_adapted": true,
+      "root_layout_refresh_20261106": "Authorized host root, status, drop and explicit migration update; no ABI change"
     },
     {
       "path": "src/PluginHost.cpp",
-      "size": 54781,
-      "sha256": "004fabe33b002f6d3147d0431df9d9aea038edb596687b86e5cabbb325e5b579",
+      "size": 54856,
+      "sha256": "ae235a54d1c8d8aacc2def8a99f5afbec5fb3e9039b8cf5a082061776984b0af",
       "source_sha256": "004fabe33b002f6d3147d0431df9d9aea038edb596687b86e5cabbb325e5b579",
-      "staging_adapted": false,
+      "staging_adapted": true,
       "source_revision": "6c4ce365d731f491f129c84f2abb9ccf9c116754",
-      "source_git_blob": "9dcdc8978c7e294e7a994dddb7e56b231dd31a45"
+      "source_git_blob": "9dcdc8978c7e294e7a994dddb7e56b231dd31a45",
+      "root_layout_refresh_20261106": "Authorized host root, status, drop and explicit migration update; no ABI change"
     },
     {
       "path": "src/PluginPaths.hpp",
@@ -913,15 +926,16 @@
     },
     {
       "path": "tests/DesktopUiSmoke.cpp",
-      "size": 32170,
-      "sha256": "5a54f42bf183416b2751b1a4319fb7e3b71c05e59aca45e4361033e6f88f60e2",
+      "size": 33110,
+      "sha256": "149af802cb28641d14e0aa56f8633356a7891f0dc90f7c940da81927eaf2643e",
       "source_sha256": "5a54f42bf183416b2751b1a4319fb7e3b71c05e59aca45e4361033e6f88f60e2",
-      "staging_adapted": false,
+      "staging_adapted": true,
       "source_revision": "6c4ce365d731f491f129c84f2abb9ccf9c116754",
       "source_git_blob": "5607496f72d7d39846e01b65b4858940cb0f57e5",
       "originating_fix_commits": [
         "038bd02fe326f767f0afd55b0ee5bc83196ba9fd"
-      ]
+      ],
+      "root_layout_refresh_20261106": "Authorized host root, status, drop and explicit migration update; no ABI change"
     },
     {
       "path": "tests/DesktopUiSmoke.vcxproj",
@@ -992,12 +1006,13 @@
     },
     {
       "path": "tests/HostDialogConcurrency.cpp",
-      "size": 15286,
-      "sha256": "8910e95ae1a1ef43f8d69be3594101384e6726948499195b4c46bd9a9af1232c",
+      "size": 15283,
+      "sha256": "8a5075e94a0c9931c7599065fd68eeb7c6e13fdedbf8111e34129d329d5d31c8",
       "source_sha256": "8910e95ae1a1ef43f8d69be3594101384e6726948499195b4c46bd9a9af1232c",
-      "staging_adapted": false,
+      "staging_adapted": true,
       "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
-      "source_git_blob": "990237a9fa20d3929fbb188f19df9775edf0232c"
+      "source_git_blob": "990237a9fa20d3929fbb188f19df9775edf0232c",
+      "root_layout_refresh_20261106": "Authorized host root, status, drop and explicit migration update; no ABI change"
     },
     {
       "path": "tests/HostDialogConcurrency.vcxproj",
@@ -1008,12 +1023,13 @@
     },
     {
       "path": "tests/HostTests.cpp",
-      "size": 61230,
-      "sha256": "5d1ee0cb0a7b4a8e1e5a0df09bd8f8b25d53c88b17138dcdb51cd457175804ba",
+      "size": 61224,
+      "sha256": "f9c56abfd18674deae11ba55cfe76093ec08989b11a23bf79a3e8710db05c461",
       "source_sha256": "5d1ee0cb0a7b4a8e1e5a0df09bd8f8b25d53c88b17138dcdb51cd457175804ba",
-      "staging_adapted": false,
+      "staging_adapted": true,
       "source_revision": "6c4ce365d731f491f129c84f2abb9ccf9c116754",
-      "source_git_blob": "b96068fb5a86ee1a0bdf6b9e765b00d751575c8e"
+      "source_git_blob": "b96068fb5a86ee1a0bdf6b9e765b00d751575c8e",
+      "root_layout_refresh_20261106": "Authorized host root, status, drop and explicit migration update; no ABI change"
     },
     {
       "path": "tests/HostTests.vcxproj",
@@ -1024,12 +1040,13 @@
     },
     {
       "path": "tests/LanguageSettingsTests.cpp",
-      "size": 5662,
-      "sha256": "381d11c05c999421d7d62055a7d5cb85b63e1a8e2ac4ec4c6265ac0ec3b730cc",
+      "size": 6130,
+      "sha256": "4f0806b0f7f4c9e7c16d5bcf7ad981777916d9cd04158ea82e82489598b8a917",
       "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
       "source_git_blob": "526f769793637bb800ee73e72ec7ca71bc29a294",
       "source_sha256": "381d11c05c999421d7d62055a7d5cb85b63e1a8e2ac4ec4c6265ac0ec3b730cc",
-      "staging_adapted": false
+      "staging_adapted": true,
+      "root_layout_refresh_20261106": "Authorized host root, status, drop and explicit migration update; no ABI change"
     },
     {
       "path": "tests/LanguageSettingsTests.vcxproj",
@@ -1090,12 +1107,13 @@
     },
     {
       "path": "tests/PathsTests.cpp",
-      "size": 18770,
-      "sha256": "b52bf1054690e575239a5d82357e2523b451f7009e90751353e818f6dcdc208b",
+      "size": 18876,
+      "sha256": "d3c4d59cee04884126651ab08ed7cf9e977a8eb968f5d4cf562cc3608bb996cc",
       "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
       "source_sha256": "b52bf1054690e575239a5d82357e2523b451f7009e90751353e818f6dcdc208b",
-      "staging_adapted": false,
-      "source_git_blob": "68395af24239e2ce322b3546a654d11a39dfa26d"
+      "staging_adapted": true,
+      "source_git_blob": "68395af24239e2ce322b3546a654d11a39dfa26d",
+      "root_layout_refresh_20261106": "Authorized host root, status, drop and explicit migration update; no ABI change"
     },
     {
       "path": "tests/PathsTests.vcxproj",
@@ -1139,10 +1157,11 @@
     },
     {
       "path": "tests/run_diagnostic_boundary.ps1",
-      "size": 1448,
-      "sha256": "f664b69cdd3b6126f9eadde8677146987f23b9ae35dad800cdd34646dcf3666f",
+      "size": 1447,
+      "sha256": "485b722ec6828793fcd6d57053a17c6d0fef5f30710898cfe4dcf0e8fd6c3052",
       "source_sha256": "f664b69cdd3b6126f9eadde8677146987f23b9ae35dad800cdd34646dcf3666f",
-      "staging_adapted": false
+      "staging_adapted": true,
+      "root_layout_refresh_20261106": "Authorized host root, status, drop and explicit migration update; no ABI change"
     },
     {
       "path": "tests/test-common.ps1",
@@ -1178,12 +1197,13 @@
     },
     {
       "path": "tests/test-host.ps1",
-      "size": 4243,
-      "sha256": "ad7a309ab5ec3aab7e2405696236195601e3717c8cd66889aae234fe7b93b0fc",
+      "size": 4974,
+      "sha256": "5e45aa75d929753a82101e58957d6bd85ebc0c83b06993f31eac4328e14e0206",
       "source_sha256": "ad7a309ab5ec3aab7e2405696236195601e3717c8cd66889aae234fe7b93b0fc",
-      "staging_adapted": false,
+      "staging_adapted": true,
       "source_revision": "6c4ce365d731f491f129c84f2abb9ccf9c116754",
-      "source_git_blob": "626633efcea2a02afc93f9c823e3ddf6df5cb720"
+      "source_git_blob": "626633efcea2a02afc93f9c823e3ddf6df5cb720",
+      "root_layout_refresh_20261106": "Authorized host root, status, drop and explicit migration update; no ABI change"
     },
     {
       "path": "tests/test-language-settings.ps1",
@@ -1205,20 +1225,22 @@
     },
     {
       "path": "tests/test-paths.ps1",
-      "size": 2153,
-      "sha256": "eceb9774e56537e8acf9c4bd7606707d7b0b27371d33c1ded68ac078bfbf5c9c",
+      "size": 2150,
+      "sha256": "0ad30b1255adec2528677e7a58d74f42f3544fc28de0e10fc97077606c834684",
       "source_revision": "0426648bd0601486347513af200aa4167a9fa09c",
       "source_sha256": "eceb9774e56537e8acf9c4bd7606707d7b0b27371d33c1ded68ac078bfbf5c9c",
-      "staging_adapted": false
+      "staging_adapted": true,
+      "root_layout_refresh_20261106": "Authorized host root, status, drop and explicit migration update; no ABI change"
     },
     {
       "path": "tests/test_diagnostic_boundary.cpp",
-      "size": 16474,
-      "sha256": "8dd1ede2d098353d2010777e977f58026a2e199de385a8ada575d10687e29e52",
+      "size": 16481,
+      "sha256": "8749fdc87dda2f5561aa579c49721eac04f4e11b54660f22ec6dc62e41e515c7",
       "source_sha256": "8dd1ede2d098353d2010777e977f58026a2e199de385a8ada575d10687e29e52",
-      "staging_adapted": false,
+      "staging_adapted": true,
       "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
-      "source_git_blob": "91c4ebd0c98acbddf960046906a184332e4a2f67"
+      "source_git_blob": "91c4ebd0c98acbddf960046906a184332e4a2f67",
+      "root_layout_refresh_20261106": "Authorized host root, status, drop and explicit migration update; no ABI change"
     },
     {
       "path": "tools/check-source-manifest.ps1",
@@ -1323,8 +1345,8 @@
     },
     {
       "path": "wiki/Configuration.md",
-      "size": 5554,
-      "sha256": "e217102c02ca2fd0bbaf3ef227943824b43eb2baa55314a0951f4b62f9b31e5c",
+      "size": 5511,
+      "sha256": "2e219104c1ef8e42b5b51b58f2720a1ebbff844cd09f20d6218681e40030384b",
       "source_sha256": "9ac70400d02675a07974bacdcdc8266143b9c6a2025b2d4f86fa6ed74b9fb65d",
       "staging_adapted": true,
       "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
@@ -1346,7 +1368,8 @@
       "documentation_repair": {
         "review": "Reviewed technical facts and conditions against current staged code; humanizer-zh expression pass.",
         "runtime_changed": false
-      }
+      },
+      "root_layout_refresh_20261106": "Authorized host root, status, drop and explicit migration update; no ABI change"
     },
     {
       "path": "wiki/Home.md",
@@ -1373,8 +1396,8 @@
     },
     {
       "path": "wiki/Hooks.md",
-      "size": 4879,
-      "sha256": "37ee86d0e63e1c6d45a1daaeb86d60879ab2f6c0d3569cb1959f421e8052b848",
+      "size": 4876,
+      "sha256": "af5cd10b36ada6a3582ac1cf3766d86fdba6e437fcbd471df2a1d74da24ea4ea",
       "source_sha256": "6f4cc03c99fa0063d9768fdd92935741f83fb55c16327c7bd20051810d1367c9",
       "staging_adapted": true,
       "documentation_history": [
@@ -1392,12 +1415,13 @@
       "documentation_repair": {
         "review": "Reviewed technical facts and conditions against current staged code; humanizer-zh expression pass.",
         "runtime_changed": false
-      }
+      },
+      "root_layout_refresh_20261106": "Authorized host root, status, drop and explicit migration update; no ABI change"
     },
     {
       "path": "wiki/Hotkeys.md",
       "size": 4140,
-      "sha256": "7f9df7437c2c413c311125bdd757a646d02d84eac00f04807517df1a7e08a177",
+      "sha256": "49316ecfd66b098e9698a14f03973a8a42106c58bcf8e5d3f71f6354b3869208",
       "source_sha256": "81ec42c4c03849146b8b59aedb78566775d90b94e6e179706ba4bd20013b61f9",
       "staging_adapted": true,
       "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
@@ -1419,12 +1443,13 @@
       "documentation_repair": {
         "review": "Reviewed technical facts and conditions against current staged code; humanizer-zh expression pass.",
         "runtime_changed": false
-      }
+      },
+      "root_layout_refresh_20261106": "Authorized host root, status, drop and explicit migration update; no ABI change"
     },
     {
       "path": "wiki/Installation.md",
-      "size": 2396,
-      "sha256": "a8b2b21c38822876011418d17a9b3e4aed9ffd0788bf10da7e0ce9c5f2973ff0",
+      "size": 2318,
+      "sha256": "e3061fcb60271a57e7142828e072d17edd836fb7545e350c99a1f2895d4d9695",
       "source_sha256": "004b7a8b0b8ee5800b3177e6ccb4e504f05acbd6b836a44c58cdafcc998e0b9f",
       "staging_adapted": true,
       "documentation_history": [
@@ -1442,12 +1467,13 @@
       "documentation_repair": {
         "review": "Reviewed technical facts and conditions against current staged code; humanizer-zh expression pass.",
         "runtime_changed": false
-      }
+      },
+      "root_layout_refresh_20261106": "Authorized host root, status, drop and explicit migration update; no ABI change"
     },
     {
       "path": "wiki/Plugin-API.md",
-      "size": 7722,
-      "sha256": "21844942b2dbf7a4fa74a888a803157fc99c5ac81a5d72fbf00ad5ed08388f47",
+      "size": 7720,
+      "sha256": "1043e3aa3bb7a2f871ae96339bb4a10f62eb2040ec775ffd4f5553cf4e3f08fd",
       "source_sha256": "e0560e09b2c05acad903640304ee17326e3bc64904dcdf3b237c52797fd3ac33",
       "staging_adapted": true,
       "documentation_history": [
@@ -1465,12 +1491,13 @@
       "documentation_repair": {
         "review": "Reviewed technical facts and conditions against current staged code; humanizer-zh expression pass.",
         "runtime_changed": false
-      }
+      },
+      "root_layout_refresh_20261106": "Authorized host root, status, drop and explicit migration update; no ABI change"
     },
     {
       "path": "wiki/Troubleshooting.md",
-      "size": 4607,
-      "sha256": "916f0bcd2506735dc14fe5515179df98598796c38d1593c10868cee16af8b70f",
+      "size": 4608,
+      "sha256": "d9999ef72aeee1bc4ca99689530adcaa3eac3d07616846f531e4b2bab93cdc08",
       "source_sha256": "182d26a05e7b864abcbd44053be8cfa09d122d39f191354b633239bf115bf700",
       "staging_adapted": true,
       "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
@@ -1492,7 +1519,8 @@
       "documentation_repair": {
         "review": "Reviewed technical facts and conditions against current staged code; humanizer-zh expression pass.",
         "runtime_changed": false
-      }
+      },
+      "root_layout_refresh_20261106": "Authorized host root, status, drop and explicit migration update; no ABI change"
     },
     {
       "path": "wiki/UI.md",
@@ -1523,8 +1551,8 @@
     },
     {
       "path": "wiki/Writing-a-Plugin.md",
-      "size": 4937,
-      "sha256": "3acb3db807040e142424ad0005e09bba7237b6ea665ed79c0159c47a15a23587",
+      "size": 4936,
+      "sha256": "93d91de3db39a68305615cc36c4f1005a4e960a120724190fdd5732197bbf6f7",
       "source_sha256": "4529fed1831a1c5bcd4fbdb376768b894f735a74aa3463919440cfcbedbf0bd7",
       "staging_adapted": true,
       "documentation_history": [
@@ -1542,7 +1570,8 @@
       "documentation_repair": {
         "review": "Reviewed technical facts and conditions against current staged code; humanizer-zh expression pass.",
         "runtime_changed": false
-      }
+      },
+      "root_layout_refresh_20261106": "Authorized host root, status, drop and explicit migration update; no ABI change"
     },
     {
       "path": "wiki/_Sidebar.md",
@@ -1566,6 +1595,14 @@
         "review": "Reviewed technical facts and conditions against current staged code; humanizer-zh expression pass.",
         "runtime_changed": false
       }
+    },
+    {
+      "path": "docs/ROOT_LAYOUT.md",
+      "generated_for_staging": true,
+      "size": 1396,
+      "sha256": "c0850488a7a2a3590adbdb5b2b264d318e44f0207f60d3d97c8e9a72d9d032a8",
+      "staging_adapted": true,
+      "root_layout_refresh_20261106": "Authorized host root, status, drop and explicit migration update; no ABI change"
     }
   ],
   "signature": "none",
@@ -1660,5 +1697,41 @@
       "src/GakuLoader.rc"
     ],
     "scope": "GakuLoader Windows product and file version 1.0.0; no ABI changes."
+  },
+  "root_layout_refresh_20261106": {
+    "previous_manifest_sha256": "3565c0dac6cfd11fc8a12e4e53c1fdcdb6db9c8f7eeca5b614ec6410760eecde",
+    "inventory_commit": "5e512191229c54172dfa86d43b3b9eef5664bc6f",
+    "changed_payload_files": [
+      "README.en.md",
+      "README.ja.md",
+      "README.md",
+      "docs/PLUGIN_DEVELOPMENT.md",
+      "docs/PLUGIN_PATHS.md",
+      "docs/QUICKSTART.md",
+      "src/DesktopUi.cpp",
+      "src/ExitDiagnosis.cpp",
+      "src/Main.cpp",
+      "src/ManagerStrings.hpp",
+      "src/PluginHost.cpp",
+      "tests/DesktopUiSmoke.cpp",
+      "tests/HostDialogConcurrency.cpp",
+      "tests/HostTests.cpp",
+      "tests/LanguageSettingsTests.cpp",
+      "tests/PathsTests.cpp",
+      "tests/run_diagnostic_boundary.ps1",
+      "tests/test-host.ps1",
+      "tests/test-paths.ps1",
+      "tests/test_diagnostic_boundary.cpp",
+      "wiki/Configuration.md",
+      "wiki/Hooks.md",
+      "wiki/Hotkeys.md",
+      "wiki/Installation.md",
+      "wiki/Plugin-API.md",
+      "wiki/Troubleshooting.md",
+      "wiki/Writing-a-Plugin.md",
+      "docs/ROOT_LAYOUT.md",
+      "SOURCE_SELECTION.json"
+    ],
+    "runtime_acceptance": "pending"
   }
 }

@@ -2,6 +2,8 @@
 
 # GakuLoader
 
+[数据目录与迁移](docs/ROOT_LAYOUT.md)
+
 完整文档：[Wiki 首页](wiki/Home.md) · [快速上手](docs/QUICKSTART.md) · [全部章节导航](wiki/_Sidebar.md)
 
 ## 这是什么
@@ -17,15 +19,15 @@ GakuLoader 是《学园偶像大师》（PC DMM 版）的原生 DLL 插件加载
 ### 安装步骤
 1. 完全退出游戏。
 2. 将编译产物或发布包中的 `version.dll` 放置在游戏根目录（即 `gakumas.exe` 所在文件夹）。
-3. 将插件 DLL 放置在 `gakumas-local/plugins/` 目录中。
+3. 将插件 DLL 放置在 `GakuLoader/plugins/` 目录中。
 
 ```text
 <游戏根目录>/
 ├── gakumas.exe
 ├── version.dll                    # GakuLoader 核心
-├── gakuloader.ini                 # 可选配置文件
-└── gakumas-local/
-    ├── gakuloader.log             # 运行日志
+└── GakuLoader/
+    ├── Configs/gakuloader.ini     # 宿主配置（可选）
+    ├── Logs/gakuloader.log        # 宿主日志
     └── plugins/                   # 插件目录
         ├── GakuMotion.dll         # 动作播放插件
         └── GakuLocalify.dll       # 本地化汉化插件
@@ -33,7 +35,7 @@ GakuLoader 是《学园偶像大师》（PC DMM 版）的原生 DLL 插件加载
 
 ### 配置文件说明
 
-游戏根目录下的 `gakuloader.ini` 用于控制插件开关、调整快捷键、设置界面主题或开启调试控制台。如果该文件不存在，加载器会自动采用默认设置：
+`GakuLoader/Configs/gakuloader.ini` 用于控制插件开关、调整快捷键、设置界面主题或开启调试控制台。如果该文件不存在，加载器会自动采用默认设置：
 
 ```ini
 [plugins]
@@ -63,7 +65,7 @@ console=false
 trace=false
 ```
 
-日志文件默认保存在 `gakumas-local/gakuloader.log`。手动修改配置文件或增删插件文件后需重启游戏生效。
+日志文件默认保存在 `GakuLoader/Logs/gakuloader.log`。手动修改配置文件或增删插件文件后需重启游戏生效。
 
 ## 使用方法与快捷键
 
@@ -87,8 +89,8 @@ trace=false
 ## 常见问题与排查
 
 1. **插件没有被加载**：
-   - 检查 `gakumas-local/gakuloader.log` 日志文件。
-   - 确认插件 DLL 是否放置在 `gakumas-local/plugins/` 目录中，而不是游戏根目录。
+   - 检查 `GakuLoader/Logs/gakuloader.log` 日志文件。
+   - 确认插件 DLL 是否放置在 `GakuLoader/plugins/` 目录中，而不是游戏根目录。
    - 确认插件架构为 64 位（x64），且导出了正确的 `GakuPlugin_Query` 接口。
 2. **退出游戏时卡住或安全看门狗（QuitGuard）机制**：
    - Unity 6 引擎在接收到常规窗口关闭指令（WM_CLOSE）时，底层有时会因内部线程死锁而无法正常结束进程。

@@ -1,4 +1,5 @@
 #include "LanguageSettings.hpp"
+#include "ManagerStrings.hpp"
 #include <array>
 #include <atomic>
 #include <cassert>
@@ -44,12 +45,20 @@ int wmain(int argc, wchar_t** argv) {
     assert(WritePrivateProfileStringW(L"host", L"console", L"true", config.c_str()));
     assert(WritePrivateProfileStringW(L"diagnostics", L"trace", L"false", config.c_str()));
     assert(WritePrivateProfileStringW(L"plugins", L"optional.dll", L"false", config.c_str()));
+    using namespace GakuLoader::ManagerStrings;
+    assert(FormatVersion("0.1.0") == "v0.1.0");
+    assert(FormatVersion("v3.6.2") == "v3.6.2");
+    assert(FormatVersion("") == "" && FormatVersion("unknown") == "unknown");
     const std::array<std::pair<uint32_t, const wchar_t*>, 4> choices{{
         {GAKU_LANGUAGE_ENGLISH, L"en"}, {GAKU_LANGUAGE_SIMPLIFIED_CHINESE, L"zh-Hans"},
         {GAKU_LANGUAGE_TRADITIONAL_CHINESE, L"zh-Hant"}, {GAKU_LANGUAGE_JAPANESE, L"ja"}}};
     for (const auto& [language, tag] : choices) {
         assert(LanguageSettings::Save(config, language));
         CheckValue(language); // a previously obtained service sees changes immediately
+        if (language == GAKU_LANGUAGE_SIMPLIFIED_CHINESE) {
+            assert(std::strcmp(Text(Key::Activated), "正在激活") == 0);
+            assert(std::strcmp(Text(Key::Ready), "已就绪") == 0);
+        }
         assert(ReadConfigValue(config, L"appearance", L"language") == tag);
         assert(ReadConfigFlag(config, L"host", L"console", false));
         assert(!ReadConfigFlag(config, L"diagnostics", L"trace", true));

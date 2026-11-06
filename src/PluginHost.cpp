@@ -104,7 +104,7 @@ void WriteToConsoleAndLog(const char* level, const char* message) {
             WriteConsoleW(out, wide.data(), static_cast<DWORD>(wide.size()), &written, nullptr);
         }
     }
-    const auto path = g_logPath.empty() ? std::filesystem::path(L"gakumas-local/gakuloader.log") : g_logPath;
+    const auto path = g_logPath.empty() ? std::filesystem::path(L"GakuLoader/Logs/gakuloader.log") : g_logPath;
     FILE* file = _wfopen(path.c_str(), L"a");
     if (file) { fprintf(file, "[%s] %s\n", level, message); fclose(file); }
     // Never route mod diagnostics through Unity Debug, Player.log or a shared
@@ -647,17 +647,6 @@ void ShutdownOnMainThread() {
         static_cast<unsigned long long>(GetTickCount64() - started));
 }
 
-// A pre-rename installation keeps its per-file plugin flags: copy the old ini
-// once so the new loader does not silently re-enable something the user had
-// turned off. This is a configuration import, not binary compatibility.
-void ImportLegacyConfig(const std::filesystem::path& config) {
-    std::error_code error;
-    if (std::filesystem::exists(config, error)) return;
-    const auto legacy = config.parent_path() / L"gml-host.ini";
-    if (!std::filesystem::exists(legacy, error)) return;
-    std::filesystem::copy_file(legacy, config, std::filesystem::copy_options::none, error);
-    if (!error) HostLogInfo("Imported legacy gml-host.ini into gakuloader.ini (one time)");
-}
 }
 
 void LogInfo(const char* format, ...) {
@@ -740,19 +729,23 @@ void Initialize(const std::filesystem::path& gameRoot, const std::filesystem::pa
     if (g_shutdownRequested) return;
     g_gameRootW = gameRoot.wstring(); g_localRootW = localRoot.wstring();
     const auto pluginsPath = localRoot / "plugins"; g_pluginsRootW = pluginsPath.wstring();
-    std::error_code ec;
-    std::filesystem::create_directories(pluginsPath, ec);
-    g_configPath = gameRoot / L"gakuloader.ini";
+    const auto configDir = localRoot / L"Configs";
+    const auto logsDir = localRoot / L"Logs";
+    for (const auto& directory : {pluginsPath, configDir, logsDir}) {
+        std::error_code error;
+        std::filesystem::create_directories(directory, error);
+        if (error) throw std::filesystem::filesystem_error("Cannot create GakuLoader directory", directory, error);
+    }
+    g_configPath = configDir / L"gakuloader.ini";
     LanguageSettings::Load(g_configPath);
     Trace::Configure(ReadConfigFlag(g_configPath, L"diagnostics", L"trace", false));
     if (Trace::Enabled()) {
-        const auto crashPath = localRoot / "crash.log";
+        const auto crashPath = logsDir / "crash.log";
         std::error_code ignored;
         std::filesystem::remove(crashPath, ignored); // one run, one file
         CrashTrace::Arm(crashPath);
     }
-    { std::lock_guard<std::mutex> logLock(g_logMutex); g_logPath = localRoot / "gakuloader.log"; }
-    ImportLegacyConfig(g_configPath);
+    { std::lock_guard<std::mutex> logLock(g_logMutex); g_logPath = logsDir / "gakuloader.log"; }
     Hotkeys::LoadOverrides(g_configPath);
     g_initialized = true;
     PublishDesktopHostSnapshot();
@@ -778,8 +771,16 @@ void ActivatePlugins() {
     HostLogInfo("Scanning %ls (GakuLoader ABI v%u)", g_pluginsRootW.c_str(), GAKU_ABI_VERSION);
     std::vector<std::filesystem::path> paths;
     for (const auto& entry : std::filesystem::directory_iterator(pluginsPath, ec)) {
-        if (entry.is_regular_file() && entry.path().extension() == ".dll" && entry.path().filename().wstring()[0] != L'.')
-            paths.push_back(entry.path());
+        if (!entry.is_regular_file() || entry.path().extension() != ".dll" || entry.path().filename().wstring()[0] == L'.') continue;
+        const auto filename = entry.path().filename().wstring();
+        // These are Motion's explicitly named auxiliary libraries, not plugin
+        // entry points. Do not execute their DllMain during discovery.
+        if (_wcsicmp(filename.c_str(), L"GakuBurstBridge.dll") == 0 ||
+            _wcsicmp(filename.c_str(), L"GakuMotion.VmdImporter.Native.dll") == 0) {
+            HostLogInfo("Auxiliary library (not a plugin): %ls", filename.c_str());
+            continue;
+        }
+        paths.push_back(entry.path());
     }
     std::sort(paths.begin(), paths.end());
     g_pluginFiles.clear();

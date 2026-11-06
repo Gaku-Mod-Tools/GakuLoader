@@ -4,21 +4,21 @@ GakuLoader 是《Gakumas》的原生插件宿主：游戏根目录的 `version.d
 
 ## 安装
 
-先退出游戏。把构建产物 `build/version.dll` 复制到与 `gakumas.exe` 同层的游戏根目录，插件放进 `gakumas-local/plugins/`。
+先退出游戏。把构建产物 `build/version.dll` 复制到与 `gakumas.exe` 同层的游戏根目录，插件放进 `GakuLoader/plugins/`。
 
 ```text
 <游戏根目录>/
 ├── gakumas.exe
 ├── version.dll                    GakuLoader
-├── gakuloader.ini                 可选
-└── gakumas-local\
-    ├── gakuloader.log
+└── GakuLoader\
+    ├── Configs/gakuloader.ini     # 宿主配置（可选）
+    ├── Logs/gakuloader.log        # 宿主日志
     └── plugins\
         ├── GakuMotion.dll
         └── GakuLocalify.dll
 ```
 
-游戏根目录的 `gakuloader.ini`（全部可选）：
+`GakuLoader/Configs/gakuloader.ini`（全部可选）：
 
 ```ini
 [plugins]
@@ -44,7 +44,7 @@ scale=100
 language=zh-Hans
 ```
 
-手工编辑配置后重启游戏生效；Manager 中注明即时生效的设置可直接应用。插件不支持 hot reload。`[plugins]` 在 `LoadLibrary` 前跳过禁用项，文件原样保留；支持 `true/false`、`yes/no`、`1/0`，空值保持默认允许。`[hotkeys]` 是物理键绑定：同一组合被两个 owner 认领时，两者一起失效并在 F1 管理器里显示冲突，不会静默双触发；F1 由 Loader 保留。若存在旧 `gml-host.ini` 且没有 `gakuloader.ini`，首次启动会**复制一次**作为配置迁移——这是配置导入，不是二进制兼容。
+手工编辑配置后重启游戏生效；Manager 中注明即时生效的设置可直接应用。插件不支持 hot reload。`[plugins]` 在 `LoadLibrary` 前跳过禁用项，文件原样保留；支持 `true/false`、`yes/no`、`1/0`，空值保持默认允许。`[hotkeys]` 是物理键绑定：同一组合被两个 owner 认领时，两者一起失效并在 F1 管理器里显示冲突，不会静默双触发；F1 由 Loader 保留。旧数据不会自动导入；需要迁移时请先备份，按插件各自的迁移指南显式处理。
 
 首次安装前备份已有的 `version.dll` 和配置。卸载时退出游戏并移走 Loader 的 `version.dll`；
 若安装前已有其它代理，恢复其原始备份。插件与配置可以保留。
@@ -73,11 +73,11 @@ Apple 风格皮肤参考 [Apple 设计资源](https://developer.apple.com/cn/des
 
 ## 确认宿主启动
 
-`gakumas-local/gakuloader.log` 应依次包含：
+`GakuLoader/Logs/gakuloader.log` 应依次包含：
 
 ```text
 Roots ready: gameRoot=... localRoot=...; native plugin activation starts before the game runtime
-Scanning ...\gakumas-local\plugins (GakuLoader ABI v1)
+Scanning ...\GakuLoader\plugins (GakuLoader ABI v1)
 Activated GakuMotion v... (native; runtime callbacks deferred)
 Runtime ready on thread=...; dispatching onRuntimeReady (metadata/hooks only)
 Frame readers ready; Unity window messages will drive actor-independent work

@@ -174,7 +174,7 @@ int wmain(int argc, wchar_t** argv) {
     Require(argc == 3, "expected test root and scenario");
     const std::filesystem::path root(argv[1]);
     const std::wstring scenario(argv[2]);
-    const auto local = root / scenario / L"gakumas-local";
+    const auto local = root / scenario / L"GakuLoader";
     fixture = LoadLibraryW((root / L"GameAssembly.dll").c_str());
     Require(fixture != nullptr, "fixture GameAssembly loaded");
     const auto configure = reinterpret_cast<Configure>(GetProcAddress(fixture, "FixtureConfigure"));
@@ -251,7 +251,7 @@ int wmain(int argc, wchar_t** argv) {
         Require(count(6) == 0 && count(7) == count(8), "metadata flags output valid and type names freed");
         auto counts = GakuLoader::GetDiagnosticBoundaryCounts();
         Require(counts.messages == 130 && counts.exceptions == 20, "aggregate counts continue beyond private detail limit");
-        const auto logText = Read(local / L"gakuloader.log");
+        const auto logText = Read(local / L"Logs" / L"gakuloader.log");
         Require(Occurrences(logText, "[UnityDiagnostic/local-only] type=") == 64, "exactly 64 private message records");
         Require(Occurrences(logText, "[UnityDiagnostic/local-only] exception captured;") == 8, "exactly 8 private exception records");
         Require(logText.find("literal %s %n ") != std::string::npos, "captured content remains literal text");

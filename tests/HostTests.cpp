@@ -346,7 +346,7 @@ int wmain(int argc, wchar_t** argv) {
     assert(GakuLoader::ParseConfigFlag(L"typo", false) == false);
 
     const std::filesystem::path root(argv[1]);
-    const auto pluginDir = root / L"gakumas-local" / L"plugins";
+    const auto pluginDir = root / L"GakuLoader" / L"plugins";
     DeleteMarker(pluginDir, L"legacy-dllmain.txt");
     DeleteMarker(pluginDir, L"legacy-query.txt");
     DeleteMarker(pluginDir, L"legacy-init.txt");
@@ -354,7 +354,7 @@ int wmain(int argc, wchar_t** argv) {
     g_foreground = true; g_textInput = false;
 
     GakuLoader::DisableHotkeyPollerForTest();
-    GakuLoader::Initialize(root, root / "gakumas-local");
+    GakuLoader::Initialize(root, root / "GakuLoader");
     // Native activation is a separate phase: nothing is loaded by Initialize.
     assert(GakuLoader::GetLoadedPlugins().empty());
     assert(!GakuLoader::IsRuntimeReady());

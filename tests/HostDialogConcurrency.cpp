@@ -210,7 +210,7 @@ int wmain(int argc,wchar_t** argv) {
     bool initialized=false;
     try {
         const std::filesystem::path root(argv[1]);
-        GakuLoader::Initialize(root,root/L"gakumas-local"); initialized=true;
+        GakuLoader::Initialize(root,root/L"GakuLoader"); initialized=true;
         GakuLoader::ActivatePlugins();
         const auto& plugins=GakuLoader::GetLoadedPlugins();
         Check(plugins.size()==1 && plugins[0].activated,"isolated fixture activation must load exactly one plugin");

@@ -14,15 +14,15 @@
 
 1. ゲームを完全に終了します。
 2. ビルドした `build/version.dll` をゲームルートディレクトリ（`gakumas.exe` と同じ場所）に配置します。
-3. プラグインDLLを `gakumas-local/plugins/` フォルダに配置します。
+3. プラグインDLLを `GakuLoader/plugins/` フォルダに配置します。
 
 ```text
 <ゲームルートディレクトリ>/
 ├── gakumas.exe
 ├── version.dll                    GakuLoader 本体
-├── gakuloader.ini                 設定ファイル (任意)
-└── gakumas-local/
-    ├── gakuloader.log             実行ログ
+└── GakuLoader/
+    ├── Configs/gakuloader.ini     # 宿主配置（可选）
+    ├── Logs/gakuloader.log        # 宿主日志
     └── plugins/                   プラグインフォルダ
         ├── GakuMotion.dll
         └── GakuLocalify.dll
@@ -32,7 +32,7 @@
 
 ## 設定方法
 
-ゲームルートディレクトリの `gakuloader.ini` でプラグインの有効化/無効化、キー割り当ての変更、コンソールの起動などを設定できます。ファイルが存在しない場合はすべてデフォルトで動作します：
+`GakuLoader/Configs/gakuloader.ini` でプラグインの有効化/無効化、キー割り当ての変更、コンソールの起動などを設定できます。ファイルが存在しない場合はすべてデフォルトで動作します：
 
 ```ini
 [plugins]
@@ -56,7 +56,7 @@ trace=false
 
 キーの変更には **Manager → Hotkeys** を使用してください。保存される項目は ID 内のドットと大文字小文字を区別し、旧形式より優先されます。「デフォルトに戻す」はプラグインが現在指定する既定値に従います。旧項目は保持され、複数の操作に一致する場合は無視されてログに記録されます。詳しくは [Hotkeys](wiki/Hotkeys.md) を参照してください。
 
-ログはデフォルトで `gakumas-local/gakuloader.log` に出力されます。設定ファイルの手動編集やプラグインの追加・削除後はゲームを再起動してください。Manager で即時反映と明示された設定はその場で適用されます。プラグインのホットリロードには非対応です。
+ログはデフォルトで `GakuLoader/Logs/gakuloader.log` に出力されます。設定ファイルの手動編集やプラグインの追加・削除後はゲームを再起動してください。Manager で即時反映と明示された設定はその場で適用されます。プラグインのホットリロードには非対応です。
 
 ## 現在対応しているプラグイン
 

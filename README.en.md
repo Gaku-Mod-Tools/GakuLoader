@@ -14,15 +14,15 @@ The host stays minimal to arbitrate shared resources across plugins; mod-specifi
 
 1. Exit the game completely.
 2. Place the built `build/version.dll` into the game root directory (alongside `gakumas.exe`).
-3. Place plugin DLLs into the `gakumas-local/plugins/` directory.
+3. Place plugin DLLs into the `GakuLoader/plugins/` directory.
 
 ```text
 <Game Root Directory>/
 ├── gakumas.exe
 ├── version.dll                    GakuLoader binary
-├── gakuloader.ini                 Optional configuration
-└── gakumas-local/
-    ├── gakuloader.log             Runtime log
+└── GakuLoader/
+    ├── Configs/gakuloader.ini     # 宿主配置（可选）
+    ├── Logs/gakuloader.log        # 宿主日志
     └── plugins/                   Plugin directory
         ├── GakuMotion.dll
         └── GakuLocalify.dll
@@ -32,7 +32,7 @@ After launching the game, press **F1** to toggle the GakuLoader control window. 
 
 ## Configuration
 
-`gakuloader.ini` in the game root directory configures plugins, hotkeys, and diagnostic options. If the file is omitted, default values are used:
+`GakuLoader/Configs/gakuloader.ini` configures plugins, hotkeys, and diagnostic options. If the file is omitted, default values are used:
 
 ```ini
 [plugins]
@@ -56,7 +56,7 @@ trace=false
 
 Use **Manager → Hotkeys** to rebind keys. Its saved entries distinguish dots and case in IDs and take precedence over the legacy format; Reset follows the plugin's current default. Legacy entries are preserved; ambiguous matches are ignored and logged. See [Hotkeys](wiki/Hotkeys.md).
 
-Logs are written to `gakumas-local/gakuloader.log`. Restart after manually editing configuration or updating plugins. Manager settings marked as immediate apply directly; plugins do not support hot-reloading.
+Logs are written to `GakuLoader/Logs/gakuloader.log`. Restart after manually editing configuration or updating plugins. Manager settings marked as immediate apply directly; plugins do not support hot-reloading.
 
 ## Supported Plugins
 

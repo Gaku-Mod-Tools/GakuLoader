@@ -6,13 +6,13 @@
 
 ## 1. 怎么查看运行日志
 
-- **常规日志文件**：默认输出在 `<游戏根目录>/gakumas-local/gakuloader.log`。该文件包含了宿主加载过程以及所有插件的合并日志输出。
+- **常规日志文件**：默认输出在 `<游戏根目录>/GakuLoader/Logs/gakuloader.log`。该文件包含了宿主加载过程以及所有插件的合并日志输出。
 - **实时控制台黑窗口**：在 `gakuloader.ini` 中添加以下配置，启动游戏时会弹出一个名为 `GakuLoader` 的独立黑窗口，实时输出每条日志：
   ```ini
   [host]
   console=true
   ```
-- **崩溃转储与追踪**：在 `gakuloader.ini` 中配置 `[diagnostics] trace=true`。若程序遭遇未处理异常或内存访问违规，会在 `gakumas-local/crash.log` 记录崩溃时刻的线程调用堆栈与寄存器上下文。
+- **崩溃转储与追踪**：在 `gakuloader.ini` 中配置 `[diagnostics] trace=true`。若程序遭遇未处理异常或内存访问违规，会在 `GakuLoader/Logs/crash.log` 记录崩溃时刻的线程调用堆栈与寄存器上下文。
 
 ---
 
@@ -56,7 +56,7 @@
 - **绝对安全硬上限（40 秒，`kCeilingMs = 40000`）**：若超过 40 秒进程仍未能自行退出，看门狗执行终极强制终止，确保后台不残留僵死进程。退出前还会自动清理孤儿进程 `UnityCrashHandler64.exe`。
 
 ### 退出卡死二分排查法
-若怀疑退出缓慢或卡死是由某个插件的 Hook 引起，可在 `gakumas-local/` 目录下放置一个名为 `gml_disable_hooks.txt` 的空文本文件（或设置系统环境变量 `GML_DISABLE_HOOKS=1`）。宿主在启动时会跳过所有业务 MinHook 的挂接，仅保留 QuitGuard 退出保护。若此时退出依然卡顿，可断定卡顿源于 Unity 引擎或系统底层；若恢复迅速退出，则可进一步排查具体插件的 Detour 逻辑。
+若怀疑退出缓慢或卡死是由某个插件的 Hook 引起，可在 `GakuLoader/` 目录下放置一个名为 `gml_disable_hooks.txt` 的空文本文件（或设置系统环境变量 `GML_DISABLE_HOOKS=1`）。宿主在启动时会跳过所有业务 MinHook 的挂接，仅保留 QuitGuard 退出保护。若此时退出依然卡顿，可断定卡顿源于 Unity 引擎或系统底层；若恢复迅速退出，则可进一步排查具体插件的 Detour 逻辑。
 
 ---
 

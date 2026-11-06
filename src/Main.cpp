@@ -30,12 +30,13 @@ DWORD WINAPI LoaderStartupThread(LPVOID) {
     const DWORD length = GetModuleFileNameW(nullptr, executable, MAX_PATH);
     if (length == 0 || length >= MAX_PATH) return 0;
     const auto gameRoot = std::filesystem::path(executable).parent_path();
-    const auto config = gameRoot / L"gakuloader.ini";
+    const auto localRoot = gameRoot / L"GakuLoader";
+    const auto config = localRoot / L"Configs" / L"gakuloader.ini";
     if (GakuLoader::ReadConfigFlag(config, L"host", L"console", false) && !GetConsoleWindow()) {
         if (AllocConsole()) SetConsoleTitleW(L"GakuLoader");
     }
     try {
-        GakuLoader::Initialize(gameRoot, gameRoot / "gakumas-local");
+        GakuLoader::Initialize(gameRoot, localRoot);
         // Desktop services must exist before activation: a plugin may bind them
         // from its activate callback.
         GakuLoader::DesktopUi::Initialize();

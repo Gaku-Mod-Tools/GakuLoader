@@ -38,7 +38,7 @@ namespace ExitDiagnosis {
 //   从本会话继承过去（实测 GML_DISABLE_HOOKS=1 无效，hook 照常安装）。
 //   标记文件则由游戏进程自己读，不依赖继承。
 //
-//   1. 文件：游戏根目录下 gakumas-local/ 里的 gml_disable_hooks.txt
+//   1. 文件：游戏根目录下 GakuLoader/ 里的 gml_disable_hooks.txt
 //   2. 环境变量：仅当直接从命令行启动游戏时有效
 bool HooksDisabled() {
     static const bool disabled = []() {
@@ -49,8 +49,8 @@ bool HooksDisabled() {
         if (slash == nullptr) return false;
         *slash = L'\0';
 
-        // <game>\gakumas-local\gml_disable_hooks.txt
-        wcscat_s(path, MAX_PATH, L"\\gakumas-local\\gml_disable_hooks.txt");
+        // <game>\GakuLoader\gml_disable_hooks.txt
+        wcscat_s(path, MAX_PATH, L"\\GakuLoader\\gml_disable_hooks.txt");
         if (GetFileAttributesW(path) != INVALID_FILE_ATTRIBUTES) {
             return true;
         }

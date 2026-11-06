@@ -83,7 +83,7 @@ extern "C" GAKU_PLUGIN_EXPORT GakuStatus GakuPlugin_Query(
 }
 ```
 
-Windows x64 DLL 放在 `gakumas-local/plugins/`。几条硬性规则：
+Windows x64 DLL 放在 `GakuLoader/plugins/`。几条硬性规则：
 
 - `GakuPlugin_Query` 只填描述符。不要在这里做 IL2CPP、UI、hook 或线程初始化，也不要返回指向临时缓冲的字符串。
 - 先验证 `requestedAbi` 和 `outputSize`，再写 `*output`；尺寸不足时必须不写。描述符的 `abiVersion` / `structSize` 固定为 `GAKU_ABI_VERSION` / `sizeof(GakuPluginDescriptor)`。
@@ -102,7 +102,7 @@ Windows x64 DLL 放在 `gakumas-local/plugins/`。几条硬性规则：
 
 不依赖 Loader 的构建产物、MinGW 或游戏。验证器在合成宿主中加载 DLL，检查 ABI 查询、
 激活与生命周期日志。真正放入游戏时，按 [安装指南](../wiki/Installation.md) 操作，
-从 `gakumas-local/gakuloader.log` 确认 `example.minimal activated`。
+从 `GakuLoader/Logs/gakuloader.log` 确认 `example.minimal activated`。
 
 ## 生命周期与线程
 

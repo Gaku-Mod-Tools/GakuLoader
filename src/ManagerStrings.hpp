@@ -1,7 +1,11 @@
 #pragma once
 #include "LanguageSettings.hpp"
+#include <string>
 
 namespace GakuLoader::ManagerStrings {
+inline std::string FormatVersion(const std::string& version) {
+    return !version.empty() && version[0] >= '0' && version[0] <= '9' ? "v" + version : version;
+}
 inline const wchar_t* OpenControls() {
     static const wchar_t* const labels[] = {L"Open GakuLoader", L"打开 GakuLoader", L"開啟 GakuLoader", L"GakuLoader を開く"};
     return labels[LanguageSettings::Current()];
@@ -27,8 +31,8 @@ inline const char* Text(Key key) {
         {"Version", "版本", "版本", "バージョン"},
         {"State", "状态", "狀態", "状態"},
         {"Panel", "面板", "面板", "パネル"},
-        {"runtime ready", "运行时就绪", "執行階段就緒", "ランタイム準備完了"},
-        {"activated", "已激活", "已啟用", "有効化済み"},
+        {"runtime ready", "已就绪", "執行階段就緒", "ランタイム準備完了"},
+        {"activated", "正在激活", "已啟用", "有効化済み"},
         {"not activated", "未激活", "未啟用", "未有効化"},
         {"failed", "失败", "失敗", "失敗"},
         {"yes", "有", "有", "あり"}, {"no", "无", "無", "なし"},

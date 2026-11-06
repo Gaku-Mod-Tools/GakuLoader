@@ -257,14 +257,19 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wparam, LPARAM lpa
         const HDROP drop = reinterpret_cast<HDROP>(wparam);
         struct FinishDrop { HDROP value; ~FinishDrop() { DragFinish(value); } } finish{drop};
         POINT point{};
-        // This host uses a single ImGui viewport at client (0,0), matching the
-        // bundled Win32 backend's mouse coordinates. Do not add HWND's desktop offset.
-        const bool inClient = DragQueryPoint(drop, &point) != FALSE;
+        // Shell DROPFILES fNC means pt is in screen coordinates. Convert it
+        // before checking the actual client rect and registered ImGui target.
+        // Some Explorer deliveries mark fNC even for our custom content area.
+        const bool reportedClient = DragQueryPoint(drop, &point) != FALSE;
         const UINT count = DragQueryFileW(drop, 0xFFFFFFFF, nullptr, 0);
         LogInfo("[DesktopUI][FileDrop] received hwnd=%p owner=%s client=%d point=%ld,%ld files=%u",
-            window, g_selectedPlugin.c_str(), inClient ? 1 : 0, point.x, point.y, count);
-        if (!inClient) {
-            LogWarn("[DesktopUI][FileDrop] rejected reason=non-client"); return 0;
+            window, g_selectedPlugin.c_str(), reportedClient ? 1 : 0, point.x, point.y, count);
+        if (!reportedClient && !ScreenToClient(window, &point)) {
+            LogWarn("[DesktopUI][FileDrop] rejected reason=coordinate-conversion error=%lu", GetLastError()); return 0;
+        }
+        RECT client{};
+        if (!GetClientRect(window, &client) || !PtInRect(&client, point)) {
+            LogWarn("[DesktopUI][FileDrop] rejected reason=outside-client point=%ld,%ld", point.x, point.y); return 0;
         }
         if (!count || count > GAKU_FILE_DROP_MAX_FILES) {
             LogWarn("[DesktopUI][FileDrop] rejected reason=%s", count ? "too-many-files" : "empty-batch"); return 0;
@@ -462,7 +467,7 @@ void DrawPluginList(const DesktopHostSnapshot& snapshot) {
             ImGui::TableNextRow();
             ImGui::TableNextColumn(); ImGui::TextUnformatted(plugin.name.c_str());
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", plugin.id.c_str());
-            ImGui::TableNextColumn(); ImGui::TextUnformatted(plugin.version.c_str());
+            ImGui::TableNextColumn(); ImGui::TextUnformatted(ManagerStrings::FormatVersion(plugin.version).c_str());
             ImGui::TableNextColumn(); ImGui::TextUnformatted(T(plugin.failed ? Key::Failed :
                 plugin.runtimeReady ? Key::Ready : plugin.activated ? Key::Activated : Key::Inactive));
             if (plugin.failed || !plugin.runtimeReady) {
@@ -740,7 +745,7 @@ void DrawHostShell(bool pluginGateHeld) {
             ImGui::TextUnformatted("GakuLoader"); ImGui::Separator();
             ImGui::TextWrapped("%s", T(Key::SelectPanel));
         } else {
-            ImGui::Text("%s  %s", selected->name.c_str(), selected->version.c_str()); ImGui::Separator();
+            ImGui::Text("%s  %s", selected->name.c_str(), ManagerStrings::FormatVersion(selected->version).c_str()); ImGui::Separator();
             if (selected->failed) ImGui::TextWrapped("%s", T(Key::FailedHelp));
             else if (!selected->hasPanel) ImGui::TextWrapped("%s", T(Key::NoPanel));
             else {

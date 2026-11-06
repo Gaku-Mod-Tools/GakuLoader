@@ -15,7 +15,7 @@ $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
 . (Join-Path $PSScriptRoot 'test-common.ps1')
 
-# Each scenario owns <root>\<scenario>\gakumas-local. The fixture appends to the log, so
+# Each scenario owns <root>\<scenario>\GakuLoader. The fixture appends to the log, so
 # every scenario's log is truncated first: a re-run then sees exactly the same budgets as
 # the first run.
 $testRoot = Initialize-GakuTestRoot (Join-Path $repo 'build\diagnostic-boundary-tests')
@@ -23,7 +23,7 @@ Copy-GakuFixtures $repo $testRoot @('GameAssembly.dll') | Out-Null
 $binary = Get-GakuTestBinary $repo 'diagnostic-boundary-tests.exe' $Configuration
 
 foreach ($scenario in @('success', 'missing', 'parameter', 'return', 'instance', 'rollback', 'aliased', 'collision')) {
-    Reset-GakuLog (Join-Path $testRoot "$scenario\gakumas-local\gakuloader.log")
+    Reset-GakuLog (Join-Path $testRoot "$scenario\GakuLoader\Logs\gakuloader.log")
     & $binary $testRoot $scenario
     if ($LASTEXITCODE -ne 0) { throw "Diagnostic boundary scenario failed: $scenario ($LASTEXITCODE)" }
 }

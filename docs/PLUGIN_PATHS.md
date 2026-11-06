@@ -22,7 +22,7 @@ if (joined != GAKU_OK) return joined;
 // Use the UTF-16 path with Win32 W APIs or std::filesystem; save transactionally.
 ```
 
-默认根为 `<GameRoot>/gakumas-local/<类别>/<descriptor.id>`。只查询不会创建目录；`ensureRoot` 只按需创建被请求的类别/owner 根。无需每插件建立六套空目录。
+默认根为 `<GameRoot>/GakuLoader/<类别>/<descriptor.id>`。只查询不会创建目录；`ensureRoot` 只按需创建被请求的类别/owner 根。无需每插件建立六套空目录。
 
 | kind | 目录 | 用途与清理边界 |
 |---|---|---|

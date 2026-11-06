@@ -68,7 +68,7 @@ hotkeys.registerHotkey(hotkeys.context, &binding);
 - 支持点击“解除绑定”（保存为空值）或“恢复默认”（跟随插件声明的默认按键）。
 
 ### 手工编辑 `gakuloader.ini`
-游戏根目录的 `gakuloader.ini` 包含 `[hotkeys]` 段。手工修改配置后需重启游戏生效：
+`GakuLoader/Configs/gakuloader.ini` 包含 `[hotkeys]` 段。手工修改配置后需重启游戏生效：
 
 ```ini
 [hotkeys]

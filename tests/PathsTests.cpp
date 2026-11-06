@@ -95,7 +95,7 @@ void StateChecks(const std::filesystem::path& root) {
     assert(!error && std::filesystem::is_directory(local / L"Configs" / L"unit.valid"));
     assert(state.EnsureRoot(GAKU_PATH_CONFIGS, error) == GAKU_OK); // idempotent
     for (size_t i = 0; i < kKinds.size(); ++i) {
-        if (kKinds[i] != GAKU_PATH_CONFIGS) assert(!std::filesystem::exists(local / kCategories[i]));
+        if (kKinds[i] != GAKU_PATH_CONFIGS) assert(!std::filesystem::exists(local / kCategories[i] / L"paths.alpha"));
     }
 
     // A regular file cannot become a category directory. This deterministic
@@ -204,8 +204,9 @@ const GakuLoader::LoadedPlugin& Find(const char* id) {
 }
 
 void HostChecks(const std::filesystem::path& root) {
-    const auto local = root / L"gakumas-local";
-    assert(WritePrivateProfileStringW(L"appearance", L"language", L"zh-Hant", (root / L"gakuloader.ini").c_str()));
+    const auto local = root / L"GakuLoader";
+    std::filesystem::create_directories(local / L"Configs");
+    assert(WritePrivateProfileStringW(L"appearance", L"language", L"zh-Hant", (local / L"Configs" / L"gakuloader.ini").c_str()));
     GakuLoader::DisableHotkeyPollerForTest();
     GakuLoader::Initialize(root, local);
     GakuLoader::ActivatePlugins();
@@ -281,7 +282,7 @@ void HostChecks(const std::filesystem::path& root) {
     for (size_t i = 0; i < kKinds.size(); ++i) {
         assert(CheckGet(getA, kKinds[i]) == local / kCategories[i] / L"paths.alpha");
         assert(CheckGet(getB, kKinds[i]) == local / kCategories[i] / L"paths.beta");
-        assert(!std::filesystem::exists(local / kCategories[i]));
+        assert(!std::filesystem::exists(local / kCategories[i] / L"paths.alpha"));
     }
     CheckUnchanged(getA, 7, GAKU_E_INVALID_ARGUMENT);
     uint32_t needed = 0x12345678u;

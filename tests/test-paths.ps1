@@ -13,7 +13,7 @@ New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
 $unicodeName = 'game ' + [char]0x5b66 + [char]0x5712 + ' ' + [char]::ConvertFromUtf32(0x1f3b5)
 $runDir = Join-Path $outputDir ([Guid]::NewGuid().ToString('N'))
 $testRoot = Initialize-GakuTestRoot (Join-Path $runDir $unicodeName)
-$pluginDir = Assert-GakuPluginDir (Join-Path $testRoot 'gakumas-local\plugins') @('paths-alpha.dll', 'paths-beta.dll', 'paths-uppercase.dll')
+$pluginDir = Assert-GakuPluginDir (Join-Path $testRoot 'GakuLoader\plugins') @('paths-alpha.dll', 'paths-beta.dll', 'paths-uppercase.dll')
 $fixtures = @()
 foreach ($name in @('paths-alpha.dll', 'paths-beta.dll', 'paths-uppercase.dll')) {
     $source = Join-Path (Get-GakuTestDir $repo $Configuration) "paths-fixtures\$name"
