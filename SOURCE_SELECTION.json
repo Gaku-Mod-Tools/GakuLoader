@@ -36,10 +36,11 @@
       "source_path": "GakuLoader.vcxproj",
       "source_git_blob": "9e8916b5464c42a49a142994113cbe6566cc1a48",
       "source_sha256": "841f127a74d44336eddea3d01a579537680748493000968b945a446185254c96",
-      "staged_sha256": "841f127a74d44336eddea3d01a579537680748493000968b945a446185254c96",
+      "staged_sha256": "fd1738c15ff4fcf008afacd226b969b508379159e4b85fc6a74f4c81485bc44d",
       "source_scope": "first-party-declared-MIT",
       "review": "fixed-commit public Manager/presentation/hotkey delta; no game files or internal agent records",
-      "staging_adapted": false
+      "staging_adapted": true,
+      "release_version_refresh_20261106": "Added compiled Windows version resource; original selected source identity retained."
     },
     "ImGui.vcxproj": {
       "source_path": "ImGui.vcxproj",
@@ -2944,5 +2945,11 @@
       "VALIDATION.md"
     ],
     "validation_scope": "clean-source default validation plus synthetic host cancellation and standalone WARP Manager/desktop checks; no game"
+  },
+  "release_version_refresh_20261106": {
+    "staging_generated_files": [
+      "src/GakuLoader.rc"
+    ],
+    "version": "1.0.0"
   }
 }

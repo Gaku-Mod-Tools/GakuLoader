@@ -8,7 +8,7 @@
     ".git/",
     "build/"
   ],
-  "content_tree_sha256": "7f754844418d9c47acebea75f19c64886c82999df0d4850aa7fb2da9bde802c0",
+  "content_tree_sha256": "b5f935e88a1f9f47808890a779fb33b17b0305e9db68206cf6175829ee4902de",
   "files": [
     {
       "path": ".gitattributes",
@@ -58,8 +58,8 @@
     },
     {
       "path": "GakuLoader.vcxproj",
-      "size": 4682,
-      "sha256": "841f127a74d44336eddea3d01a579537680748493000968b945a446185254c96",
+      "size": 4764,
+      "sha256": "fd1738c15ff4fcf008afacd226b969b508379159e4b85fc6a74f4c81485bc44d",
       "source_sha256": "841f127a74d44336eddea3d01a579537680748493000968b945a446185254c96",
       "staging_adapted": false,
       "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
@@ -133,8 +133,8 @@
     },
     {
       "path": "SOURCE_SELECTION.json",
-      "size": 172219,
-      "sha256": "e99dca74fc9f390cb7662c868f7e1c75a9f3d6b309fccdbf99ca116852719cf6",
+      "size": 172482,
+      "sha256": "2ee5e07d6d8759f3d69d6c5966bcdfaf5aee71bbab80180e8bb13a1601358c4f",
       "generated_for_staging": true,
       "documentation_history": [
         {
@@ -645,6 +645,13 @@
       "sha256": "5b7bfb70a9692264e2619fe35770772d76858b11e32666bb0a384785b0047a11",
       "source_sha256": "5b7bfb70a9692264e2619fe35770772d76858b11e32666bb0a384785b0047a11",
       "staging_adapted": false
+    },
+    {
+      "path": "src/GakuLoader.rc",
+      "size": 663,
+      "sha256": "9bcc5cc996c7571ef2390635de70cc8f84b576e71cb9e7b93bfbe7a9b803d6bd",
+      "generated_for_staging": true,
+      "review": "Windows product/file version 1.0.0."
     },
     {
       "path": "src/GameHook.cpp",
@@ -1644,5 +1651,14 @@
       "tests/test-host.ps1"
     ],
     "previous_manifest_sha256": "21e421081f17f38e37ce17fe00880ab34062b5d070b2073ece7bc5bb58da1c60"
+  },
+  "release_version_refresh_20261106": {
+    "previous_manifest_sha256": "569351e3c40391bb2192ee1196cb5a7824459d6e72a66187bd7dc72df5a27e53",
+    "changed_payload_files": [
+      "SOURCE_SELECTION.json",
+      "GakuLoader.vcxproj",
+      "src/GakuLoader.rc"
+    ],
+    "scope": "GakuLoader Windows product and file version 1.0.0; no ABI changes."
   }
 }

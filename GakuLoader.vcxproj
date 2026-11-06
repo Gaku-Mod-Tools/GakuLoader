@@ -48,6 +48,10 @@
   </ItemDefinitionGroup>
 
   <ItemGroup>
+    <ResourceCompile Include="src\GakuLoader.rc" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ClCompile Include="src\Main.cpp" />
     <ClCompile Include="src\Proxy.cpp" />
     <ClCompile Include="src\PluginHost.cpp" />
