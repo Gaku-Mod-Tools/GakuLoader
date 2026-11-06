@@ -3,6 +3,7 @@
 #include "GakuProcessLifetimeHooks.h"
 #include "GakuPaths.h"
 #include "GakuLanguage.h"
+#include "GakuLifecycle.h"
 #include <stddef.h>
 _Static_assert(offsetof(GakuHostApi, abiVersion) == 0, "version must be first");
 _Static_assert(offsetof(GakuHostApi, structSize) == sizeof(uint32_t), "size must be second");
@@ -39,6 +40,9 @@ _Static_assert(offsetof(GakuUiLanguageV1, structSize) == 4, "language value size
 _Static_assert(offsetof(GakuUiLanguageV1, language) == 8, "language value choice");
 _Static_assert(offsetof(GakuUiLanguageV1, reserved) == 12, "language value reserved");
 _Static_assert(sizeof(GakuLanguageServiceV1) == 16, "optional language service layout");
+_Static_assert(sizeof(GakuLifecycleServiceV1) == 24, "optional lifecycle service layout");
+_Static_assert(offsetof(GakuLifecycleServiceV1, context) == 8, "lifecycle owner token");
+_Static_assert(offsetof(GakuLifecycleServiceV1, isStopping) == 16, "lifecycle cancellation getter");
 _Static_assert(offsetof(GakuLanguageServiceV1, getLanguage) == 8, "language service getter");
 _Static_assert(GAKU_LANGUAGE_ENGLISH == 0u && GAKU_LANGUAGE_SIMPLIFIED_CHINESE == 1u &&
     GAKU_LANGUAGE_TRADITIONAL_CHINESE == 2u && GAKU_LANGUAGE_JAPANESE == 3u, "stable language ids");

@@ -22,13 +22,16 @@ dialogs cancel and subsequent requests are rejected. A short show/reopen check
 may briefly display the test controls window.
 No game, Localify, VRify, GameAssembly or injected plugin is loaded.
 
-Controlled frame-admission denial runs twelve or more production render-loop
-iterations without advancing CPU frame, draw or Present counters, then resumes
-complete pixel-verified frames. The WARP executable's admission adapter forces
-denial; actual mutex contention is verified separately with the real ModLoader
-and DLL fixture in `tests/test-host.ps1`. That test holds a UI callback with a
-barrier, confirms the waiting actor update executes, rejects a complete desktop
-CPU frame while an update owns the gate, and verifies exactly 64 updates for each
+Controlled plugin-admission denial keeps the selected plugin page's complete
+image intact. Switching to Manager during that contention runs twelve or more
+iterations while CPU frame, draw and Present counters keep advancing. The
+manager UI test also checks the real ImGui clock driving its waiting spinner
+advances while fresh snapshots and plugin callbacks are unavailable. The WARP
+executable's admission adapter forces denial; actual mutex contention is verified
+separately with the real host and DLL fixture in `tests/test-host.ps1`. That test
+holds a UI callback with a barrier, confirms the waiting actor update executes,
+rejects plugin drawing while an update owns the gate, reads copied status and
+owner cancellation without waiting for that gate, and verifies 64 updates for each
 of two actors during contention with no overlapping callbacks. Shared actor-entry
 participants join the same gate: with a desktop frame holding it, the participant
 does not enter until that frame completes, the game original still runs exactly

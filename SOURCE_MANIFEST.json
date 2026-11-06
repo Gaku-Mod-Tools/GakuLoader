@@ -1,14 +1,14 @@
 {
   "schema": "gakuloader.frozen-source-manifest/1",
-  "source_revision": "6c8938990b2b08cc6079c61f3cefe29b67acd698",
-  "scope": "minimal fixed-Git-blob file-drop UIPI/diagnostic repair; prior paths, Manager, mature docs and independent vendored adaptations retained",
+  "source_revision": "6c4ce365d731f491f129c84f2abb9ccf9c116754",
+  "scope": "minimal fixed-Git-blob Manager animation and cancellable startup repair; prior file-drop, paths, Manager, mature docs and independent vendored adaptations retained",
   "excludes": [
     "SOURCE_MANIFEST.json (self)",
     "VALIDATION.md (historical observed results)",
     ".git/",
     "build/"
   ],
-  "content_tree_sha256": "f12ffd05fd35987a87acf8aaa02f248d101fa46c7fb7a1887c39dc20e363b5b1",
+  "content_tree_sha256": "7f754844418d9c47acebea75f19c64886c82999df0d4850aa7fb2da9bde802c0",
   "files": [
     {
       "path": ".gitattributes",
@@ -133,8 +133,8 @@
     },
     {
       "path": "SOURCE_SELECTION.json",
-      "size": 150924,
-      "sha256": "40d0830d4ca63a1f51d3e1d41c845d43282aa1439fc807146e4753717c38eb77",
+      "size": 172219,
+      "sha256": "e99dca74fc9f390cb7662c868f7e1c75a9f3d6b309fccdbf99ca116852719cf6",
       "generated_for_staging": true,
       "documentation_history": [
         {
@@ -154,8 +154,8 @@
     },
     {
       "path": "STAGING_REVIEW.md",
-      "size": 9982,
-      "sha256": "2c64f960b2481eb3821fd15a200f00966e29141c79b0059455d2172569f8282d",
+      "size": 11683,
+      "sha256": "0b4757df0b92477c97b46e920a8f3b093cd14ad47d67b9f8e049c84e4be66f62",
       "generated_for_staging": true,
       "staging_adapted": true
     },
@@ -390,12 +390,12 @@
     },
     {
       "path": "docs/PLUGIN_DEVELOPMENT.md",
-      "size": 14976,
-      "sha256": "03578c77ab374608c0576b823d22f3a1e7177819aeba9a35c9cddbb10507ea51",
-      "source_sha256": "03578c77ab374608c0576b823d22f3a1e7177819aeba9a35c9cddbb10507ea51",
+      "size": 15341,
+      "sha256": "aaaa6de61808dab4758be2346faad844e6a4803f1d97942000a81a839528b8c7",
+      "source_sha256": "aaaa6de61808dab4758be2346faad844e6a4803f1d97942000a81a839528b8c7",
       "staging_adapted": false,
-      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
-      "source_git_blob": "2aad9607395c1ebe535aac87f4801e9c4745c879"
+      "source_revision": "6c4ce365d731f491f129c84f2abb9ccf9c116754",
+      "source_git_blob": "54cb3aca12eb96b52cb1c9fd786d32de78043cd8"
     },
     {
       "path": "docs/PLUGIN_PATHS.md",
@@ -481,6 +481,15 @@
       "source_git_blob": "1e9bb38fa03ba0d4eee4edd7917f39d380206a79",
       "source_sha256": "6b1e39362171f9ba3588cec296da31043a9c93c5d4cf68344844bf70e78cd185",
       "staging_adapted": false
+    },
+    {
+      "path": "include/GakuLifecycle.h",
+      "size": 663,
+      "sha256": "f7a8c5708bb35356089eb8a83a9288cabd75389fc3952dfbe79adc887972e648",
+      "source_sha256": "f7a8c5708bb35356089eb8a83a9288cabd75389fc3952dfbe79adc887972e648",
+      "staging_adapted": false,
+      "source_revision": "6c4ce365d731f491f129c84f2abb9ccf9c116754",
+      "source_git_blob": "d50ae457ecac147b19845ca0d49d5ccbd8d0e230"
     },
     {
       "path": "include/GakuPaths.h",
@@ -589,12 +598,12 @@
     },
     {
       "path": "src/DesktopUi.cpp",
-      "size": 50607,
-      "sha256": "0b0c4d30fc5281c22060c632e2c8cd297a92d661a57c917be5c9ffb197654c3b",
-      "source_sha256": "0b0c4d30fc5281c22060c632e2c8cd297a92d661a57c917be5c9ffb197654c3b",
+      "size": 51521,
+      "sha256": "d5b1f04d944b3393f3bda8b8d7cb01be0b95623ebe3890cd1673e872e3217cd5",
+      "source_sha256": "d5b1f04d944b3393f3bda8b8d7cb01be0b95623ebe3890cd1673e872e3217cd5",
       "staging_adapted": false,
-      "source_revision": "6c8938990b2b08cc6079c61f3cefe29b67acd698",
-      "source_git_blob": "0590e142a00721a8a9772ec97a96531ec9eaad8c",
+      "source_revision": "6c4ce365d731f491f129c84f2abb9ccf9c116754",
+      "source_git_blob": "28d7d50e42e7ae6efebae4c64a8a6207a84e6e72",
       "originating_fix_commits": [
         "038bd02fe326f767f0afd55b0ee5bc83196ba9fd",
         "6c8938990b2b08cc6079c61f3cefe29b67acd698"
@@ -639,10 +648,12 @@
     },
     {
       "path": "src/GameHook.cpp",
-      "size": 25286,
-      "sha256": "1fe36df2e641d854c8dfdc0d25135cee91f8f8d25a647178e1fe68a363e1db60",
-      "source_sha256": "1fe36df2e641d854c8dfdc0d25135cee91f8f8d25a647178e1fe68a363e1db60",
-      "staging_adapted": false
+      "size": 25781,
+      "sha256": "3712639c9b4f9e1bc403726e40d6bc52f6fca329748ee691ae98337695852f28",
+      "source_sha256": "3712639c9b4f9e1bc403726e40d6bc52f6fca329748ee691ae98337695852f28",
+      "staging_adapted": false,
+      "source_revision": "6c4ce365d731f491f129c84f2abb9ccf9c116754",
+      "source_git_blob": "934baf3173b3894e35e06e2e5add91e194e0b8c4"
     },
     {
       "path": "src/GameHook.hpp",
@@ -653,12 +664,12 @@
     },
     {
       "path": "src/Host.hpp",
-      "size": 4920,
-      "sha256": "06821b9dabc7405d3cea8796a73a4e2793e3483ae49dc1ff45e1a9fde29dc120",
-      "source_sha256": "06821b9dabc7405d3cea8796a73a4e2793e3483ae49dc1ff45e1a9fde29dc120",
+      "size": 5089,
+      "sha256": "2846a59e23b2ea276e04caeb48344981b880ad4c81c1ee829c3dbea21ed68578",
+      "source_sha256": "2846a59e23b2ea276e04caeb48344981b880ad4c81c1ee829c3dbea21ed68578",
       "staging_adapted": false,
-      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
-      "source_git_blob": "e557ffdd2f02945a0b34fe6f08a5580b3a1471c0"
+      "source_revision": "6c4ce365d731f491f129c84f2abb9ccf9c116754",
+      "source_git_blob": "e99a01f088414cb8c2f0ec941547ec9e23e50e78"
     },
     {
       "path": "src/HostConfig.hpp",
@@ -719,12 +730,12 @@
     },
     {
       "path": "src/PluginHost.cpp",
-      "size": 53239,
-      "sha256": "b6ef37564caa164aa5544202e68c8b39da965e36804910c2d9ffcdf8dcd04ced",
-      "source_sha256": "b6ef37564caa164aa5544202e68c8b39da965e36804910c2d9ffcdf8dcd04ced",
+      "size": 54781,
+      "sha256": "004fabe33b002f6d3147d0431df9d9aea038edb596687b86e5cabbb325e5b579",
+      "source_sha256": "004fabe33b002f6d3147d0431df9d9aea038edb596687b86e5cabbb325e5b579",
       "staging_adapted": false,
-      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
-      "source_git_blob": "e01989fc5ec96a16a9768ac035615d003905203b"
+      "source_revision": "6c4ce365d731f491f129c84f2abb9ccf9c116754",
+      "source_git_blob": "9dcdc8978c7e294e7a994dddb7e56b231dd31a45"
     },
     {
       "path": "src/PluginPaths.hpp",
@@ -792,12 +803,12 @@
     },
     {
       "path": "tests/CAbiTest.c",
-      "size": 3692,
-      "sha256": "d86c9d57bb7c6d49aad353531da523f84f08a284324d7c98b2514bc37936ddf1",
-      "source_sha256": "d86c9d57bb7c6d49aad353531da523f84f08a284324d7c98b2514bc37936ddf1",
+      "size": 4000,
+      "sha256": "1fc806e4588625069525f348cf55e2ef05485b326d2c0377780a4005e2629b03",
+      "source_sha256": "1fc806e4588625069525f348cf55e2ef05485b326d2c0377780a4005e2629b03",
       "staging_adapted": false,
-      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
-      "source_git_blob": "23e7750ee8d7dd89f378eca01098be991ba4effc"
+      "source_revision": "6c4ce365d731f491f129c84f2abb9ccf9c116754",
+      "source_git_blob": "fffbc334747577d46b903f0b87aa2cb50a185c61"
     },
     {
       "path": "tests/CAbiTest.vcxproj",
@@ -808,10 +819,12 @@
     },
     {
       "path": "tests/DESKTOP_UI.md",
-      "size": 5271,
-      "sha256": "62bb7cd4c5f06ad806de864f96b13e1eb8a18486f0bfd42acdbc5522af9fa9a0",
-      "source_sha256": "62bb7cd4c5f06ad806de864f96b13e1eb8a18486f0bfd42acdbc5522af9fa9a0",
-      "staging_adapted": false
+      "size": 5505,
+      "sha256": "77fa717410634ea7f731e765082e1244648e056d7f7326ee86d65b66e1536d5d",
+      "source_sha256": "77fa717410634ea7f731e765082e1244648e056d7f7326ee86d65b66e1536d5d",
+      "staging_adapted": false,
+      "source_revision": "6c4ce365d731f491f129c84f2abb9ccf9c116754",
+      "source_git_blob": "8d43b96f5d3c8741d490ea9b164fcaa316ef7153"
     },
     {
       "path": "tests/DesktopAppearanceTests.cpp",
@@ -893,12 +906,12 @@
     },
     {
       "path": "tests/DesktopUiSmoke.cpp",
-      "size": 31375,
-      "sha256": "e0facd0ea900329434636d1bc8ab99ba05c3acd577da59635d0a9ec7f1facf85",
-      "source_sha256": "e0facd0ea900329434636d1bc8ab99ba05c3acd577da59635d0a9ec7f1facf85",
+      "size": 32170,
+      "sha256": "5a54f42bf183416b2751b1a4319fb7e3b71c05e59aca45e4361033e6f88f60e2",
+      "source_sha256": "5a54f42bf183416b2751b1a4319fb7e3b71c05e59aca45e4361033e6f88f60e2",
       "staging_adapted": false,
-      "source_revision": "6c8938990b2b08cc6079c61f3cefe29b67acd698",
-      "source_git_blob": "72aeb6b00ecb7958b1730d95d036043c3dc954e6",
+      "source_revision": "6c4ce365d731f491f129c84f2abb9ccf9c116754",
+      "source_git_blob": "5607496f72d7d39846e01b65b4858940cb0f57e5",
       "originating_fix_commits": [
         "038bd02fe326f767f0afd55b0ee5bc83196ba9fd"
       ]
@@ -926,10 +939,12 @@
     },
     {
       "path": "tests/FramePumpTests.cpp",
-      "size": 10663,
-      "sha256": "29bac2ea370716f2eab5dad88eb58821d8ba265df0ad457e90acfed2e600f6b9",
-      "source_sha256": "29bac2ea370716f2eab5dad88eb58821d8ba265df0ad457e90acfed2e600f6b9",
-      "staging_adapted": false
+      "size": 11007,
+      "sha256": "40ee4da97feec5bbe5e431fb9d75ff9be9e088a0fd82caa60581381e6f745100",
+      "source_sha256": "40ee4da97feec5bbe5e431fb9d75ff9be9e088a0fd82caa60581381e6f745100",
+      "staging_adapted": false,
+      "source_revision": "6c4ce365d731f491f129c84f2abb9ccf9c116754",
+      "source_git_blob": "567752b2c17a731c069259ace53c9b007b221f16"
     },
     {
       "path": "tests/FramePumpTests.vcxproj",
@@ -947,10 +962,12 @@
     },
     {
       "path": "tests/GakuHostFixture.cpp",
-      "size": 10050,
-      "sha256": "fdb8efb702a96b4e96994e4ada272d864b2ea18be93c6d6751674bf9d869db53",
-      "source_sha256": "fdb8efb702a96b4e96994e4ada272d864b2ea18be93c6d6751674bf9d869db53",
-      "staging_adapted": false
+      "size": 10854,
+      "sha256": "b81018e7baf4f9e6049a1e0b6aba205ba9bb7561c2ca12daa34aa9afaf489181",
+      "source_sha256": "b81018e7baf4f9e6049a1e0b6aba205ba9bb7561c2ca12daa34aa9afaf489181",
+      "staging_adapted": false,
+      "source_revision": "6c4ce365d731f491f129c84f2abb9ccf9c116754",
+      "source_git_blob": "8271a0500ed6cd557761f5749359ab3f5ce35414"
     },
     {
       "path": "tests/GakuLegacyFixture.cpp",
@@ -984,12 +1001,12 @@
     },
     {
       "path": "tests/HostTests.cpp",
-      "size": 58254,
-      "sha256": "8e5c48e89fbc55d4ed5a4dd0299ff6919c52bf4e21e3e6b7ae2e6a1fb02fd5d5",
-      "source_sha256": "8e5c48e89fbc55d4ed5a4dd0299ff6919c52bf4e21e3e6b7ae2e6a1fb02fd5d5",
+      "size": 61230,
+      "sha256": "5d1ee0cb0a7b4a8e1e5a0df09bd8f8b25d53c88b17138dcdb51cd457175804ba",
+      "source_sha256": "5d1ee0cb0a7b4a8e1e5a0df09bd8f8b25d53c88b17138dcdb51cd457175804ba",
       "staging_adapted": false,
-      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
-      "source_git_blob": "6bdd71af0d8d703d178f3ecc6769b64433816fc4"
+      "source_revision": "6c4ce365d731f491f129c84f2abb9ccf9c116754",
+      "source_git_blob": "b96068fb5a86ee1a0bdf6b9e765b00d751575c8e"
     },
     {
       "path": "tests/HostTests.vcxproj",
@@ -1018,11 +1035,11 @@
     },
     {
       "path": "tests/ManagerUiTests.cpp",
-      "size": 17025,
-      "sha256": "7f89191da98e83c29d3356ad0c6f21082be2a395032d2ba16854ed9b7c70c41e",
-      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
-      "source_git_blob": "521b170ea9b6bcec410d7910a63f833855ad1276",
-      "source_sha256": "7f89191da98e83c29d3356ad0c6f21082be2a395032d2ba16854ed9b7c70c41e",
+      "size": 18097,
+      "sha256": "357d399adbccc63aebb963c14f57e55a4f74e311075b487276eefbf7d0a0458a",
+      "source_revision": "6c4ce365d731f491f129c84f2abb9ccf9c116754",
+      "source_git_blob": "ffa23f46e2cc6e573378a75f8a7247b92f357246",
+      "source_sha256": "357d399adbccc63aebb963c14f57e55a4f74e311075b487276eefbf7d0a0458a",
       "staging_adapted": false
     },
     {
@@ -1154,12 +1171,12 @@
     },
     {
       "path": "tests/test-host.ps1",
-      "size": 3960,
-      "sha256": "a6517e3336502e7cc472e487494577cde2381ea442e29d8e64c332f2b300d830",
-      "source_sha256": "a6517e3336502e7cc472e487494577cde2381ea442e29d8e64c332f2b300d830",
+      "size": 4243,
+      "sha256": "ad7a309ab5ec3aab7e2405696236195601e3717c8cd66889aae234fe7b93b0fc",
+      "source_sha256": "ad7a309ab5ec3aab7e2405696236195601e3717c8cd66889aae234fe7b93b0fc",
       "staging_adapted": false,
-      "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
-      "source_git_blob": "e94976043680939e5a467f0e08155b84834ca30f"
+      "source_revision": "6c4ce365d731f491f129c84f2abb9ccf9c116754",
+      "source_git_blob": "626633efcea2a02afc93f9c823e3ddf6df5cb720"
     },
     {
       "path": "tests/test-language-settings.ps1",
@@ -1602,5 +1619,30 @@
       "tests/DesktopUiSmoke.cpp"
     ],
     "previous_manifest_sha256": "d8c4fa80cdc9945ab8a02d71dd2b7e037b2a5e6ff955aeb7152b836494489c3f"
+  },
+  "startup_recovery_refresh_20261106": {
+    "selected_snapshot_commit": "6c4ce365d731f491f129c84f2abb9ccf9c116754",
+    "source_fix_commits": [
+      "6c4ce365d731f491f129c84f2abb9ccf9c116754"
+    ],
+    "record": "STAGING_REVIEW.md",
+    "selection_record": "SOURCE_SELECTION.json",
+    "imported_files": [
+      "docs/PLUGIN_DEVELOPMENT.md",
+      "include/GakuLifecycle.h",
+      "src/DesktopUi.cpp",
+      "src/GameHook.cpp",
+      "src/Host.hpp",
+      "src/PluginHost.cpp",
+      "tests/CAbiTest.c",
+      "tests/DESKTOP_UI.md",
+      "tests/DesktopUiSmoke.cpp",
+      "tests/FramePumpTests.cpp",
+      "tests/GakuHostFixture.cpp",
+      "tests/HostTests.cpp",
+      "tests/ManagerUiTests.cpp",
+      "tests/test-host.ps1"
+    ],
+    "previous_manifest_sha256": "21e421081f17f38e37ce17fe00880ab34062b5d070b2073ece7bc5bb58da1c60"
   }
 }

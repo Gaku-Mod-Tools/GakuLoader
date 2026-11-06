@@ -391,17 +391,27 @@ int main(int argc, char** argv) {
         fileDropArmed = false;
         puts("PASS: production WM_DROPFILES at offset HWND routes Unicode multi-file batch to content once; outside bounds/callback/owner refused");
 
+        expectPluginPixels = false;
         rejectFrames = true;
         WaitUntil([] { return rejectedFrames >= 1; }, "busy-frame denial not exercised");
         const auto cpuBefore = cpuFrames.load(), drawBefore = inspectedFrames.load(), presentBefore = presentedFrames.load();
+        const auto pluginBefore = frames.load();
         const auto rejectedBefore = rejectedFrames.load();
         WaitUntil([&] { return rejectedFrames >= rejectedBefore + 12; }, "repeated busy frames not observed");
         Check(cpuFrames == cpuBefore && inspectedFrames == drawBefore && presentedFrames == presentBefore,
-            "busy frame began CPU/clear/draw/present instead of retaining the last complete image");
+            "busy plugin page replaced its last complete image");
+        Check(frames == pluginBefore, "busy plugin gate dispatched a plugin callback");
+        Check(windowService->requestShow(windowService->context) == GAKU_OK, "busy manager show request refused");
+        WaitUntil([&] { return presentedFrames >= presentBefore + 12 && cpuFrames >= cpuBefore + 12; },
+            "manager stopped drawing and presenting while plugin callbacks were busy");
+        Check(frames == pluginBefore, "busy manager dispatched a plugin callback");
+        const auto resumePresent = presentedFrames.load();
         rejectFrames = false;
-        WaitUntil([&] { return presentedFrames > presentBefore + 2; }, "desktop did not resume after frame gate opened");
+        Check(GakuLoader::DesktopUi::RequestShowPanel("gaku.test") == GAKU_OK, "plugin restore after busy manager refused");
+        WaitUntil([&] { return frames >= pluginBefore + 3 && presentedFrames >= resumePresent + 3; },
+            "plugin drawing did not resume after callback gate opened");
         CheckWorker();
-        puts("PASS: 12+ denied frames leave CPU/draw/present counters unchanged; complete image resumes without empty panel presents");
+        puts("PASS: busy plugin page retains complete image; Manager paints 12+ frames; plugin drawing resumes when gate opens");
 
         rejectFrames = true;
         const auto deniedBeforeClipboard = rejectedFrames.load();
@@ -416,6 +426,7 @@ int main(int argc, char** argv) {
         Check(clipboardGets == fetchBefore + 1, "unchanged sequence caused redundant clipboard OS fetches");
         requestCopy = true;
         WaitUntil([] { return clipboardSets >= 1; }, "clipboard copy did not flush outside the frame gate");
+        expectPluginPixels = true;
         puts("PASS: delayed clipboard backend runs outside CPU gate; first paste is fresh and copy flushes without touching system clipboard");
 
         SendMessageW(desktop, WM_SETFOCUS, 0, 0);

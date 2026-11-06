@@ -8,6 +8,7 @@
 #include "Trace.hpp"
 #include "CrashTrace.hpp"
 #include "GakuProcessLifetimeHooks.h"
+#include "GakuLifecycle.h"
 #include "PluginPaths.hpp"
 #include "LanguageSettings.hpp"
 #include <minhook.h>
@@ -46,6 +47,22 @@ std::deque<QueuedTask> g_tasks;
 bool g_initialized = false, g_activated = false;
 std::atomic_bool g_runtimeReady{false};
 std::atomic_bool g_shutdownRequested{false};
+// Published only while holding g_callbacks. The desktop shell must be able to
+// copy status while a lifecycle callback holds that gate for several seconds.
+std::atomic<std::shared_ptr<const DesktopHostSnapshot>> g_desktopSnapshot;
+void PublishDesktopHostSnapshot() {
+    auto result = std::make_shared<DesktopHostSnapshot>();
+    result->runtimeReady = g_runtimeReady.load(std::memory_order_acquire);
+    result->activated = g_activated;
+    result->shuttingDown = g_shutdownRequested.load(std::memory_order_acquire);
+    result->pluginFiles = g_pluginFiles;
+    result->plugins.reserve(g_plugins.size());
+    for (const auto& plugin : g_plugins) {
+        result->plugins.push_back({plugin.id, plugin.name, plugin.version,
+            plugin.activated, plugin.runtimeReady, plugin.failed, plugin.descriptor.onDesktopUi != nullptr});
+    }
+    g_desktopSnapshot.store(std::move(result), std::memory_order_release);
+}
 // Set before plugin shutdown when the process is leaving. Owner retirement then
 // leaves its hook leases to one batched disable instead of freezing the process
 // once per target.
@@ -411,6 +428,11 @@ GakuStatus EnsurePathRoot(void* context, GakuPathKind kind) {
         return GAKU_E_INTERNAL;
     }
 }
+uint32_t OwnerIsStopping(void* context) {
+    const auto* owner = static_cast<const PluginOwner*>(context);
+    return !owner || g_shutdownRequested.load(std::memory_order_acquire) ||
+        !owner->accepting.load(std::memory_order_acquire) ? 1u : 0u;
+}
 GakuStatus QueryService(void* context, const char* name, uint32_t version, uint32_t size, void* output) {
     if (!context || !name || !name[0] || !output) return GAKU_E_INVALID_ARGUMENT;
     // Built-in tables contain no mutable plugin-domain state. Each owner gets
@@ -426,6 +448,11 @@ GakuStatus QueryService(void* context, const char* name, uint32_t version, uint3
     }
     if (strcmp(name, GAKU_SERVICE_LANGUAGE) == 0) {
         return CopyServiceTable(&LanguageSettings::kService, sizeof(LanguageSettings::kService), version, size, output);
+    }
+    if (strcmp(name, GAKU_SERVICE_LIFECYCLE) == 0) {
+        const GakuLifecycleServiceV1 table{GAKU_LIFECYCLE_VERSION, sizeof(GakuLifecycleServiceV1),
+            context, OwnerIsStopping};
+        return CopyServiceTable(&table, sizeof(table), version, size, output);
     }
     if (strcmp(name, GAKU_SERVICE_PATHS) == 0) {
         try {
@@ -582,6 +609,7 @@ void StopHotkeyPoller() {
 
 void ShutdownOnMainThread() {
     g_shutdownRequested = true;
+    PublishDesktopHostSnapshot();
     const auto started = GetTickCount64();
     g_shutdownPhaseTick.store(started, std::memory_order_relaxed);
     g_shutdownPhase.store("cancel-owner-work", std::memory_order_release);
@@ -604,6 +632,7 @@ void ShutdownOnMainThread() {
         HostLogInfo("[Shutdown] end plugin=%s callback_ms=%llu", it->name.c_str(),
             static_cast<unsigned long long>(GetTickCount64() - pluginStarted));
         it->activated = false;
+        PublishDesktopHostSnapshot();
         g_shutdownPhaseTick.store(GetTickCount64(), std::memory_order_relaxed);
         g_shutdownPhase.store("retire-owner", std::memory_order_release);
         RetireOwner(static_cast<PluginOwner*>(it->owner));
@@ -726,6 +755,7 @@ void Initialize(const std::filesystem::path& gameRoot, const std::filesystem::pa
     ImportLegacyConfig(g_configPath);
     Hotkeys::LoadOverrides(g_configPath);
     g_initialized = true;
+    PublishDesktopHostSnapshot();
     HostLogInfo("Roots ready: gameRoot=%ls localRoot=%ls; native plugin activation starts before the game runtime",
         g_gameRootW.c_str(), g_localRootW.c_str());
     StartHotkeyPoller();
@@ -754,6 +784,7 @@ void ActivatePlugins() {
     std::sort(paths.begin(), paths.end());
     g_pluginFiles.clear();
     for (const auto& path : paths) g_pluginFiles.push_back(path.filename().wstring());
+    PublishDesktopHostSnapshot();
     for (const auto& path : paths) {
         const auto filename = path.filename().wstring();
         if (!ReadConfigFlag(g_configPath, L"plugins", filename.c_str(), true)) {
@@ -802,6 +833,7 @@ void ActivatePlugins() {
                 plugin.version.empty() ? "?" : plugin.version.c_str());
         }
         g_plugins.push_back(std::move(plugin));
+        PublishDesktopHostSnapshot();
     }
     HostLogInfo("Native activation complete; %zu plugin(s) resident", g_plugins.size());
     // Evidence from inside our own process; external module enumeration can be
@@ -813,23 +845,29 @@ void NotifyRuntimeReady() {
     std::lock_guard<std::recursive_mutex> lock(g_callbacks);
     if (!g_initialized || g_runtimeReady || g_shutdownRequested) return;
     g_runtimeReady = true;
+    PublishDesktopHostSnapshot();
     // uptime_ms is the only way to place "hooks installed" against a screenshot:
     // the game window is created earlier than this signal, so a UI that appears
     // before it keeps whatever text it was built with.
     HostLogInfo("[StartupTiming] NotifyRuntimeReady thread=%lu uptime_ms=%llu; dispatching onRuntimeReady (metadata/hooks only)",
         GetCurrentThreadId(), static_cast<unsigned long long>(Trace::UptimeMs()));
     for (auto& plugin : g_plugins) {
+        if (g_shutdownRequested.load(std::memory_order_acquire)) break;
         if (!plugin.activated || plugin.failed) continue;
-        if (!plugin.descriptor.onRuntimeReady) { plugin.runtimeReady = true; continue; }
+        if (!plugin.descriptor.onRuntimeReady) {
+            plugin.runtimeReady = true; PublishDesktopHostSnapshot(); continue;
+        }
         try {
             const auto started = Trace::UptimeMs();
             HostLogInfo("[StartupTiming] runtime callback begin plugin=%s uptime_ms=%llu thread=%lu", plugin.id.c_str(), started, GetCurrentThreadId());
             plugin.descriptor.onRuntimeReady(plugin.state);
             plugin.runtimeReady = true;
+            PublishDesktopHostSnapshot();
             HostLogInfo("[StartupTiming] runtime callback complete plugin=%s uptime_ms=%llu thread=%lu elapsed_ms=%llu",
                 plugin.id.c_str(), Trace::UptimeMs(), GetCurrentThreadId(), Trace::UptimeMs() - started);
         } catch (...) {
             plugin.failed = true;
+            PublishDesktopHostSnapshot();
             RetireOwner(static_cast<PluginOwner*>(plugin.owner));
             HostLogError("Plugin runtime-ready callback threw across ABI: %s", plugin.name.c_str());
         }
@@ -885,7 +923,7 @@ void TickFrame(float deltaTime) {
         if (!plugin.activated || plugin.failed || !plugin.descriptor.onTick) continue;
         try { plugin.descriptor.onTick(plugin.state, deltaTime); }
         catch (...) {
-            plugin.failed = true; RetireOwner(static_cast<PluginOwner*>(plugin.owner));
+            plugin.failed = true; PublishDesktopHostSnapshot(); RetireOwner(static_cast<PluginOwner*>(plugin.owner));
             HostLogError("Plugin tick threw across ABI: %s", plugin.name.c_str());
         }
     }
@@ -905,7 +943,7 @@ void TickActor(void* activeActor, float deltaTime) {
         if (!plugin.activated || plugin.failed || !plugin.descriptor.onActorTick) continue;
         try { plugin.descriptor.onActorTick(plugin.state, activeActor, deltaTime); }
         catch (...) {
-            plugin.failed = true; RetireOwner(static_cast<PluginOwner*>(plugin.owner));
+            plugin.failed = true; PublishDesktopHostSnapshot(); RetireOwner(static_cast<PluginOwner*>(plugin.owner));
             HostLogError("Plugin actor tick threw across ABI: %s", plugin.name.c_str());
         }
     }
@@ -931,19 +969,10 @@ void RunInCallbackGate(void (*body)(void*), void* userData) {
     body(userData);
 }
 bool SnapshotDesktopHost(DesktopHostSnapshot& output) {
-    std::unique_lock<std::recursive_mutex> lock(g_callbacks, std::try_to_lock);
-    if (!lock.owns_lock()) return false;
-    DesktopHostSnapshot result;
-    result.runtimeReady = g_runtimeReady;
-    result.activated = g_activated;
-    result.shuttingDown = g_shutdownRequested.load(std::memory_order_acquire);
-    result.pluginFiles = g_pluginFiles;
-    result.plugins.reserve(g_plugins.size());
-    for (const auto& plugin : g_plugins) {
-        result.plugins.push_back({plugin.id, plugin.name, plugin.version,
-            plugin.activated, plugin.runtimeReady, plugin.failed, plugin.descriptor.onDesktopUi != nullptr});
-    }
-    output = std::move(result);
+    const auto snapshot = g_desktopSnapshot.load(std::memory_order_acquire);
+    if (!snapshot) return false;
+    output = *snapshot;
+    output.shuttingDown = g_shutdownRequested.load(std::memory_order_acquire);
     return true;
 }
 void DispatchDesktopPanel(const char* pluginId) {
@@ -955,7 +984,7 @@ void DispatchDesktopPanel(const char* pluginId) {
             plugin.id != pluginId) continue;
         try { plugin.descriptor.onDesktopUi(plugin.state); }
         catch (...) {
-            plugin.failed = true; RetireOwner(static_cast<PluginOwner*>(plugin.owner));
+            plugin.failed = true; PublishDesktopHostSnapshot(); RetireOwner(static_cast<PluginOwner*>(plugin.owner));
             HostLogError("Plugin desktop callback threw across ABI: %s", plugin.name.c_str());
         }
         return;
@@ -967,10 +996,10 @@ void Shutdown() {
     // managed callback. It only requests shutdown; normal main dispatch performs
     // callbacks. If Unity has stopped, the watchdog still terminates.
     if (!IsMainThread(nullptr)) {
-        g_shutdownRequested.store(true, std::memory_order_release);
+        RequestShutdown();
         HostLogWarn("Shutdown requested off main thread; callbacks deferred to main dispatch"); return;
     }
-    g_shutdownRequested.store(true, std::memory_order_release);
+    RequestShutdown();
     StopHotkeyPoller();
     g_shutdownPhaseTick.store(GetTickCount64(), std::memory_order_relaxed);
     g_shutdownPhase.store("waiting-callback-gate", std::memory_order_release);
@@ -978,6 +1007,7 @@ void Shutdown() {
     if (!g_initialized) return;
     ShutdownOnMainThread();
 }
+void RequestShutdown() { g_shutdownRequested.store(true, std::memory_order_release); }
 const std::vector<LoadedPlugin>& GetLoadedPlugins() { return g_plugins; }
 
 #if defined(GAKULOADER_TEST_SEAMS)

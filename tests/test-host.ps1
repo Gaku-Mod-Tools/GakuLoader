@@ -60,6 +60,11 @@ Copy-GakuFixtures $repo $filteredPlugins @('fixture-a.dll', 'fixture-b.dll', 'le
 & $hostTests $filteredRoot 'filtered'
 if ($LASTEXITCODE -ne 0) { throw 'Plugin filename filter failed' }
 
+# A runtime callback can wait for native work while holding the lifecycle gate.
+# Cancellation stays readable and prevents later runtime callbacks from starting.
+& $hostTests $testRoot 'cancel-runtime'
+if ($LASTEXITCODE -ne 0) { throw 'Runtime initialization cancellation failed' }
+
 $report = [ordered]@{
     suite = 'host'
     result = 'PASS'

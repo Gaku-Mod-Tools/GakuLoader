@@ -690,7 +690,7 @@ void DrawManagerPage(const DesktopHostSnapshot& snapshot) {
         ImGui::EndTabBar();
     }
 }
-void DrawHostShell() {
+void DrawHostShell(bool pluginGateHeld) {
     SnapshotDesktopHost(g_hostSnapshot);
     g_wantsTextInput.store(ImGui::GetIO().WantTextInput, std::memory_order_release);
     if (g_selectedPlugin.empty()) g_selectedPlugin = kManagerPanel;
@@ -747,10 +747,18 @@ void DrawHostShell() {
                 ImGui::PushID(selected->id.c_str());
                 g_inCallback = true;
                 const double panelStarted = NowMs();
-                DispatchDesktopPanel(selected->id.c_str());
+                bool dispatched = true;
+                if (pluginGateHeld) DispatchDesktopPanel(selected->id.c_str());
+                else dispatched = TryDispatchDesktopFrame([](void* panel) {
+                    DispatchDesktopPanel(static_cast<DesktopPluginPanel*>(panel)->id.c_str());
+                }, &*selected);
                 const double panelElapsed = NowMs() - panelStarted;
                 g_inCallback = false;
                 ImGui::PopID();
+                if (!dispatched) {
+                    DrawSpinner(); ImGui::SameLine();
+                    ImGui::TextUnformatted(T(Key::Waiting));
+                }
                 // One frame is 16.7 ms at 60 Hz; anything above that is visible
                 // as a hitch. Rate-limited so a permanently slow panel reports
                 // itself once every two seconds instead of every frame.
@@ -803,17 +811,23 @@ bool RenderFrame() {
             g_saveFailed = !DesktopAppearance::SaveAppearanceSettings(ConfigPath(), g_currentTheme, g_currentUiScale);
             g_saveAppearance = false;
         }
-        const bool complete = TryDispatchDesktopFrame([](void*) {
+        // The manager owns only copied status and UI-thread state, so its
+        // spinners keep painting while initialization owns the plugin gate.
+        // Selected plugin pages retain their last complete image on contention
+        // instead of flashing an empty panel between short Unity callbacks.
+        const auto buildFrame = [](void* gateHeld) {
 #if defined(GAKULOADER_DESKTOP_UI_TEST)
             if (g_testHooks.beginCpuFrame) g_testHooks.beginCpuFrame();
 #endif
             ImGui_ImplDX11_NewFrame(); ImGui_ImplWin32_NewFrame(); ImGui::NewFrame();
             g_fileDrop.BeginFrame();
-            DrawHostShell();
+            DrawHostShell(*static_cast<bool*>(gateHeld));
             g_fileDrop.EndFrame();
             ImGui::Render();
-        }, nullptr);
-        if (!complete) return true; // retain the last complete image; no clear/present
+        };
+        bool pluginGateHeld = !g_selectedPlugin.empty() && g_selectedPlugin != kManagerPanel;
+        if (!pluginGateHeld) buildFrame(&pluginGateHeld);
+        else if (!TryDispatchDesktopFrame(buildFrame, &pluginGateHeld)) return true;
         if (g_managerAction) { auto action = std::move(g_managerAction); g_managerAction = {}; action(); }
         FlushClipboard(); // CPU gate is released before the native write
         if (g_resizeWidth && g_resizeHeight) {

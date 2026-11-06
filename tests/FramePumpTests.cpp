@@ -80,6 +80,7 @@ void TickActor(void*, float) {
     detourEvents.emplace_back("actor-tick");
 }
 bool IsShuttingDown() { return shutdownRequested; }
+void RequestShutdown() { shutdownRequested = true; }
 void NotifyRuntimeReady() {}
 void DispatchMainThreadTasks() {
     assert(GetCurrentThreadId() == unityThread);
@@ -102,7 +103,11 @@ void LogError(const char*, ...) {}
 bool HooksDisabledForDiagnosis() { return false; }
 void LogExitDiagnosisMode() {}
 bool InstallDiagnosticBoundary() { return true; }
-namespace DesktopUi { void Shutdown() {} }
+namespace DesktopUi {
+void Shutdown() {
+    assert(shutdownRequested && "exit waited for workers before publishing cancellation");
+}
+}
 }
 
 int main() {
@@ -235,8 +240,13 @@ int main() {
     CloseHandle(GakuLoader::g_startupWorkerFinished);
     GakuLoader::g_startupBoundarySeen = GakuLoader::g_startupWorkerFinished = nullptr;
 
+    assert(!shutdownRequested);
+    GakuLoader::DisableAllHooksForExit();
+    assert(shutdownRequested);
+
     DestroyWindow(gameWindow);
     UnregisterClassW(windowClass.lpszClassName, windowClass.hInstance);
     puts("PASS: production Win32 wake path; worker rejection; actor-free progress; actual-frame dedup; reentry; lost-wake retry; bounded queue; frozen-frame shutdown; shared entry before/original/after then actor tick");
     puts("PASS: pre-Vuplex worker completion then Unity-thread queue before native load; no synthetic tick; unrelated/foreign/loader-callout rejection; one-time gate; timeout fallback");
+    puts("PASS: shutdown cancellation is published before desktop/runtime worker teardown");
 }

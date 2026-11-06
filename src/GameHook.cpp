@@ -303,6 +303,12 @@ DWORD WINAPI WorkerLoop(LPVOID) {
     // Distinct phase, distinct thread: plugins may resolve exports/metadata and
     // install hooks here, but must defer managed objects to the main thread.
     NotifyRuntimeReady();
+    if (g_stopThread.load(std::memory_order_acquire) || IsShuttingDown()) {
+        il2cpp_thread_detach(gcThread);
+        g_runtimeThreadDetached.store(true, std::memory_order_release);
+        LogInfo("[GameHook] runtime setup cancelled; worker detached before host hook installation");
+        return 0;
+    }
 
     MH_STATUS status = MH_Initialize();
     if (status != MH_OK && status != MH_ERROR_ALREADY_INITIALIZED) {
@@ -477,6 +483,9 @@ void DisableAllHooksForExit() {
         LogWarn("Exit teardown deferred to main thread; runtime hook leases remain active");
         return;
     }
+    // Runtime-ready callbacks may be waiting for cancellable native work.
+    // Publish the stop signal before joining that worker or waiting for its gate.
+    RequestShutdown();
     DesktopUi::Shutdown(); // drain render callbacks before taking lifecycle mutex
     // This thread attached itself to the IL2CPP domain so plugins could resolve
     // metadata at runtime-ready. il2cpp_shutdown waits for every attached thread

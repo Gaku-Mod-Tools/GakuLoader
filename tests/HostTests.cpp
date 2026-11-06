@@ -1,6 +1,7 @@
 #define NOMINMAX
 #include "GakuTestCompat.hpp"
 #include "Host.hpp"
+#include "GakuLifecycle.h"
 #include "HostContracts.hpp"
 #include "HostConfig.hpp"
 #include "Hotkeys.hpp"
@@ -360,7 +361,7 @@ int wmain(int argc, wchar_t** argv) {
     GakuLoader::ActivatePlugins();
 
     const auto& plugins = GakuLoader::GetLoadedPlugins();
-    if (argc == 3) {
+    if (argc == 3 && std::wcscmp(argv[2], L"filtered") == 0) {
         // A config flag must skip LoadLibrary entirely, so the legacy DllMain
         // never runs and no pre-reset module is even resident.
         assert(plugins.size() == 2);
@@ -402,6 +403,43 @@ int wmain(int argc, wchar_t** argv) {
     assert(desktopSnapshot.plugins.size() == 2 && desktopSnapshot.activated && !desktopSnapshot.runtimeReady);
     assert(desktopSnapshot.plugins[0].hasPanel && desktopSnapshot.plugins[0].activated);
     assert(desktopSnapshot.plugins[1].hasPanel && desktopSnapshot.plugins[1].id == "fixture.b");
+    GakuLifecycleServiceV1 lifecycleA{}, lifecycleB{}, lifecycleSentinel;
+    std::memset(&lifecycleSentinel, 0x5a, sizeof(lifecycleSentinel));
+    const auto unchangedLifecycle = lifecycleSentinel;
+    assert(plugins[0].host.queryService(plugins[0].host.hostContext, GAKU_SERVICE_LIFECYCLE,
+        2, sizeof(lifecycleSentinel), &lifecycleSentinel) == GAKU_E_VERSION);
+    assert(std::memcmp(&lifecycleSentinel, &unchangedLifecycle, sizeof(lifecycleSentinel)) == 0);
+    assert(plugins[0].host.queryService(plugins[0].host.hostContext, GAKU_SERVICE_LIFECYCLE,
+        1, sizeof(lifecycleSentinel) - 1, &lifecycleSentinel) == GAKU_E_SIZE);
+    assert(std::memcmp(&lifecycleSentinel, &unchangedLifecycle, sizeof(lifecycleSentinel)) == 0);
+    assert(plugins[0].host.queryService(plugins[0].host.hostContext, GAKU_SERVICE_LIFECYCLE,
+        1, sizeof(lifecycleA), &lifecycleA) == GAKU_OK);
+    assert(plugins[1].host.queryService(plugins[1].host.hostContext, GAKU_SERVICE_LIFECYCLE,
+        1, sizeof(lifecycleB), &lifecycleB) == GAKU_OK);
+    assert(!lifecycleA.isStopping(lifecycleA.context) && !lifecycleB.isStopping(lifecycleB.context));
+
+    if (argc == 3 && std::wcscmp(argv[2], L"cancel-runtime") == 0) {
+        const auto waitForStop = reinterpret_cast<FixtureBlockFn>(GetProcAddress(moduleA, "GakuFixture_WaitRuntimeForStop"));
+        assert(waitForStop);
+        waitForStop(0);
+        std::thread initializing([] { GakuLoader::NotifyRuntimeReady(); });
+        const auto deadline = GetTickCount64() + 2000;
+        while (!waitForStop(1) && GetTickCount64() < deadline) Sleep(1);
+        assert(waitForStop(1));
+        assert(GakuLoader::SnapshotDesktopHost(desktopSnapshot) && desktopSnapshot.runtimeReady);
+        assert(!desktopSnapshot.plugins[0].runtimeReady && !desktopSnapshot.plugins[1].runtimeReady);
+        const auto cancelStarted = GetTickCount64();
+        GakuLoader::RequestShutdown();
+        initializing.join();
+        assert(GetTickCount64() - cancelStarted < 2000);
+        a = ReadFixture(moduleA); b = ReadFixture(moduleB);
+        assert(a.readyCount == 1 && a.contractFailures == 0 && b.readyCount == 0);
+        assert(lifecycleA.isStopping(lifecycleA.context));
+        assert(GakuLoader::BindMainThread(GetCurrentThreadId()));
+        GakuLoader::Shutdown();
+        puts("PASS: runtime callback reads status/cancellation while holding gate; shutdown cancels wait and skips later runtime callbacks");
+        return 0;
+    }
 
     // Runtime ready is delivered from a loader worker thread, not the main thread.
     const DWORD mainThread = GetCurrentThreadId();
@@ -621,6 +659,10 @@ int wmain(int argc, wchar_t** argv) {
         while (!blockTick(1) && GetTickCount64() < deadline) Sleep(1);
         assert(blockTick(1));
         assert(!GakuLoader::TryDispatchDesktopFrame([](void* value) { ++*static_cast<std::atomic_uint*>(value); }, &rejectedBuildCalls));
+        GakuLoader::DesktopHostSnapshot whileBusy;
+        assert(GakuLoader::SnapshotDesktopHost(whileBusy) && whileBusy.plugins.size() == 2);
+        assert(whileBusy.plugins[0].runtimeReady && !whileBusy.shuttingDown);
+        assert(!lifecycleA.isStopping(lifecycleA.context));
         blockTick(2);
     });
     GakuLoader::TickFrame(0.016f);
@@ -852,6 +894,7 @@ int wmain(int argc, wchar_t** argv) {
     SetEvent(g_registerResume);
     lateRegistration.join();
     retireB.join();
+    assert(lifecycleB.isStopping(lifecycleB.context) && !lifecycleA.isStopping(lifecycleA.context));
     GakuLoader::SetActorEntryRegisterObserverForTest(nullptr);
     CloseHandle(g_registerPaused);
     CloseHandle(g_registerResume);
@@ -916,6 +959,7 @@ int wmain(int argc, wchar_t** argv) {
     assert(enqueue() == GAKU_OK);
     std::thread shutdown([] { GakuLoader::Shutdown(); });
     shutdown.join();
+    assert(lifecycleA.isStopping(lifecycleA.context));
     assert(ReadFixture(moduleA).shutdownCount == 0); // never teardown on a watchdog thread
     GakuHotkeyService retiringHotkeys{};
     assert(plugins[0].host.queryService(plugins[0].host.hostContext, GAKU_SERVICE_HOTKEYS,

@@ -133,6 +133,7 @@ const auto status = host->queryService(host->hostContext, GAKU_SERVICE_LOG,
 | `gakuloader.log` | UTF-8 纯文本写入 Loader 私有日志；不是 printf 格式串，也不走 Unity 日志 |
 | `gakuloader.runtime` | 游戏根/本地/插件目录（绝对宽字符路径，进程生命周期有效）与 `getGameAssembly()`；后者在 GameAssembly 加载前为 NULL |
 | `gakuloader.paths` | 可选 v1，独立 `GakuPaths.h`；按 owner 查询绝对 UTF-16 分类根、按需创建，见[数据路径](PLUGIN_PATHS.md)。不自动迁移旧数据 |
+| `gakuloader.lifecycle` | 可选 v1，独立 [GakuLifecycle.h](../include/GakuLifecycle.h)；按 owner 查询 `GakuLifecycleServiceV1`。`isStopping(context)` 可在任意插件线程查询宿主退出请求或 owner 退休，不获取回调门闩；适合让耗时的 `onRuntimeReady` 等待主动取消。旧宿主缺少服务时插件自行选择回退策略 |
 | `gakuloader.main-thread` | 有界 FIFO（1024）；`enqueue` 永不同步执行，shutdown 丢弃未执行任务；`isMainThread` 供线程判断 |
 | `gakuloader.hooks` | 独占 detour 租约；冲突返回 `GAKU_E_CONFLICT`。`acquireBatch` 一次发布 1..256 个 original。不要调用 `MH_ALL_HOOKS` / `MH_Uninitialize` |
 | `gakuloader.process-lifetime-hooks` | 可选 v1 扩展，声明在 `include/GakuProcessLifetimeHooks.h`；原子保留本 owner 已启用的指定 Hook，退役及退出收尾后继续生效 |

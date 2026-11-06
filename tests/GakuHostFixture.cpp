@@ -1,5 +1,6 @@
 #include "GakuTestCompat.hpp"
 #include "GakuPlugin.h"
+#include "GakuLifecycle.h"
 #include "GakuFixtureContract.hpp"
 #include <windows.h>
 #include <atomic>
@@ -26,6 +27,7 @@ std::atomic_int hotkeyStatus{0};
 std::atomic_bool blockDesktop{false}, desktopEntered{false}, releaseDesktop{false};
 std::atomic_bool blockTick{false}, tickEntered{false}, releaseTick{false};
 std::atomic_bool hotkeysRegistered{false};
+std::atomic_bool waitRuntimeForStop{false}, runtimeWaiting{false};
 
 #if FIXTURE_VARIANT == 1
 constexpr const char* kId = "fixture.a";
@@ -110,6 +112,15 @@ GakuStatus Activate(const GakuHostApi* api, void** state) {
 void RuntimeReady(void*) {
     readyCount.fetch_add(1);
     readyThread.store(GetCurrentThreadId());
+    if (waitRuntimeForStop) {
+        GakuLifecycleServiceV1 lifecycle{};
+        Check(host.queryService(host.hostContext, GAKU_SERVICE_LIFECYCLE, GAKU_LIFECYCLE_VERSION,
+            sizeof(lifecycle), &lifecycle) == GAKU_OK && lifecycle.isStopping);
+        runtimeWaiting = true;
+        const auto deadline = GetTickCount64() + 5000;
+        while (!lifecycle.isStopping(lifecycle.context) && GetTickCount64() < deadline) Sleep(1);
+        Check(lifecycle.isStopping(lifecycle.context) != 0);
+    }
 }
 void Tick(void*, float) {
     Enter();
@@ -197,3 +208,7 @@ extern "C" __declspec(dllexport) uint32_t GakuFixture_BlockTick(uint32_t action)
     return tickEntered.load() ? 1u : 0u;
 }
 extern "C" __declspec(dllexport) void GakuFixture_UnregisterHotkeys() { UnregisterHotkeys(); }
+extern "C" __declspec(dllexport) uint32_t GakuFixture_WaitRuntimeForStop(uint32_t action) {
+    if (action == 0) { runtimeWaiting = false; waitRuntimeForStop = true; }
+    return runtimeWaiting ? 1u : 0u;
+}

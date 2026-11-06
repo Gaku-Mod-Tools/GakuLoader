@@ -40,9 +40,12 @@ void TickFrame(float deltaTime);
 void TickActor(void* activeActor, float deltaTime);
 bool IsRuntimeReady();
 bool IsShuttingDown();
+// Publish cancellation without taking callback gates or invoking plugin code.
+// Exit workers must observe this before the host waits for them to stop.
+void RequestShutdown();
 
-// All-or-nothing CPU frame admission. Busy frames leave the previous desktop
-// backbuffer intact; GPU submission and native dialogs run after this returns.
+// Non-blocking plugin UI admission. The manager renders independently; selected
+// plugin pages retain their complete image while this gate is busy.
 bool TryDispatchDesktopFrame(void (*buildFrame)(void*), void* userData);
 // Loader-internal, not part of the plugin ABI: runs `body` inside the same gate
 // that serializes tick and desktop callbacks. The shared actor entry uses it so

@@ -98,3 +98,29 @@ staging/build adaptations are unchanged. The source checkpoint is committed befo
 as required by `tools/validate-source.ps1`; current observed results are appended to `VALIDATION.md`.
 Validation uses only this source repository and synthetic fixtures. No game, real user asset, deployment,
 remote write or package ZIP operation is part of this refresh.
+
+## Manager animation and startup cancellation refresh (2026-11-06)
+
+Fourteen public source, SDK, synthetic-test and developer-guide files are selected
+byte-for-byte from fixed GakuLoader repair commit `6c4ce365d731f491f129c84f2abb9ccf9c116754`.
+Every existing staged file matched that source commit's parent before selection;
+only the new independent `include/GakuLifecycle.h` table adds a path.
+Internal DevAgents history, unrelated development features and deployed binaries
+are excluded. Vendored dependencies, build/CI adaptations, public README/Wiki
+bytes and the frozen `GakuPlugin.h` ABI remain unchanged.
+
+The Manager renders copied immutable status while plugin initialization holds the
+callback gate. Selected plugin pages keep complete-image admission to avoid
+contention flashes. The optional owner-bound `gakuloader.lifecycle` v1 table
+lets runtime callbacks observe shutdown without taking the callback gate. Exit
+publishes cancellation before waiting for workers, skips subsequent runtime
+callbacks, and detaches the runtime worker before installing further host hooks.
+The normal plugin order and pre-Vuplex synchronization boundary are unchanged.
+
+`SOURCE_SELECTION.json` retains earlier per-file provenance and records all fixed
+Git blobs and hashes for this selection; `SOURCE_MANIFEST.json` freezes the
+resulting 173-file payload. The source checkpoint is committed before default
+clean-source validation. Additional Manager animation, selected-panel retention,
+real host cancellation and cross-DLL WARP checks are synthetic; no game, real
+user assets, deployment, remote write or package publication is included.
+Observed results are appended to `VALIDATION.md` after execution.

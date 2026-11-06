@@ -32,6 +32,8 @@ std::filesystem::path screenshot;
 std::string workerError;
 std::atomic_uint cpuFrames{0}, presentedFrames{0}, completedInput{0}, screenshots{0};
 std::atomic<float> rasterSize{0}, bitmapScale{0}, background{0};
+std::atomic_bool callbackGateBusy{false};
+std::atomic<double> spinnerTime{0};
 unsigned nextInput = 0;
 int hotkeyOwner = 0;
 void Check(bool okay, const char* message) { if (!okay) throw std::runtime_error(message); }
@@ -49,6 +51,7 @@ void BeginFrame() {
     if (input) input();
 }
 void InspectItem(const char* key, const char* value, float left, float top, float right, float bottom) {
+    if (std::string(key) == "spinner.test.waiting") spinnerTime = ImGui::GetTime();
     { std::lock_guard lock(itemMutex); items[key] = {value, left, top, right, bottom, cpuFrames.load()}; }
     rasterSize = ImGui::GetIO().FontDefault->FontSize;
     bitmapScale = ImGui::GetIO().FontGlobalScale;
@@ -152,8 +155,12 @@ std::filesystem::path ConfigPath() { return configPath; }
 void LogInfo(const char* format, ...) { va_list args; va_start(args, format); vprintf(format, args); puts(""); va_end(args); }
 void LogWarn(const char* format, ...) { va_list args; va_start(args, format); vprintf(format, args); puts(""); va_end(args); }
 void LogError(const char* format, ...) { va_list args; va_start(args, format); vprintf(format, args); puts(""); va_end(args); }
-bool TryDispatchDesktopFrame(void (*build)(void*), void* data) { build(data); return true; }
+bool TryDispatchDesktopFrame(void (*build)(void*), void* data) {
+    if (callbackGateBusy) return false;
+    build(data); return true;
+}
 bool SnapshotDesktopHost(DesktopHostSnapshot& output) {
+    if (callbackGateBusy) return false;
     output.plugins = {{"test.waiting", "Waiting plugin", "1.0", true, false, false, false},
         {"test.failed", "Failed plugin", "1.0", true, true, true, false},
         {"test.ready", "Ready plugin", "1.0", true, true, false, false}};
@@ -190,6 +197,18 @@ int main(int argc, char** argv) {
             "spinner must follow the displayed state, including failed after runtime ready");
         Check(rasterSize == 18 && bitmapScale == 1.0f, "initial font rasterization");
         Screenshot("plugin-list-dark.bmp");
+
+        // Initialization owns the plugin callback gate. The manager must still
+        // build and present new frames using the last copied status, so the
+        // actual ImGui clock driving DrawSpinner keeps advancing.
+        callbackGateBusy = true;
+        const auto busyFrame = presentedFrames.load();
+        const auto previousSpinnerTime = spinnerTime.load();
+        Wait([&] { return presentedFrames >= busyFrame + 12; }, "manager stopped painting while plugin callbacks were busy");
+        Check(HasFresh("spinner.test.waiting") && spinnerTime > previousSpinnerTime + 0.05,
+            "waiting spinner stopped animating while plugin callbacks were busy");
+        callbackGateBusy = false;
+        puts("PASS: manager presents 12+ frames and advances spinner animation while plugin callback gate is busy");
 
         SelectTab("Appearance");
         for (const auto& [index, tag] : {std::pair{1, L"Sapphire"}, std::pair{3, L"AppleLight"}, std::pair{4, L"AppleDark"}}) {
