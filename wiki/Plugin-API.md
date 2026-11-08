@@ -93,13 +93,13 @@ mainThread.enqueue(mainThread.context, [](void* data) {
 - `GAKU_LANGUAGE_JAPANESE` (3)：日文
 
 ### 6. `gakuloader.file-dialog`（异步文件选择）
-非模态调用系统原生文件打开对话框，不会阻塞游戏帧或 UI 渲染：
+异步请求系统原生文件打开对话框，由专用线程处理，不需要在游戏帧内等待选择结果：
 1. 调用 `beginOpen()` 发起请求，获得一个 `ticket`（每个插件同一时刻仅允许一个活跃请求）。
 2. 在每帧循环或 UI 回调中调用 `poll()` 检查状态（`PENDING`、`ACCEPTED`、`CANCELLED`、`FAILED`）。
 3. 状态变为 `ACCEPTED` 时读取选中文件路径，随后调用 `release()` 释放 ticket。
 
 ### 7. `gakuloader.file-drop`（文件拖放集成）
-通过 `include/GakuFileDrop.h`，在插件的 `onDesktopUi` 回调中调用 `setTarget` 设置接收拖拽的屏幕像素矩形区域，调用 `poll` 轮询用户拖入的文件路径列表（单批最多支持 256 个文件、1MB 路径总长度）。
+通过 `include/GakuFileDrop.h`，在所属插件的 `onDesktopUi` 回调中调用 `setTarget` 设置接收区域，坐标为宿主单视口的**客户区像素坐标**。区域每个完成的 UI 帧都要重新登记；宿主只向当前选中的插件面板投递。`poll` 先读取数量与 UTF-8 字节数，再用足够的缓冲区取回路径并消费一次；缓冲区不足时保留批次。每批最多 256 个文件、路径总长 1 MiB。窗口外或区域外的拖放不会投递。
 
 ---
 

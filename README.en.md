@@ -14,15 +14,15 @@ The host stays minimal to arbitrate shared resources across plugins; mod-specifi
 
 1. Exit the game completely.
 2. Place the built `build/version.dll` into the game root directory (alongside `gakumas.exe`).
-3. Place plugin DLLs into the `GakuLoader/plugins/` directory.
+3. Place plugin DLLs into the `GakuLoader/plugins/` directory. Motion’s importer and GakuBurstBridge are companion libraries; the Loader skips them during plugin discovery and Motion loads them as needed.
 
 ```text
 <Game Root Directory>/
 ├── gakumas.exe
 ├── version.dll                    GakuLoader binary
 └── GakuLoader/
-    ├── Configs/gakuloader.ini     # 宿主配置（可选）
-    ├── Logs/gakuloader.log        # 宿主日志
+    ├── Configs/gakuloader.ini     # Optional host settings
+    ├── Logs/gakuloader.log        # Host log
     └── plugins/                   Plugin directory
         ├── GakuMotion.dll
         └── GakuLocalify.dll
@@ -95,7 +95,7 @@ Install Desktop development with C++ and a Windows SDK. Supported toolsets are V
 
 The build only produces local artifacts. `-OutputDll` copies to an explicit candidate path; it does not discover a game directory or deploy automatically. See [Building](wiki/Building.md) for the full test matrix and optional MinGW fixtures.
 
-Required ImGui and MinHook source is included; no submodule initialization is needed. Install Loader and business plugins using matching product bundles.
+The release source snapshot includes ImGui and MinHook. Development checkouts that use submodules require those dependencies to be initialized after reviewing their status. Install Loader and business plugins using matching product bundles.
 
 ## Documentation (Wiki)
 

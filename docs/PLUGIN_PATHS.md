@@ -1,6 +1,6 @@
 # 插件数据路径
 
-Loader 提供可选 `gakuloader.paths` v1 服务，声明在 [GakuPaths.h](../include/GakuPaths.h)。原有 GakuPlugin ABI v1、runtime 根与 DLL 发现方式不变。此阶段不会搬迁宿主自己的 ini/log，也不会移动旧插件数据；业务迁移由插件分阶段实施。
+Loader 提供可选 `gakuloader.paths` v1 服务，声明在 `GakuPaths.h`。原有 GakuPlugin ABI v1 的结构与函数签名不变。当前宿主的 runtime `localRoot` 为 `<GameRoot>/GakuLoader`，插件从其 `plugins/` 发现；宿主配置与日志分别位于 `Configs/gakuloader.ini` 和 `Logs/gakuloader.log`。宿主不会自动搬迁旧文件；旧数据迁移由用户与插件按各自指南显式处理。
 
 插件查询服务后获得绑定自身 owner 的根目录，不传任意 pluginId：
 
@@ -33,7 +33,7 @@ if (joined != GAKU_OK) return joined;
 | `GAKU_PATH_LOGS` | `Logs/<id>` | 日志/自动诊断，可建 Crash 会话子目录；用户导出成果另存 UserData |
 | `GAKU_PATH_TEMP` | `Temp/<id>` | 无恢复价值的中间文件，按会话/任务分目录；未提交事务不能当普通 Temp 清理 |
 
-程序 DLL 和随包只读资源不属于 PluginData。现阶段 `plugins` 仍为顶层 DLL 发现目录，伴生 DLL 继续遵循各插件已有显式定位，路径服务不更改依赖搜索或加载顺序。
+程序 DLL 和随包只读资源不属于 PluginData。`GakuLoader/plugins/` 是插件发现目录；`GakuBurstBridge.dll` 和 `GakuMotion.VmdImporter.Native.dll` 是伴生库，由 GakuMotion 按需加载，不由 Loader 当作插件激活。路径服务本身不更改依赖搜索或加载顺序。
 
 ## C ABI 与错误合同
 
@@ -47,13 +47,13 @@ if (joined != GAKU_OK) return joined;
 
 pluginId 必须是稳定 ASCII 小写、1–64 字符，首字符为 a-z/0-9，随后只用 a-z/0-9/点/下划线/连字符；点分段不得为空，禁止 Windows 设备名 stem（`con`、`con.txt`、`com1` 等）。不做自动小写或字符替换：`foo` 与旧 ID `Foo` 不会映射同一个可写目录，后者仅路径服务返回 INVALID_ARGUMENT，仍可用原 ABI 装载并查询其他服务。开发者应显式选定稳定 ID；已有用户数据的 ID 更名要提供迁移。
 
-[GakuPaths.hpp](../include/GakuPaths.hpp) 提供 Query/GetRoot，以及严格 `FromUtf8/ToUtf8` 和 `JoinRelative`。根和 Win32 文件 I/O 用 UTF-16；文本/跨语言边界用 UTF-8，禁止经 CP_ACP 往返。JoinRelative 只帮助合作插件排除相对跳转、设备名与明显非法文件名；不处理外部链接/ZIP 的信任边界，也不是文件系统沙箱。Loader 不拦截插件自行 fopen/Win32 I/O。
+`GakuPaths.hpp` 提供 Query/GetRoot，以及严格 `FromUtf8/ToUtf8` 和 `JoinRelative`。根和 Win32 文件 I/O 用 UTF-16；文本/跨语言边界用 UTF-8，禁止经 CP_ACP 往返。JoinRelative 只帮助合作插件排除相对跳转、设备名与明显非法文件名；不处理外部链接/ZIP 的信任边界，也不是文件系统沙箱。Loader 不拦截插件自行 fopen/Win32 I/O。
 
 ## 旧布局与迁移
 
 查不到服务时返回 UNAVAILABLE。尚未迁移的安装可按插件既有合同继续旧布局；已完成新布局迁移的安装不能因换了旧 Loader 而静默读写旧残留。插件需用固定可发现状态或最低宿主版本要求阻止这种回退，并提示升级宿主。新根的权限/I/O 失败也不能触发旧根 fallback。
 
-新服务只分配路径，不证明数据已经迁移。插件首次启动须先发现并迁移自己的旧数据，保留原件、明确冲突与唯一 active-layout 切换点，再读配置/启动 worker；不得仅凭目录存在宣布完成。迁移锁必须覆盖普通配置保存/更新器，或让首次迁移前所有 writer 保持静止。已完成后不因 converter/插件版本变化重新导入上游；每次普通启动只写当前权威布局。
+新服务只分配路径，不证明数据已经迁移。插件应区分全新安装和已有数据：全新安装可按自身合同初始化空布局；迁移已有数据须显式执行并保留原件，明确冲突与唯一 active-layout 切换点，不得仅凭目录存在宣布迁移完成。迁移锁必须覆盖普通配置保存/更新器，或让首次迁移前所有 writer 保持静止。已完成后不因 converter/插件版本变化重新导入上游；每次普通启动只写当前权威布局。
 
 本阶段不提供自动 DataRoot 搬迁、安装 ID、统一 receipt、清理器或全局文件 Hook。不要把使用本 API 视为真实迁移已经完成。
 

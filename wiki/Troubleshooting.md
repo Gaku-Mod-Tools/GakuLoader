@@ -56,7 +56,7 @@
 - **绝对安全硬上限（40 秒，`kCeilingMs = 40000`）**：若超过 40 秒进程仍未能自行退出，看门狗执行终极强制终止，确保后台不残留僵死进程。退出前还会自动清理孤儿进程 `UnityCrashHandler64.exe`。
 
 ### 退出卡死二分排查法
-若怀疑退出缓慢或卡死是由某个插件的 Hook 引起，可在 `GakuLoader/` 目录下放置一个名为 `gml_disable_hooks.txt` 的空文本文件（或设置系统环境变量 `GML_DISABLE_HOOKS=1`）。宿主在启动时会跳过所有业务 MinHook 的挂接，仅保留 QuitGuard 退出保护。若此时退出依然卡顿，可断定卡顿源于 Unity 引擎或系统底层；若恢复迅速退出，则可进一步排查具体插件的 Detour 逻辑。
+若怀疑退出缓慢或卡死是由某个插件的 Hook 引起，可在 `GakuLoader/` 目录下放置一个名为 `gml_disable_hooks.txt` 的空文本文件（或设置系统环境变量 `GML_DISABLE_HOOKS=1`）。宿主在启动时会跳过所有业务 MinHook 的挂接，仅保留 QuitGuard 退出保护。若此时退出依然卡顿，说明问题不能仅由已停用的业务 Hook 解释，仍需进一步排查；若恢复迅速退出，可继续检查具体插件的 Hook 及生命周期。
 
 ---
 

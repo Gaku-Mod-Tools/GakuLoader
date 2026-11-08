@@ -19,7 +19,7 @@ GakuLoader 是《学园偶像大师》（PC DMM 版）的原生 DLL 插件加载
 ### 安装步骤
 1. 完全退出游戏。
 2. 将编译产物或发布包中的 `version.dll` 放置在游戏根目录（即 `gakumas.exe` 所在文件夹）。
-3. 将插件 DLL 放置在 `GakuLoader/plugins/` 目录中。
+3. 将插件 DLL 放置在 `GakuLoader/plugins/` 目录中。Motion 导入器和 GakuBurstBridge 是伴生库，由 Motion 按需加载，不作为独立插件显示。
 
 ```text
 <游戏根目录>/
@@ -105,7 +105,7 @@ trace=false
 ### 编译环境要求
 - Windows 10 / 11 64 位
 - Visual Studio 2022（MSVC v143）或 Visual Studio 2026（MSVC v145），勾选“使用 C++ 的桌面开发”工作负载与 Windows SDK。
-- 源码内已包含所需的 Dear ImGui 与 MinHook 源码，无需另外拉取外部子模块。
+- 发布源码快照包含所需的 Dear ImGui 与 MinHook；开发检出若使用子模块，请先检查状态，再按仓库配置初始化。
 
 ### 编译命令
 在 `GakuLoader` 目录下打开 PowerShell 执行构建：

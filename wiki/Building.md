@@ -20,9 +20,10 @@
 
 ## 获取源码与子模块
 
-克隆仓库后，确保初始化并更新所有子模块（包括 MinHook、ImGui 等）：
+发布源码快照已包含 MinHook 和 ImGui；开发检出若将依赖配置为子模块，先检查状态和本地修改，再按需初始化：
 
 ```powershell
+git submodule status
 git submodule update --init --recursive
 ```
 
@@ -98,7 +99,7 @@ git submodule update --init --recursive
 ## 常见构建问题排查
 
 - **遇到 `LNK1101: 无法打开模块调试源文件 (MSPDB140.DLL)`**：通常是由于杀毒软件占用或符号服务权限受限引起，可尝试将构建目录加入防病毒排除项，或在管理员权限终端中重新构建。
-- **子模块缺失报错**：运行 `git submodule update --init --recursive` 重新拉取完整的第三方依赖库。
+- **子模块缺失报错**：先确认检出是否使用子模块及本地依赖状态；发布源码缺失时应重新取得完整快照，开发检出则按仓库配置初始化。
 
 ---
 

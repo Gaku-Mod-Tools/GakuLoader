@@ -8,7 +8,7 @@
     ".git/",
     "build/"
   ],
-  "content_tree_sha256": "48ab0b0be17b9ac4284a5e05a685eb71289036ecf36fcc28a8f0aa2c65a62125",
+  "content_tree_sha256": "a483f45d756432198ae5514e7674c78bfb7880003ff6ec813aaa8840bec9a0b2",
   "files": [
     {
       "path": ".gitattributes",
@@ -88,28 +88,40 @@
     },
     {
       "path": "README.en.md",
-      "size": 5923,
-      "sha256": "5ba6e08947900cc5001ec37f004c0a0cf731dfe6596600e53c0840210070fb40",
+      "size": 6148,
+      "sha256": "465b13d7a9c8bd4998ad357140440c49d8091d208b4ec14ed5fc9f9771ffa7bf",
       "source_sha256": "df4e5a8e5afc6b336d5b97c38fee7b07041421974deb4a28da6850ae878f78d2",
       "staging_adapted": true,
       "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
       "source_git_blob": "73d309e2496af7432fd29755c3ccf87780e3abad",
-      "root_layout_refresh_20261106": "Authorized host root, status, drop and explicit migration update; no ABI change"
+      "root_layout_refresh_20261106": "Authorized host root, status, drop and explicit migration update; no ABI change",
+      "documentation_history": [
+        {
+          "date": "2026-11-07",
+          "previous_sha256": "5ba6e08947900cc5001ec37f004c0a0cf731dfe6596600e53c0840210070fb40"
+        }
+      ]
     },
     {
       "path": "README.ja.md",
-      "size": 7620,
-      "sha256": "f888428ac3ec5635ffc5b0b0b94abcdc1948de4f9d04fe0e8a364b68d7cada2d",
+      "size": 7896,
+      "sha256": "68d6fbbc08253ec3304c8c46259074cb048acac02b154ecc6afe8054d733d284",
       "source_sha256": "7caace2776d5a7c758b31b5823662d369cd4a8584f94a325043c4b6bae13a2b3",
       "staging_adapted": true,
       "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
       "source_git_blob": "8b25b97f6bfa160b3e782133e86868c700415fbf",
-      "root_layout_refresh_20261106": "Authorized host root, status, drop and explicit migration update; no ABI change"
+      "root_layout_refresh_20261106": "Authorized host root, status, drop and explicit migration update; no ABI change",
+      "documentation_history": [
+        {
+          "date": "2026-11-07",
+          "previous_sha256": "f888428ac3ec5635ffc5b0b0b94abcdc1948de4f9d04fe0e8a364b68d7cada2d"
+        }
+      ]
     },
     {
       "path": "README.md",
-      "size": 6986,
-      "sha256": "71e8c288a23c8f49c1ff75e5f8a1ed8cdacee1c7fe64cdb36e56ce0cd743f096",
+      "size": 7140,
+      "sha256": "1ab60fc14c8b730b03ea17a45c1974aff2844a16f4deb2c6b59ad17f3b016831",
       "source_sha256": "dd62f3ba1f1e4f0346c226ada558ec4d70bff0acf9cb0358f999080347fc0a06",
       "staging_adapted": true,
       "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
@@ -126,6 +138,10 @@
             "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
             "source_git_blob": "f2b385e12b8efb8b39738eb768779243ea1b080f"
           }
+        },
+        {
+          "date": "2026-11-07",
+          "previous_sha256": "71e8c288a23c8f49c1ff75e5f8a1ed8cdacee1c7fe64cdb36e56ce0cd743f096"
         }
       ],
       "documentation_repair": {
@@ -136,8 +152,8 @@
     },
     {
       "path": "SOURCE_SELECTION.json",
-      "size": 179301,
-      "sha256": "6a2bfb0405d27885d121d28d25dcf1fa898e69411008791f146feb6a9933ce0a",
+      "size": 181309,
+      "sha256": "3262ae914870ca76326664f5bcd7601b90fa995984e3dfed447ff5b1df37d551",
       "generated_for_staging": true,
       "documentation_history": [
         {
@@ -148,6 +164,10 @@
             "sha256": "6888de9c4dfcb0aebea8e47a99d3c6f9e0445ac3c64092191e90baa8a290dcfe",
             "generated_for_staging": true
           }
+        },
+        {
+          "date": "2026-11-07",
+          "previous_sha256": "6a2bfb0405d27885d121d28d25dcf1fa898e69411008791f146feb6a9933ce0a"
         }
       ],
       "documentation_repair": {
@@ -395,8 +415,8 @@
     },
     {
       "path": "docs/PLUGIN_DEVELOPMENT.md",
-      "size": 15340,
-      "sha256": "1942c2fc8cd5c2aed701b2945e5be9b6c31c24cef8c9be3b23157cf51d484390",
+      "size": 15285,
+      "sha256": "dd280c8fab16ea158b6926f5e151a9903b891b6395b6345770bcdfb04d671fa4",
       "source_sha256": "aaaa6de61808dab4758be2346faad844e6a4803f1d97942000a81a839528b8c7",
       "staging_adapted": true,
       "source_revision": "6c4ce365d731f491f129c84f2abb9ccf9c116754",
@@ -405,22 +425,34 @@
     },
     {
       "path": "docs/PLUGIN_PATHS.md",
-      "size": 5839,
-      "sha256": "627f746c16cb106441707c28d3beba950c0befa5319ee2415620ea6603043e7c",
+      "size": 6084,
+      "sha256": "48cf36f8ffdf1a5786d2cc9adf5d1160d0c5e9ef4edf2c165de3e25e3625ecb4",
       "source_revision": "0426648bd0601486347513af200aa4167a9fa09c",
       "source_sha256": "74a7c2959f153deb940183397ca2c0eec944c0ca3d9b1cfb1b92666ca2b2d9d1",
       "staging_adapted": true,
-      "root_layout_refresh_20261106": "Authorized host root, status, drop and explicit migration update; no ABI change"
+      "root_layout_refresh_20261106": "Authorized host root, status, drop and explicit migration update; no ABI change",
+      "documentation_history": [
+        {
+          "date": "2026-11-07",
+          "previous_sha256": "627f746c16cb106441707c28d3beba950c0befa5319ee2415620ea6603043e7c"
+        }
+      ]
     },
     {
       "path": "docs/QUICKSTART.md",
-      "size": 7983,
-      "sha256": "743fa745d69116b6fe3238e94abb657523a13ef8fc0a0712e0ec5e68f7142b89",
+      "size": 8159,
+      "sha256": "f011bf1a427fd691301199cedde59e95a7418855bf6fdb11262003f5ce26909f",
       "source_sha256": "d5b4f08cbc663746a550bdf1e67afcd4ca4ee38c7dc9fcca15f74fa5f9bb236f",
       "staging_adapted": true,
       "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
       "source_git_blob": "0070cfd78fc33768e5958d7d848524679917c56e",
-      "root_layout_refresh_20261106": "Authorized host root, status, drop and explicit migration update; no ABI change"
+      "root_layout_refresh_20261106": "Authorized host root, status, drop and explicit migration update; no ABI change",
+      "documentation_history": [
+        {
+          "date": "2026-11-07",
+          "previous_sha256": "743fa745d69116b6fe3238e94abb657523a13ef8fc0a0712e0ec5e68f7142b89"
+        }
+      ]
     },
     {
       "path": "docs/README.md",
@@ -1322,8 +1354,8 @@
     },
     {
       "path": "wiki/Building.md",
-      "size": 3664,
-      "sha256": "d6243572485f3b0dc1e4538b98158c7027a3afdae653da52aa735cd305bfc46e",
+      "size": 3802,
+      "sha256": "9c149ae4732c58bc58c3361df4970172ab0cf7ff26afb60e2a56cfe65e075786",
       "source_sha256": "eff46790e21187b7ffc065122e0a2141178823245f6142b0717438f33463237a",
       "staging_adapted": true,
       "documentation_history": [
@@ -1336,6 +1368,10 @@
             "source_sha256": "eff46790e21187b7ffc065122e0a2141178823245f6142b0717438f33463237a",
             "staging_adapted": true
           }
+        },
+        {
+          "date": "2026-11-07",
+          "previous_sha256": "d6243572485f3b0dc1e4538b98158c7027a3afdae653da52aa735cd305bfc46e"
         }
       ],
       "documentation_repair": {
@@ -1448,8 +1484,8 @@
     },
     {
       "path": "wiki/Installation.md",
-      "size": 2318,
-      "sha256": "e3061fcb60271a57e7142828e072d17edd836fb7545e350c99a1f2895d4d9695",
+      "size": 2371,
+      "sha256": "a87df24bb7cff8d79b101136008daa540927e21d2f990c8792576b00aa1cf10f",
       "source_sha256": "004b7a8b0b8ee5800b3177e6ccb4e504f05acbd6b836a44c58cdafcc998e0b9f",
       "staging_adapted": true,
       "documentation_history": [
@@ -1462,6 +1498,10 @@
             "source_sha256": "004b7a8b0b8ee5800b3177e6ccb4e504f05acbd6b836a44c58cdafcc998e0b9f",
             "staging_adapted": true
           }
+        },
+        {
+          "date": "2026-11-07",
+          "previous_sha256": "e3061fcb60271a57e7142828e072d17edd836fb7545e350c99a1f2895d4d9695"
         }
       ],
       "documentation_repair": {
@@ -1472,8 +1512,8 @@
     },
     {
       "path": "wiki/Plugin-API.md",
-      "size": 7720,
-      "sha256": "1043e3aa3bb7a2f871ae96339bb4a10f62eb2040ec775ffd4f5553cf4e3f08fd",
+      "size": 7990,
+      "sha256": "bbabc25c6337ac933f4c2ac0e8842ab55c0e15ca527aa42975ca4506eb73f41a",
       "source_sha256": "e0560e09b2c05acad903640304ee17326e3bc64904dcdf3b237c52797fd3ac33",
       "staging_adapted": true,
       "documentation_history": [
@@ -1486,6 +1526,10 @@
             "source_sha256": "e0560e09b2c05acad903640304ee17326e3bc64904dcdf3b237c52797fd3ac33",
             "staging_adapted": true
           }
+        },
+        {
+          "date": "2026-11-07",
+          "previous_sha256": "1043e3aa3bb7a2f871ae96339bb4a10f62eb2040ec775ffd4f5553cf4e3f08fd"
         }
       ],
       "documentation_repair": {
@@ -1496,8 +1540,8 @@
     },
     {
       "path": "wiki/Troubleshooting.md",
-      "size": 4608,
-      "sha256": "d9999ef72aeee1bc4ca99689530adcaa3eac3d07616846f531e4b2bab93cdc08",
+      "size": 4638,
+      "sha256": "54170a1caf67e99a56f37def8cd7ccc6553a61de8326f7577c7c01f8361ffa7a",
       "source_sha256": "182d26a05e7b864abcbd44053be8cfa09d122d39f191354b633239bf115bf700",
       "staging_adapted": true,
       "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
@@ -1514,6 +1558,10 @@
             "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
             "source_git_blob": "1396ac14c07c1d2a4b37ec95a67272485f99b2b0"
           }
+        },
+        {
+          "date": "2026-11-07",
+          "previous_sha256": "d9999ef72aeee1bc4ca99689530adcaa3eac3d07616846f531e4b2bab93cdc08"
         }
       ],
       "documentation_repair": {
@@ -1733,5 +1781,23 @@
       "SOURCE_SELECTION.json"
     ],
     "runtime_acceptance": "pending"
+  },
+  "public_doc_alignment_20261107": {
+    "previous_manifest_sha256": "7b9086400c97d7f27a4415ed2872b3e67aca71c4ef0ceb2280a0573f660380a5",
+    "scope": "Public documentation only; no build, runtime, ABI, dependency or license changes.",
+    "changed_payload_files": [
+      "README.en.md",
+      "README.ja.md",
+      "README.md",
+      "docs/PLUGIN_PATHS.md",
+      "docs/QUICKSTART.md",
+      "wiki/Building.md",
+      "wiki/Installation.md",
+      "wiki/Plugin-API.md",
+      "wiki/Troubleshooting.md",
+      "SOURCE_SELECTION.json"
+    ],
+    "game_acceptance": "existing user-reported results unchanged",
+    "remote_updated": false
   }
 }

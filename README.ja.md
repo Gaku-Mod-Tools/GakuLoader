@@ -14,15 +14,15 @@
 
 1. ゲームを完全に終了します。
 2. ビルドした `build/version.dll` をゲームルートディレクトリ（`gakumas.exe` と同じ場所）に配置します。
-3. プラグインDLLを `GakuLoader/plugins/` フォルダに配置します。
+3. プラグインDLLを `GakuLoader/plugins/` フォルダに配置します。Motion のインポーターと GakuBurstBridge は補助ライブラリで、Loader のプラグイン検出対象には含まれず、必要に応じて Motion が読み込みます。
 
 ```text
 <ゲームルートディレクトリ>/
 ├── gakumas.exe
 ├── version.dll                    GakuLoader 本体
 └── GakuLoader/
-    ├── Configs/gakuloader.ini     # 宿主配置（可选）
-    ├── Logs/gakuloader.log        # 宿主日志
+    ├── Configs/gakuloader.ini     # ホスト設定（任意）
+    ├── Logs/gakuloader.log        # ホストログ
     └── plugins/                   プラグインフォルダ
         ├── GakuMotion.dll
         └── GakuLocalify.dll
@@ -95,7 +95,7 @@ trace=false
 
 ビルドはローカルの成果物を生成するだけです。`-OutputDll` は明示した候補パスへコピーし、ゲームディレクトリの自動検出や自動配置は行いません。全テストと任意の MinGW 依存は [Building](wiki/Building.md) を参照してください。
 
-ビルドに必要な ImGui と MinHook のソースを同梱しており、サブモジュール初期化は不要です。Loader と機能プラグインは対応する配布パッケージを組み合わせてください。
+リリース用ソースには ImGui と MinHook が含まれます。サブモジュールを使う開発チェックアウトでは、状態を確認してから依存関係を初期化してください。Loader と機能プラグインは対応する配布パッケージを組み合わせてください。
 
 ## 詳細ドキュメント (Wiki)
 
