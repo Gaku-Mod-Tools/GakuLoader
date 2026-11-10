@@ -1,0 +1,54 @@
+# GakuLoader Plugin Exception
+Version 1.0
+
+## Additional Permission under GNU GPL Version 3, Section 7
+
+Copyright (C) 2026 GakuLoader contributors who have authorized this exception.
+
+GakuLoader is licensed under the GNU General Public License, version 3 only (GPL-3.0-only), subject to the following additional permission.
+
+### 1. Independent Plugins
+
+For the purposes of this exception, an "Independent Plugin" is a separately developed software module that interacts with GakuLoader through its documented public plugin interfaces.
+
+These interfaces include the public C-ABI plugin SDK, such as `GakuPlugin.h`, `GakuPaths.h`, `GakuLanguage.h`, `GakuLifecycle.h`, and other documented public plugin interfaces provided by GakuLoader.
+
+An Independent Plugin may be distributed as a dynamically loaded library and may exchange data, callbacks, function pointers, and service interfaces with GakuLoader through these public interfaces.
+
+### 2. Permission to Combine and Distribute
+
+As a special exception under Section 7 of GPLv3, the copyright holders of GakuLoader who have authorized this exception grant you additional permission to combine or link GakuLoader with Independent Plugins and to convey and distribute the resulting combination.
+
+Independent Plugins may be licensed under terms of their respective copyright holders' choice, including permissive open-source licenses, copyleft licenses, and proprietary licenses.
+
+Such Independent Plugins are not required to be licensed under GPLv3 solely because they interact with GakuLoader through the documented public plugin interfaces.
+
+This permission applies only to the extent that the copyright holders granting this exception have the authority to grant it.
+
+### 3. Scope and Limitations
+
+This exception does not grant permission to copy, modify, or incorporate GPL-covered implementation code from GakuLoader into an Independent Plugin except as otherwise permitted by the applicable licenses.
+
+Modifications to GakuLoader itself remain subject to GPLv3 and any applicable additional permissions.
+
+This exception does not override the licenses or rights of third-party components, including components incorporated into GakuLoader or Independent Plugins.
+
+All applicable copyright notices, license notices, and other obligations imposed by the respective licenses must be preserved.
+
+### 4. Modified Versions
+
+Developers of modified versions of GakuLoader may retain this exception to the extent permitted by the copyright holders of the code concerned.
+
+Contributors are not automatically required to grant this exception for their own modifications.
+
+Under Section 7 of GPLv3, recipients may remove this additional permission when conveying covered works, subject to the terms of GPLv3.
+
+### 5. No Additional Warranty
+
+This exception provides no additional warranty or liability protection beyond the terms of the applicable licenses.
+
+---
+
+This exception is an additional permission under Section 7 of the GNU General Public License, version 3.
+
+It does not replace or modify the text of GPLv3 itself.
