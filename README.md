@@ -130,6 +130,18 @@ trace=false
 .\examples\minimal-plugin\verify.ps1
 ```
 
+### 开源许可证
+
+GakuLoader 宿主核心采用 **GNU GPL v3.0**，并提供 **GakuLoader Plugin Exception**。
+
+该例外允许独立插件通过 GakuLoader 公开的插件接口与宿主交互，而不因这种交互本身被要求采用 GPL-3.0。
+
+GakuLoader 公共 C-ABI SDK 单独采用 MIT License。第三方插件可以自行选择许可证，但仍须遵守其所使用的其他代码和组件的授权条件。
+
+修改和再分发 GakuLoader 宿主核心仍须遵守 GPL-3.0。
+
+详见 [GPL-3.0 许可证](LICENSE) 与 [插件例外条款](LICENSES/GakuLoader-Plugin-Exception.txt)。
+
 ### Wiki 详细文档导航
 - [安装与目录规范](wiki/Installation.md)：部署路径、文件备份与更新方法
 - [配置说明](wiki/Configuration.md)：`gakuloader.ini` 各配置项详解
