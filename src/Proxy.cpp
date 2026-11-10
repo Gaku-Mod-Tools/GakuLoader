@@ -1,3 +1,11 @@
+// SPDX-License-Identifier: GPL-3.0-only
+//
+// GakuLoader is licensed under GNU GPL version 3.
+// Additional permission for independent plugins is provided under
+// the GakuLoader Plugin Exception.
+//
+// See LICENSE and LICENSES/GakuLoader-Plugin-Exception.txt.
+
 // windows.h pulls in winver.h unconditionally, and that header already declares the
 // version.dll entry points. MSVC treats a later __declspec(dllexport) definition of an
 // already-declared function as a different linkage (C2375/C2733); GCC merges them.

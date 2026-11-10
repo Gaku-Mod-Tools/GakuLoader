@@ -1,3 +1,8 @@
+// SPDX-License-Identifier: MIT
+//
+// GakuLoader Public Plugin SDK
+// See the applicable MIT license notice.
+
 #pragma once
 /* GakuLoader plugin ABI v1.
    Fixed-size, C-compatible negotiation; no STL, no ownership transfer, no

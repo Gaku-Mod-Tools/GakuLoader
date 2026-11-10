@@ -8,7 +8,7 @@
     ".git/",
     "build/"
   ],
-  "content_tree_sha256": "a483f45d756432198ae5514e7674c78bfb7880003ff6ec813aaa8840bec9a0b2",
+  "content_tree_sha256": "e3245e17efa3d8dc48206424f5e28151073354a1526e7df37bb03ce66d83d502",
   "files": [
     {
       "path": ".gitattributes",
@@ -74,10 +74,16 @@
     },
     {
       "path": "LICENSE",
-      "size": 1080,
-      "sha256": "74f36d03b547c7bd183a828a026dbf38027eb1705d97c1b0ea4bfa466716d60b",
+      "size": 35149,
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
       "source_sha256": "74f36d03b547c7bd183a828a026dbf38027eb1705d97c1b0ea4bfa466716d60b",
       "staging_adapted": false
+    },
+    {
+      "path": "LICENSES/GakuLoader-Plugin-Exception.txt",
+      "size": 3067,
+      "sha256": "fa23cf7ab06ec1cbdb9b37873364963906ba78facfbbd9fc4a022a10b67a2055",
+      "staging_adapted": true
     },
     {
       "path": "MinHook.vcxproj",
@@ -120,8 +126,8 @@
     },
     {
       "path": "README.md",
-      "size": 7140,
-      "sha256": "1ab60fc14c8b730b03ea17a45c1974aff2844a16f4deb2c6b59ad17f3b016831",
+      "size": 7740,
+      "sha256": "caa09532730c4a911ec33cd2ab38c16c3596db558a76e30708fca7337011a748",
       "source_sha256": "dd62f3ba1f1e4f0346c226ada558ec4d70bff0acf9cb0358f999080347fc0a06",
       "staging_adapted": true,
       "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
@@ -462,6 +468,14 @@
       "staging_adapted": true
     },
     {
+      "path": "docs/ROOT_LAYOUT.md",
+      "generated_for_staging": true,
+      "size": 1396,
+      "sha256": "c0850488a7a2a3590adbdb5b2b264d318e44f0207f60d3d97c8e9a72d9d032a8",
+      "staging_adapted": true,
+      "root_layout_refresh_20261106": "Authorized host root, status, drop and explicit migration update; no ABI change"
+    },
+    {
       "path": "examples/minimal-plugin/MinimalPlugin.cpp",
       "size": 2926,
       "sha256": "d8154a6f24346cf083d0d457ff9fc645874efaa0583350bf9672da1584789254",
@@ -506,8 +520,8 @@
     },
     {
       "path": "include/GakuFileDrop.h",
-      "size": 1620,
-      "sha256": "b8f703c34627ecee86d51fe1aa630053b2e224c441430ac6c93779642d6148fd",
+      "size": 1730,
+      "sha256": "6384dd552b0bf94bc59f801d679833c9aba66b75772c6ab2dad70af7f317588c",
       "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
       "source_git_blob": "d3bc93bf670162bd1448c1f713c6f34d0e67dbcb",
       "source_sha256": "b8f703c34627ecee86d51fe1aa630053b2e224c441430ac6c93779642d6148fd",
@@ -515,8 +529,8 @@
     },
     {
       "path": "include/GakuLanguage.h",
-      "size": 920,
-      "sha256": "6b1e39362171f9ba3588cec296da31043a9c93c5d4cf68344844bf70e78cd185",
+      "size": 1030,
+      "sha256": "81e0dbe0f72ed50b6424c97ed4b45b920392bd167d0cc8487bf8276a4a24c2d6",
       "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
       "source_git_blob": "1e9bb38fa03ba0d4eee4edd7917f39d380206a79",
       "source_sha256": "6b1e39362171f9ba3588cec296da31043a9c93c5d4cf68344844bf70e78cd185",
@@ -524,8 +538,8 @@
     },
     {
       "path": "include/GakuLifecycle.h",
-      "size": 663,
-      "sha256": "f7a8c5708bb35356089eb8a83a9288cabd75389fc3952dfbe79adc887972e648",
+      "size": 773,
+      "sha256": "38646aace2b0d9f69d759338d15cad8f61d73acfc735f5d4b0e1c4e92f11e862",
       "source_sha256": "f7a8c5708bb35356089eb8a83a9288cabd75389fc3952dfbe79adc887972e648",
       "staging_adapted": false,
       "source_revision": "6c4ce365d731f491f129c84f2abb9ccf9c116754",
@@ -533,8 +547,8 @@
     },
     {
       "path": "include/GakuPaths.h",
-      "size": 2368,
-      "sha256": "a1182d4903c642299fe28e3687a46ac23c19dfdb40e47a83e84da7af52865ea3",
+      "size": 2478,
+      "sha256": "a42a919c264e1bc61c9f980dc186421fcc429f215525d8d41eab9db34cebd839",
       "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
       "source_sha256": "a1182d4903c642299fe28e3687a46ac23c19dfdb40e47a83e84da7af52865ea3",
       "staging_adapted": false,
@@ -542,16 +556,16 @@
     },
     {
       "path": "include/GakuPaths.hpp",
-      "size": 5671,
-      "sha256": "a18bd3b2bb647ee219f3c0fb167dc5eb8fd068fb8db3a4d708b52a5f54e49705",
+      "size": 5781,
+      "sha256": "f5bb91c725dc2ebc68397b38dc685c0f02104c3271b7d98d1626ed69cf461a02",
       "source_revision": "0426648bd0601486347513af200aa4167a9fa09c",
       "source_sha256": "a18bd3b2bb647ee219f3c0fb167dc5eb8fd068fb8db3a4d708b52a5f54e49705",
       "staging_adapted": false
     },
     {
       "path": "include/GakuPlugin.h",
-      "size": 14132,
-      "sha256": "12f4e4db22ff0505990b66cfeaf97b1cae54486c9eb415e7efc3adfd9984867e",
+      "size": 14242,
+      "sha256": "7f3e19a6f1b5b1bbf2e3bd2c674796e8004127dfa4daa587ae6d06903ac52fa0",
       "source_sha256": "12f4e4db22ff0505990b66cfeaf97b1cae54486c9eb415e7efc3adfd9984867e",
       "staging_adapted": false,
       "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
@@ -559,43 +573,43 @@
     },
     {
       "path": "include/GakuProcessLifetimeHooks.h",
-      "size": 1101,
-      "sha256": "b892064ebb74cf1afa7155d60eccf1183669912732735fbc2ef23c46071fb7f0",
+      "size": 1211,
+      "sha256": "5172c627f3a0cd484ee3874a7d84dddbaa51becaebf3740ef581c59719473317",
       "source_sha256": "b892064ebb74cf1afa7155d60eccf1183669912732735fbc2ef23c46071fb7f0",
       "staging_adapted": false
     },
     {
       "path": "src/ActorEntry.cpp",
-      "size": 8967,
-      "sha256": "1f8d98d83be6c337b03048afd7bf8cb0af7cb318e8465fa6067b71deb2f3800e",
+      "size": 9230,
+      "sha256": "64c0d2bbc6550a39fd551f8a75960c73aa92f7b3a9e607084d456210f937c723",
       "source_sha256": "1f8d98d83be6c337b03048afd7bf8cb0af7cb318e8465fa6067b71deb2f3800e",
       "staging_adapted": false
     },
     {
       "path": "src/ActorEntry.hpp",
-      "size": 1315,
-      "sha256": "da7a4bbd91f65743e4571b1d771ffe4d95f75b20c7040a1e73011edbd89947f7",
+      "size": 1578,
+      "sha256": "2867a0d8c5ae578afe082c09dec8f965fddc6b406e543c229a9bb917bb394dea",
       "source_sha256": "da7a4bbd91f65743e4571b1d771ffe4d95f75b20c7040a1e73011edbd89947f7",
       "staging_adapted": false
     },
     {
       "path": "src/CrashTrace.cpp",
-      "size": 4544,
-      "sha256": "20d44120784a858787151d0a63d33364c6dc3f6b5aa378cf6ca64765c6c87101",
+      "size": 4807,
+      "sha256": "f80ab4cf6eccee83d6442ac57e77b8e6c5a42fdf288259db0a09af6a2bbbfbae",
       "source_sha256": "20d44120784a858787151d0a63d33364c6dc3f6b5aa378cf6ca64765c6c87101",
       "staging_adapted": false
     },
     {
       "path": "src/CrashTrace.hpp",
-      "size": 554,
-      "sha256": "f68d560038e717f6ec4dd59480b62b42d729de39ee5c56474202a9d0d0f98e8d",
+      "size": 817,
+      "sha256": "3be4f393095aa0d74b82613f790f43b0a8cccd96e7b2a10298b018ab6d1fc9e0",
       "source_sha256": "f68d560038e717f6ec4dd59480b62b42d729de39ee5c56474202a9d0d0f98e8d",
       "staging_adapted": false
     },
     {
       "path": "src/DesktopAppearance.hpp",
-      "size": 23357,
-      "sha256": "0ed05e5682a6b8b803beda0841b43c618ba273778638fcaa254e6926a99310dc",
+      "size": 23620,
+      "sha256": "d1ccd49c3739f3bd7624552db0f6daafab5422e026d5f9b5ddb1065a894aa71b",
       "source_sha256": "0ed05e5682a6b8b803beda0841b43c618ba273778638fcaa254e6926a99310dc",
       "staging_adapted": false,
       "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
@@ -603,22 +617,22 @@
     },
     {
       "path": "src/DesktopDialogs.cpp",
-      "size": 11330,
-      "sha256": "98518f40f4e7fd5d3d9038f7481922025fc826cceddb093bb7ce76557e9f7014",
+      "size": 11593,
+      "sha256": "1b937cc4c95acf90989ec6c595952748fc0839feebf0af770abd097d9e1dc879",
       "source_sha256": "98518f40f4e7fd5d3d9038f7481922025fc826cceddb093bb7ce76557e9f7014",
       "staging_adapted": false
     },
     {
       "path": "src/DesktopDialogs.hpp",
-      "size": 451,
-      "sha256": "2be6e3d62707e22de82325ca98afa99b8dbdf66a51870d9a1d4d21d4e3b9ede5",
+      "size": 714,
+      "sha256": "a7580d841cc7ebff3727e0d4c5eafc3079f900514bb37a3cc97305f5018af22a",
       "source_sha256": "2be6e3d62707e22de82325ca98afa99b8dbdf66a51870d9a1d4d21d4e3b9ede5",
       "staging_adapted": false
     },
     {
       "path": "src/DesktopFileDrop.hpp",
-      "size": 4950,
-      "sha256": "ad9201b47914f792b718b88f6b8c98df65f978e23c490651d40b6fe762e04283",
+      "size": 5213,
+      "sha256": "a5dbaadb51a8b6e6a1cbbf7102da68f66886a059763c59f09e9cd6c046e9fbd6",
       "source_revision": "6c8938990b2b08cc6079c61f3cefe29b67acd698",
       "source_git_blob": "7517ef87152ff601870dbf0fc22f7082d9cdd1d0",
       "source_sha256": "ad9201b47914f792b718b88f6b8c98df65f978e23c490651d40b6fe762e04283",
@@ -629,8 +643,8 @@
     },
     {
       "path": "src/DesktopFonts.hpp",
-      "size": 4426,
-      "sha256": "011cf082f1bd51f605d7774ab161d29b30d60935662a7dfa5dd0b3a61ae0d3f8",
+      "size": 4689,
+      "sha256": "67493309a59452b042224da68df3bd1fa8821dd36d1cb8c8ab4d7649bd7671e7",
       "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
       "source_git_blob": "c43a9e9060fa8e455d61e23e1a08adea06ba5a2a",
       "source_sha256": "011cf082f1bd51f605d7774ab161d29b30d60935662a7dfa5dd0b3a61ae0d3f8",
@@ -638,8 +652,8 @@
     },
     {
       "path": "src/DesktopUi.cpp",
-      "size": 51968,
-      "sha256": "de981edf8bedfebc315687795134d1151de9da47e7c0cec22fdcab16527125f3",
+      "size": 52231,
+      "sha256": "eb982207cee3910377e8d458e293fc9f0b288684a6561fef7bb95b332052c1ee",
       "source_sha256": "d5b1f04d944b3393f3bda8b8d7cb01be0b95623ebe3890cd1673e872e3217cd5",
       "staging_adapted": true,
       "source_revision": "6c4ce365d731f491f129c84f2abb9ccf9c116754",
@@ -652,8 +666,8 @@
     },
     {
       "path": "src/DesktopUi.hpp",
-      "size": 1811,
-      "sha256": "66995d1178321a358f7253b17d3d14095c5e716269149f5f674135003e82c51e",
+      "size": 2074,
+      "sha256": "fd8a22e4135dd8e980daaa639677fde685b53aaf2ba5dbeacf98b17468b1a6f6",
       "source_sha256": "66995d1178321a358f7253b17d3d14095c5e716269149f5f674135003e82c51e",
       "staging_adapted": false,
       "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
@@ -661,44 +675,44 @@
     },
     {
       "path": "src/DiagnosticBoundary.cpp",
-      "size": 5771,
-      "sha256": "219d49c5547e4272ed518f46655159ff94ef0a293a9611fc18facb4f2947d858",
+      "size": 6034,
+      "sha256": "de57bbd01b8cc574c06e2662e64c471a060283fa1dd8bb38a367544e1adf74c5",
       "source_sha256": "219d49c5547e4272ed518f46655159ff94ef0a293a9611fc18facb4f2947d858",
       "staging_adapted": false
     },
     {
       "path": "src/DiagnosticBoundary.hpp",
-      "size": 514,
-      "sha256": "df5bdbaa2d7e41b7b0a1a9e7de18d9c4be2d78f157e351d807b09c668c55a46f",
+      "size": 777,
+      "sha256": "0c4653b9b9cba7aaf9548ff0dbc1ed995f822c6e8901487c668a807455d34df4",
       "source_sha256": "df5bdbaa2d7e41b7b0a1a9e7de18d9c4be2d78f157e351d807b09c668c55a46f",
       "staging_adapted": false
     },
     {
       "path": "src/ExitDiagnosis.cpp",
-      "size": 3248,
-      "sha256": "912c5c43ddbecaaad5414b7a546a0d0339cbab7787c8bc01876d9e9e70a19e04",
+      "size": 3511,
+      "sha256": "ae1a3ee900d327673703f1cb61ec6d9d975711c147fb3a81141525c54b50a5ca",
       "source_sha256": "37733525a14ba1c5e0202c3a2c4f2ebf11fa548e1df1c60b63d84d86f3a756ee",
       "staging_adapted": true,
       "root_layout_refresh_20261106": "Authorized host root, status, drop and explicit migration update; no ABI change"
     },
     {
       "path": "src/ExitDiagnosis.hpp",
-      "size": 358,
-      "sha256": "5b7bfb70a9692264e2619fe35770772d76858b11e32666bb0a384785b0047a11",
+      "size": 621,
+      "sha256": "009a5495ff038966904cd3e61aee25f463837a944ad178087d08f1044efc4d04",
       "source_sha256": "5b7bfb70a9692264e2619fe35770772d76858b11e32666bb0a384785b0047a11",
       "staging_adapted": false
     },
     {
       "path": "src/GakuLoader.rc",
-      "size": 663,
-      "sha256": "9bcc5cc996c7571ef2390635de70cc8f84b576e71cb9e7b93bfbe7a9b803d6bd",
+      "size": 926,
+      "sha256": "537d05d65c8db05d67c9dc77b545d187d7753e07921f96fef5faf2a79bddf661",
       "generated_for_staging": true,
       "review": "Windows product/file version 1.0.0."
     },
     {
       "path": "src/GameHook.cpp",
-      "size": 25781,
-      "sha256": "3712639c9b4f9e1bc403726e40d6bc52f6fca329748ee691ae98337695852f28",
+      "size": 26044,
+      "sha256": "fcbde3bc662ccc457e6deb83db9c1475de9f5f03235074647fe6a0f97235c759",
       "source_sha256": "3712639c9b4f9e1bc403726e40d6bc52f6fca329748ee691ae98337695852f28",
       "staging_adapted": false,
       "source_revision": "6c4ce365d731f491f129c84f2abb9ccf9c116754",
@@ -706,15 +720,15 @@
     },
     {
       "path": "src/GameHook.hpp",
-      "size": 1135,
-      "sha256": "3876399bf79f335aa5c53896412de0b84934da35f753bec124625df87e0e2a81",
+      "size": 1398,
+      "sha256": "5fb7050e7284cf73d127e43359bfb277b2b683033dde620d1bd8436b1db2fd72",
       "source_sha256": "3876399bf79f335aa5c53896412de0b84934da35f753bec124625df87e0e2a81",
       "staging_adapted": false
     },
     {
       "path": "src/Host.hpp",
-      "size": 5089,
-      "sha256": "2846a59e23b2ea276e04caeb48344981b880ad4c81c1ee829c3dbea21ed68578",
+      "size": 5352,
+      "sha256": "4cb2de27382c9debf22b6b1821422a2d0fcf76ff935869ce4f28bfc393cb3608",
       "source_sha256": "2846a59e23b2ea276e04caeb48344981b880ad4c81c1ee829c3dbea21ed68578",
       "staging_adapted": false,
       "source_revision": "6c4ce365d731f491f129c84f2abb9ccf9c116754",
@@ -722,22 +736,22 @@
     },
     {
       "path": "src/HostConfig.hpp",
-      "size": 1399,
-      "sha256": "77d963b51b3b0c9e07e51c2f87979297d69789953b89a1ef482ec431a07ad326",
+      "size": 1662,
+      "sha256": "ed415b80dcee05bdc43cbdd81f98a626d2cacd12a21f3baa11d2806c789ebbc4",
       "source_sha256": "77d963b51b3b0c9e07e51c2f87979297d69789953b89a1ef482ec431a07ad326",
       "staging_adapted": false
     },
     {
       "path": "src/HostContracts.hpp",
-      "size": 819,
-      "sha256": "48d71e432fd11697d7c77ed804cb2a4a2f5959cac4dd3b51fabbe3cd52cb88de",
+      "size": 1082,
+      "sha256": "f72e0e279e890f5a93afa576db92c683a692f39f7adc937f07221b74ad89c5f9",
       "source_sha256": "48d71e432fd11697d7c77ed804cb2a4a2f5959cac4dd3b51fabbe3cd52cb88de",
       "staging_adapted": false
     },
     {
       "path": "src/Hotkeys.cpp",
-      "size": 23450,
-      "sha256": "dbcf921474a8f819758c9a0a813c5d367b6a17741e9dc1fc5fa7c9f75d403303",
+      "size": 23713,
+      "sha256": "97bdaa77383155f5c5e6383a939daa5d07c397689573c80989ee6688ff90a1ef",
       "source_sha256": "dbcf921474a8f819758c9a0a813c5d367b6a17741e9dc1fc5fa7c9f75d403303",
       "staging_adapted": false,
       "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
@@ -745,8 +759,8 @@
     },
     {
       "path": "src/Hotkeys.hpp",
-      "size": 2528,
-      "sha256": "0b3a9a076ef017e3641f88fbe94dc01526006400e1338a142a14c5e94da47bf2",
+      "size": 2791,
+      "sha256": "38c6d328a369b8e46b838523db80711828eaefe8c57732d22427cf4be9744af1",
       "source_sha256": "0b3a9a076ef017e3641f88fbe94dc01526006400e1338a142a14c5e94da47bf2",
       "staging_adapted": false,
       "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
@@ -754,8 +768,8 @@
     },
     {
       "path": "src/LanguageSettings.hpp",
-      "size": 1931,
-      "sha256": "615e84dfcaab75a5fc17b9e773812a208f38962c6aff9c2080a94e429b1cc317",
+      "size": 2194,
+      "sha256": "f9f566be07aad77769583bcb321c0bf5696cbb73630df0c98b19c5a57ecf521f",
       "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
       "source_git_blob": "7f9791281d3c4b77cfdc526918f9f6f166c3f66f",
       "source_sha256": "615e84dfcaab75a5fc17b9e773812a208f38962c6aff9c2080a94e429b1cc317",
@@ -763,16 +777,16 @@
     },
     {
       "path": "src/Main.cpp",
-      "size": 3482,
-      "sha256": "52267d908de800eb0584d7eabf5f8ce996d2a33917bc468602c92552b5713c83",
+      "size": 3745,
+      "sha256": "c9aafd3074ed27eda89136bcb42302ff46974a02a819dcd9a4f8a3a5fc702439",
       "source_sha256": "dd3a10b35aab923547ef9974e73e9a0e538047c5c84526f358413401a4e906bd",
       "staging_adapted": true,
       "root_layout_refresh_20261106": "Authorized host root, status, drop and explicit migration update; no ABI change"
     },
     {
       "path": "src/ManagerStrings.hpp",
-      "size": 8327,
-      "sha256": "1a9c589694ec64f6f2d90e280528f0e0a3ec86b8be1808e93403d102c57215f4",
+      "size": 8590,
+      "sha256": "084f90828a55c11c2c8338040be50b20080e69cf61f0e8e18fe91483e71170fe",
       "source_revision": "ed5ad70819907c0a0f5acc25e804b0aea205fa57",
       "source_git_blob": "2cd34729cfa82f9231b3db74a438682a66e7df75",
       "source_sha256": "cc02814a0d769b629d33256dae0842585855ca6cbdb8960755561c5ee2fa7fce",
@@ -781,8 +795,8 @@
     },
     {
       "path": "src/PluginHost.cpp",
-      "size": 54856,
-      "sha256": "ae235a54d1c8d8aacc2def8a99f5afbec5fb3e9039b8cf5a082061776984b0af",
+      "size": 55119,
+      "sha256": "ed7b27b85881f1bc486549cc4a23d9301207e948c96c86cbc8859caef5e9ea37",
       "source_sha256": "004fabe33b002f6d3147d0431df9d9aea038edb596687b86e5cabbb325e5b579",
       "staging_adapted": true,
       "source_revision": "6c4ce365d731f491f129c84f2abb9ccf9c116754",
@@ -791,65 +805,65 @@
     },
     {
       "path": "src/PluginPaths.hpp",
-      "size": 4348,
-      "sha256": "36eb11bc986c7ad34127c1ab4434e192ad352a578e1e3a07ad23d9d58f9e1879",
+      "size": 4611,
+      "sha256": "414ceb1f56f729b5d81fa87cd05fdbc73a52bccc2d6ed33eac3473968d5b35cf",
       "source_revision": "0426648bd0601486347513af200aa4167a9fa09c",
       "source_sha256": "36eb11bc986c7ad34127c1ab4434e192ad352a578e1e3a07ad23d9d58f9e1879",
       "staging_adapted": false
     },
     {
       "path": "src/Proxy.cpp",
-      "size": 6324,
-      "sha256": "922ddfa17c5a89fddc48c2c15ce6a6caab83daa0483ceb64489f0e58b83d1f42",
+      "size": 6587,
+      "sha256": "204e483d5bcb647cb885231af063bfb8f7f214f5347a8d2278a6230678ef7afc",
       "source_sha256": "922ddfa17c5a89fddc48c2c15ce6a6caab83daa0483ceb64489f0e58b83d1f42",
       "staging_adapted": false
     },
     {
       "path": "src/Proxy.hpp",
-      "size": 108,
-      "sha256": "6c4cdddeafcb03673146e2ce188d3627d03d265baaab85a595e6e87457cc35f6",
+      "size": 371,
+      "sha256": "0fc6793b161dcefd5c300a7fb4f180420aab47eabd4bd9140c1753d9b184e25d",
       "source_sha256": "6c4cdddeafcb03673146e2ce188d3627d03d265baaab85a595e6e87457cc35f6",
       "staging_adapted": false
     },
     {
       "path": "src/QuitGuard.cpp",
-      "size": 17901,
-      "sha256": "62cf3ff56ba412baca7d57f3224eeb09503f9f4572357842ad204bb9c6339f02",
+      "size": 18164,
+      "sha256": "8f2b2987b0e479e747798b03c6a4054a025e0c50dc07a94c184eff220ac3cf76",
       "source_sha256": "62cf3ff56ba412baca7d57f3224eeb09503f9f4572357842ad204bb9c6339f02",
       "staging_adapted": false
     },
     {
       "path": "src/QuitGuard.hpp",
-      "size": 450,
-      "sha256": "1f11266c9e222bf2cc8820ccf2d6aa231dcbcdf2c76512048954e59c214af104",
+      "size": 713,
+      "sha256": "344cd9f15b7065806160e5b756735162fc12540c66eac1137c39ee6cba7368ad",
       "source_sha256": "1f11266c9e222bf2cc8820ccf2d6aa231dcbcdf2c76512048954e59c214af104",
       "staging_adapted": false
     },
     {
       "path": "src/Trace.cpp",
-      "size": 1442,
-      "sha256": "6c92d80245494266a16f3b2556aff09a8f158406fd6bf086f182b5872057a3a5",
+      "size": 1705,
+      "sha256": "00d7101052398d3bf987694e0575366b7a65a2e9e4ad60e1f6dde104df303bd2",
       "source_sha256": "6c92d80245494266a16f3b2556aff09a8f158406fd6bf086f182b5872057a3a5",
       "staging_adapted": false
     },
     {
       "path": "src/Trace.hpp",
-      "size": 877,
-      "sha256": "28736d0be4c34900f0fcd0361acc87f4f02086faf083b12cd295c64cbe5948bb",
+      "size": 1140,
+      "sha256": "5c112c866e646cc75f5f6995bea705db05f8915d356448efbd95b75bb272c15c",
       "source_sha256": "28736d0be4c34900f0fcd0361acc87f4f02086faf083b12cd295c64cbe5948bb",
       "staging_adapted": false
     },
     {
       "path": "src/UnityQuit.cpp",
-      "size": 6228,
-      "sha256": "141013b6e53de7e8577eccf54f659dc0b78961780a3693a3bcc7e43f8c7d0661",
+      "size": 6491,
+      "sha256": "35b49c87d5b06a6a5967eede492df339bc0fae135aa045d3a467ec672ca886e2",
       "source_sha256": "141013b6e53de7e8577eccf54f659dc0b78961780a3693a3bcc7e43f8c7d0661",
       "staging_adapted": false
     },
     {
       "path": "src/UnityQuit.hpp",
-      "size": 1197,
-      "sha256": "f7629f54dcd092a12fefd77ce825fba3bab7218e36206c672e2e3c27f2115787",
+      "size": 1460,
+      "sha256": "5a883f9db2d654477e021379a5cd1133f30fd4b13b254397766db1a5f94a63f4",
       "source_sha256": "f7629f54dcd092a12fefd77ce825fba3bab7218e36206c672e2e3c27f2115787",
       "staging_adapted": false
     },
@@ -1643,14 +1657,6 @@
         "review": "Reviewed technical facts and conditions against current staged code; humanizer-zh expression pass.",
         "runtime_changed": false
       }
-    },
-    {
-      "path": "docs/ROOT_LAYOUT.md",
-      "generated_for_staging": true,
-      "size": 1396,
-      "sha256": "c0850488a7a2a3590adbdb5b2b264d318e44f0207f60d3d97c8e9a72d9d032a8",
-      "staging_adapted": true,
-      "root_layout_refresh_20261106": "Authorized host root, status, drop and explicit migration update; no ABI change"
     }
   ],
   "signature": "none",
@@ -1799,5 +1805,10 @@
     ],
     "game_acceptance": "existing user-reported results unchanged",
     "remote_updated": false
+  },
+  "licensing_revision_20261110": {
+    "license": "GNU GPL version 3 with GakuLoader Plugin Exception",
+    "sdk_license": "MIT",
+    "scope": "Host core under GPL-3.0-only with plugin exception; public SDK headers under MIT"
   }
 }
