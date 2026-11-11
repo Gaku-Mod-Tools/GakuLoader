@@ -21,6 +21,9 @@ const GakuAppearanceService* GetAppearanceService();
 GakuStatus SetFileDropTarget(const char* pluginId, const GakuFileDropTarget* target);
 GakuStatus PollFileDrop(const char* pluginId, uint32_t resultSize, GakuFileDropResult* result,
     uint32_t capacity, char* paths);
+// Live shell drag (OLE) state for hover feedback; never consumes a batch.
+GakuStatus PeekFileDrag(const char* pluginId, uint32_t stateSize, GakuFileDragState* state,
+    uint32_t capacity, char* paths);
 // Owner identity is supplied by the host service wrapper. Copies the id before
 // posting and selects that plugin's panel even when another panel is selected.
 GakuStatus RequestShowPanel(const char* pluginId);

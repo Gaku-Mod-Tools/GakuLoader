@@ -95,6 +95,9 @@ void LogShutdownProgress();
 void LogInfo(const char* fmt, ...);
 void LogWarn(const char* fmt, ...);
 void LogError(const char* fmt, ...);
+// Host-only. Never crosses the plugin ABI; suppressed unless
+// gakuloader.ini [log] level=debug.
+void LogDebug(const char* fmt, ...);
 std::filesystem::path LogPath();
 std::filesystem::path ConfigPath();
 const std::vector<LoadedPlugin>& GetLoadedPlugins();

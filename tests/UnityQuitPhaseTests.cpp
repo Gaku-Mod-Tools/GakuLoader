@@ -18,6 +18,7 @@ namespace GakuLoader {
 void LogInfo(const char*, ...) {}
 void LogWarn(const char*, ...) {}
 void LogError(const char*, ...) {}
+void LogDebug(const char*, ...) {}
 void* ResolveIl2cppClass(const char*, const char*, const char*) {
     assert(GetUnityQuitPhase() == UnityQuitPhase::Resolving);
     return failResolve ? nullptr : reinterpret_cast<void*>(1);

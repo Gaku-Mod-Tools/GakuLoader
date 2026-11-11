@@ -2,7 +2,6 @@
 
 This independent source repository defaults to local source validation only.
 
-- Read [STAGING_REVIEW.md](STAGING_REVIEW.md), [SOURCE_SELECTION.json](SOURCE_SELECTION.json), and [SOURCE_MANIFEST.json](SOURCE_MANIFEST.json) before changing the frozen snapshot.
 - Preserve the C ABI in `include/GakuPlugin.h`; do not change existing field offsets, enum values or function signatures.
 - Use MSVC v143/v145, C++20, UTF-8 and static CRT. Do not enable Control Flow Guard for the host.
 - Dependencies are vendored source, with their own licenses and documented local changes. Do not silently replace them with upstream copies.

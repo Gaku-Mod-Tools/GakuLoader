@@ -33,6 +33,8 @@ std::atomic_int fileDropX{0}, fileDropY{0};
 std::mutex clipboardMutex;
 std::string clipboardText = "initial simulated clipboard";
 std::atomic_bool keySeen{false}, callbackRunning{false}, stopped{false};
+std::atomic_uint gameInputMessages{0};
+std::atomic_int g_forceTextInput{-1};
 std::atomic_int displayWidth{0}, displayHeight{0};
 std::mutex errorMutex;
 std::string error;
@@ -161,6 +163,21 @@ void SelectPluginPanel() {
 }
 LRESULT CALLBACK GameProc(HWND window, UINT message, WPARAM wparam, LPARAM lparam) {
     if (message == WM_CLOSE) { ++gameCloses; return 0; }
+    // Count any keyboard / IME / mouse input that would leak into the game
+    // window. The desktop GUI is a separate HWND and thread, so none of the
+    // messages posted to it may ever show up here.
+    switch (message) {
+    case WM_CHAR: case WM_DEADCHAR: case WM_SYSCHAR: case WM_SYSDEADCHAR:
+    case WM_KEYDOWN: case WM_KEYUP: case WM_SYSKEYDOWN: case WM_SYSKEYUP:
+    case WM_IME_STARTCOMPOSITION: case WM_IME_ENDCOMPOSITION:
+    case WM_IME_COMPOSITION: case WM_IME_CHAR: case WM_IME_SETCONTEXT:
+    case WM_IME_NOTIFY: case WM_IME_KEYDOWN: case WM_IME_KEYUP:
+    case WM_MOUSEMOVE: case WM_LBUTTONDOWN: case WM_LBUTTONUP:
+    case WM_RBUTTONDOWN: case WM_RBUTTONUP: case WM_MBUTTONDOWN: case WM_MBUTTONUP:
+    case WM_MOUSEWHEEL: case WM_MOUSEHWHEEL:
+        ++gameInputMessages;
+        break;
+    }
     return DefWindowProcW(window, message, wparam, lparam);
 }
 void InspectPixel(void* rawDevice, void* rawContext, void* rawSwapchain) {
@@ -207,6 +224,7 @@ std::filesystem::path ConfigPath() { return ""; }
 void LogInfo(const char* format, ...) { va_list args; va_start(args, format); vprintf(format, args); puts(""); va_end(args); }
 void LogWarn(const char* format, ...) { va_list args; va_start(args, format); vprintf(format, args); puts(""); va_end(args); }
 void LogError(const char* format, ...) { va_list args; va_start(args, format); vprintf(format, args); puts(""); va_end(args); }
+void LogDebug(const char*, ...) {}
 // Actual mutex contention is tested with the real PluginHost+DLL fixtures by
 // test-host.ps1. This adapter forces denial to test the production GPU branch.
 bool TryDispatchDesktopFrame(void (*build)(void*), void* data) {
@@ -346,7 +364,14 @@ int main(int argc, char** argv) {
         Check(windowService->getWindow() == nullptr && windowService->presentationKind == GAKU_DESKTOP_PRESENTATION_PLUGIN_PANEL,
             "desktop window service contract");
         GakuLoader::DesktopUi::TestHooks hooks{true, InspectPixel,
-            [] { ++cpuFrames; ServiceSelectionClick(); }, [] { ++presentedFrames; }};
+            [] {
+                ++cpuFrames; ServiceSelectionClick();
+                // A focused ImGui InputText sets WantTextInputNextFrame for the
+                // next NewFrame. Inject the same flag so WantsTextInput(), which
+                // the loader publishes from io.WantTextInput, can be asserted.
+                const int force = g_forceTextInput.load();
+                if (force >= 0) ImGui::GetCurrentContext()->WantTextInputNextFrame = force;
+            }, [] { ++presentedFrames; }};
         hooks.clipboardGet = FakeClipboardGet; hooks.clipboardSet = FakeClipboardSet;
         hooks.clipboardSequence = [] { return clipboardSequence.load(); };
         GakuLoader::DesktopUi::ConfigureTest(hooks);
@@ -479,6 +504,38 @@ int main(int argc, char** argv) {
         Check(GakuLoader::DesktopUi::RequestShowPanel("gaku.other") == GAKU_OK, "second plugin reopen refused");
         WaitUntil([&] { return otherPanelFrames > otherBeforeRequest; }, "second plugin request selected the first panel");
         puts("PASS: owner-specific show selects the requested panel from Manager and another plugin; invalid panels refused");
+
+        // GUI input isolation: WM_CHAR / WM_IME_* / mouse messages sent to the
+        // independent desktop HWND must not reach the game WndProc at all.
+        const auto gameInputsBefore = gameInputMessages.load();
+        SendMessageW(desktop, WM_CHAR, 'A', 1);
+        SendMessageW(desktop, WM_IME_STARTCOMPOSITION, 0, 0);
+        SendMessageW(desktop, WM_IME_COMPOSITION, 0, 0);
+        SendMessageW(desktop, WM_IME_ENDCOMPOSITION, 0, 0);
+        SendMessageW(desktop, WM_IME_CHAR, 'A', 1);
+        SendMessageW(desktop, WM_MOUSEMOVE, 0, MAKELPARAM(12, 12));
+        SendMessageW(desktop, WM_LBUTTONDOWN, MK_LBUTTON, MAKELPARAM(12, 12));
+        SendMessageW(desktop, WM_LBUTTONUP, 0, MAKELPARAM(12, 12));
+        Check(gameInputMessages.load() == gameInputsBefore, "GUI input reached the game WndProc");
+        Check(reinterpret_cast<WNDPROC>(GetWindowLongPtrW(game, GWLP_WNDPROC)) == GameProc,
+            "game WndProc changed by GUI input");
+        puts("PASS: WM_CHAR/WM_IME_*/mouse sent to the desktop HWND never reach the game WndProc (input isolation)");
+
+        // WantsTextInput(): the loader must advertise a focused ImGui text field
+        // and release it again on focus loss / minimise, so its hotkey poller
+        // only yields keyboard while the control window really owns text input.
+        g_forceTextInput = 1; // focused InputText
+        WaitUntil([] { return GakuLoader::DesktopUi::WantsTextInput(); }, "focused InputText did not publish WantsTextInput");
+        Check(GakuLoader::DesktopUi::WantsTextInput(), "WantsTextInput false with focused InputText");
+        SendMessageW(desktop, WM_KILLFOCUS, 0, 0);
+        g_forceTextInput = 0; // field released
+        WaitUntil([] { return !GakuLoader::DesktopUi::WantsTextInput(); }, "WantsTextInput not released on focus loss");
+        SendMessageW(desktop, WM_SIZE, SIZE_MINIMIZED, 0);
+        Check(!GakuLoader::DesktopUi::WantsTextInput(), "minimised desktop still wants text input");
+        SendMessageW(desktop, WM_SIZE, SIZE_RESTORED, 0);
+        g_forceTextInput = -1; // stop injecting
+        puts("PASS: WantsTextInput true for focused InputText, false on focus loss and minimise");
+
         ShowWindow(desktop, SW_HIDE);
         puts("PASS: controls close/hide and asynchronous reopen preserve the game window");
 

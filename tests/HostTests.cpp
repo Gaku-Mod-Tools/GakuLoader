@@ -30,6 +30,7 @@ const GakuDesktopWindowService* GetWindowService() { return nullptr; }
 const GakuAppearanceService* GetAppearanceService() { return nullptr; }
 GakuStatus SetFileDropTarget(const char*, const GakuFileDropTarget*) { return GAKU_E_UNAVAILABLE; }
 GakuStatus PollFileDrop(const char*, uint32_t, GakuFileDropResult*, uint32_t, char*) { return GAKU_E_UNAVAILABLE; }
+GakuStatus PeekFileDrag(const char*, uint32_t, GakuFileDragState*, uint32_t, char*) { return GAKU_E_UNAVAILABLE; }
 GakuStatus RequestShowPanel(const char*) { return GAKU_E_UNAVAILABLE; }
 void ToggleManager() {}
 bool WantsTextInput() { return false; }
@@ -485,9 +486,16 @@ int wmain(int argc, wchar_t** argv) {
     assert(a.hotkeyCount == 1 && a.hotkeyThread == mainThread);
     Pump(); GakuLoader::TickFrame(0.016f); // still held: no auto-repeat
     assert(ReadFixture(moduleA).hotkeyCount == 1);
+    // A dropped KeyUp must not leave the binding latched. Clearing the simulated
+    // key state (as if WM_KEYUP never arrived) and letting one poll observe the
+    // release must re-arm the edge, so the next physical press fires exactly once
+    // (net hotkeyCount stays 2 for the assertions below).
+    { std::lock_guard<std::mutex> lock(g_keyMutex); g_keysHeld.clear(); } // lose the KeyUp
+    Pump(); GakuLoader::TickFrame(0.016f);        // poll observes the release, no dispatch
+    assert(ReadFixture(moduleA).hotkeyCount == 1); // no replay from the lost KeyUp
+    Hold(0x78); Pump(); GakuLoader::TickFrame(0.016f); // next press re-arms the edge
+    assert(ReadFixture(moduleA).hotkeyCount == 2);     // exactly +1, not stuck
     Release(0x78); Pump();
-    Hold(0x78); Pump(); GakuLoader::TickFrame(0.016f);
-    assert(ReadFixture(moduleA).hotkeyCount == 2);
 
     // Ctrl+M is claimed by both fixtures: both bindings are already conflicted
     // from registration, neither fires, and neither plugin is rejected.

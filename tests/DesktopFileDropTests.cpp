@@ -199,6 +199,84 @@ void DiagnosticReasonsPreserveBatch() {
     assert(result.fileCount == 1 && std::strcmp(output, "first.vmd") == 0);
     assert(box.Accept(kOwner, 150, 250, {"next.vmd"})); // existing bool API keeps its semantics
 }
+void DragHoverState() {
+    Mailbox box;
+    GakuFileDragState state{};
+    std::array<char, 64> output;
+    // No target registered: the host reports an empty drag to every owner.
+    assert(box.QueryDrag(kOwner, sizeof(state), &state, 0, nullptr) == GAKU_OK);
+    assert(state.abiVersion == GAKU_FILE_DRAG_VERSION && state.structSize == sizeof(state));
+    assert(state.flags == 0 && state.fileCount == 0 && state.x < 0.0f && state.y < 0.0f);
+    assert(box.SetTarget(kOwner, &kTarget) == GAKU_OK);
+
+    const std::vector<std::string> files{"a.vmd", "b.wav"};
+    const auto packed = Pack(files);
+    box.BeginDrag(packed, static_cast<uint32_t>(files.size()));
+    box.UpdateDrag(150.0f, 250.0f); // inside kTarget
+    assert(box.QueryDrag(kOwner, sizeof(state), &state, 0, nullptr) == GAKU_OK);
+    assert((state.flags & GAKU_FILE_DRAG_ACTIVE) != 0);
+    assert((state.flags & GAKU_FILE_DRAG_INSIDE_TARGET) != 0);
+    assert(state.generation == 1 && state.fileCount == files.size());
+    assert(state.requiredBytes == packed.size());
+    assert(state.x == 150.0f && state.y == 250.0f);
+    // Hover dragging across the window edge only clears the inside bit.
+    box.UpdateDrag(150.0f, 900.0f);
+    assert(box.QueryDrag(kOwner, sizeof(state), &state, 0, nullptr) == GAKU_OK);
+    assert((state.flags & GAKU_FILE_DRAG_ACTIVE) != 0 && (state.flags & GAKU_FILE_DRAG_INSIDE_TARGET) == 0);
+    // Another owner never observes this panel's drag.
+    assert(box.QueryDrag(kOtherOwner, sizeof(state), &state, 0, nullptr) == GAKU_OK);
+    assert(state.flags == 0 && state.fileCount == 0 && state.requiredBytes == 0);
+    // Peeking is non-consuming and never fabricates a drop batch.
+    assert(box.QueryDrag(kOwner, sizeof(state), &state,
+        static_cast<uint32_t>(output.size()), output.data()) == GAKU_OK);
+    assert(std::memcmp(output.data(), packed.data(), packed.size()) == 0);
+    assert(Peek(box).fileCount == 0);
+    // Short buffers report the requirement and write nothing.
+    output.fill('\x55');
+    assert(box.QueryDrag(kOwner, sizeof(state), &state, 3, output.data()) == GAKU_E_SIZE);
+    assert(state.requiredBytes == packed.size());
+    assert(std::all_of(output.begin(), output.end(), [](char c) { return c == '\x55'; }));
+    // Every new OS drag gets a new generation so observers can re-validate once.
+    box.BeginDrag(packed, static_cast<uint32_t>(files.size()));
+    assert(box.QueryDrag(kOwner, sizeof(state), &state, 0, nullptr) == GAKU_OK && state.generation == 2);
+    box.EndDrag();
+    assert(box.QueryDrag(kOwner, sizeof(state), &state, 0, nullptr) == GAKU_OK);
+    assert(state.flags == 0 && state.fileCount == 0);
+    // Clear() drops the drag with the batch: a hidden window keeps no hover.
+    box.BeginDrag(packed, static_cast<uint32_t>(files.size()));
+    box.Clear();
+    assert(box.QueryDrag(kOwner, sizeof(state), &state, 0, nullptr) == GAKU_OK && state.flags == 0);
+    // A host that can never receive an OLE drag reports the blocked capability
+    // even with nothing in flight, so a plugin can explain the dark preview
+    // instead of waiting for hover events UIPI will never deliver.
+    box.SetHostBlocked(true, true);
+    assert(box.QueryDrag(kOwner, sizeof(state), &state, 0, nullptr) == GAKU_OK);
+    assert((state.flags & (GAKU_FILE_DRAG_HOST_BLOCKED | GAKU_FILE_DRAG_HOST_ELEVATED)) ==
+        (GAKU_FILE_DRAG_HOST_BLOCKED | GAKU_FILE_DRAG_HOST_ELEVATED) && state.fileCount == 0);
+    assert(box.SetTarget(kOwner, &kTarget) == GAKU_OK);
+    box.BeginDrag(packed, static_cast<uint32_t>(files.size()));
+    box.UpdateDrag(150.0f, 250.0f);
+    assert(box.QueryDrag(kOwner, sizeof(state), &state, 0, nullptr) == GAKU_OK);
+    assert((state.flags & (GAKU_FILE_DRAG_ACTIVE | GAKU_FILE_DRAG_INSIDE_TARGET |
+        GAKU_FILE_DRAG_HOST_BLOCKED | GAKU_FILE_DRAG_HOST_ELEVATED)) ==
+        (GAKU_FILE_DRAG_ACTIVE | GAKU_FILE_DRAG_INSIDE_TARGET |
+        GAKU_FILE_DRAG_HOST_BLOCKED | GAKU_FILE_DRAG_HOST_ELEVATED));
+    box.EndDrag();
+    // Blocked without elevation: the host just has no hover transport, and a
+    // plugin must not blame administrator rights for it.
+    box.SetHostBlocked(true, false);
+    assert(box.QueryDrag(kOwner, sizeof(state), &state, 0, nullptr) == GAKU_OK);
+    assert((state.flags & GAKU_FILE_DRAG_HOST_BLOCKED) != 0);
+    assert((state.flags & GAKU_FILE_DRAG_HOST_ELEVATED) == 0);
+    box.SetHostBlocked(false, false);
+    assert(box.QueryDrag(kOwner, sizeof(state), &state, 0, nullptr) == GAKU_OK && state.flags == 0);
+    // Argument contract matches poll().
+    assert(box.QueryDrag(nullptr, sizeof(state), &state, 0, nullptr) == GAKU_E_INVALID_ARGUMENT);
+    assert(box.QueryDrag(kOwner, sizeof(state) - 1, &state, 0, nullptr) == GAKU_E_SIZE);
+    assert(box.QueryDrag(kOwner, sizeof(state), nullptr, 0, nullptr) == GAKU_E_INVALID_ARGUMENT);
+    assert(box.QueryDrag(kOwner, sizeof(state), &state, 1, nullptr) == GAKU_E_INVALID_ARGUMENT);
+    assert(box.QueryDrag(kOwner, sizeof(state), &state, 0, output.data()) == GAKU_E_INVALID_ARGUMENT);
+}
 }
 
 int main() {
@@ -211,6 +289,7 @@ int main() {
     DisableAndClear();
     MalformedAndOverflow();
     DiagnosticReasonsPreserveBatch();
-    std::puts("PASS: 9 desktop file-drop broker contract groups, including rejection diagnostics (offline only).");
+    DragHoverState();
+    std::puts("PASS: 10 desktop file-drop broker contract groups, including rejection diagnostics and live drag state (offline only).");
     return 0;
 }

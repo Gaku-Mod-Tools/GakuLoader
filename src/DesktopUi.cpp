@@ -16,6 +16,8 @@
 #include "ManagerStrings.hpp"
 #include <windows.h>
 #include <shellapi.h>
+#include <ole2.h>
+#include <shlobj.h>
 #include <d3d11.h>
 #include <dxgi.h>
 #include <imgui.h>
@@ -24,6 +26,7 @@
 #include <atomic>
 #include <mutex>
 #include <cstring>
+#include <new>
 #include <algorithm>
 #include <string>
 #include <functional>
@@ -55,6 +58,40 @@ void AllowShellFileDrops(HWND window) {
                 window, message, filter.ExtStatus);
         }
     }
+}
+// UIPI keeps a host that runs above Explorer's integrity level from receiving
+// any IDropTarget call, and ChangeWindowMessageFilterEx cannot lift it (it only
+// whitelists WM_DROPFILES/WM_COPYGLOBALDATA). Probe once so the log states which
+// transport is actually live instead of leaving a silent, permanently dark
+// hover state.
+struct HostIntegrity {
+    bool known = false;
+    bool elevated = false;
+    uint32_t rid = 0;
+};
+HostIntegrity ReadHostIntegrity() {
+    HostIntegrity result;
+    HANDLE token = nullptr;
+    if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token)) return result;
+    DWORD elevated = 0, written = 0;
+    if (GetTokenInformation(token, TokenElevation, &elevated, sizeof(elevated), &written))
+        result.elevated = elevated != 0;
+    alignas(TOKEN_MANDATORY_LABEL) unsigned char buffer[sizeof(TOKEN_MANDATORY_LABEL) + SECURITY_MAX_SID_SIZE]{};
+    if (GetTokenInformation(token, TokenIntegrityLevel, buffer, sizeof(buffer), &written)) {
+        const auto* label = reinterpret_cast<const TOKEN_MANDATORY_LABEL*>(buffer);
+        if (label->Label.Sid) {
+            const DWORD count = *GetSidSubAuthorityCount(label->Label.Sid);
+            if (count) {
+                result.rid = *GetSidSubAuthority(label->Label.Sid, count - 1);
+                // The elevation query above writes to the same counter, so a
+                // successful TokenElevation must not be mistaken for a parsed
+                // integrity SID: the RID decides whether OLE may be armed.
+                result.known = true;
+            }
+        }
+    }
+    CloseHandle(token);
+    return result;
 }
 std::atomic_bool g_stop{true};
 std::atomic_bool g_wantsTextInput{false};
@@ -141,6 +178,174 @@ void FlushClipboard() {
     g_clipboardWritePending = false;
     g_clipboardValid = false; // verify the actual OS value on next frame
 }
+// ---------------------------------------------------------------- file drop
+// Two transports feed the same mailbox: the legacy WM_DROPFILES message and an
+// OLE IDropTarget on this window. OLE is what makes hover feedback possible at
+// all (the shell only posts WM_DROPFILES after the button is released) and its
+// points are unambiguously screen pixels, converted exactly once here.
+struct DropPaths {
+    std::vector<std::string> paths;
+    size_t bytes = 0;
+    UINT count = 0;
+    const char* failure = nullptr;
+    UINT failureIndex = 0;
+};
+std::string PackPaths(const std::vector<std::string>& paths) {
+    std::string packed;
+    for (const auto& path : paths) { packed.append(path); packed.push_back('\0'); }
+    return packed;
+}
+void CollectDropPaths(HDROP drop, DropPaths& out) {
+    out.count = DragQueryFileW(drop, 0xFFFFFFFF, nullptr, 0);
+    if (!out.count) { out.failure = "empty-batch"; return; }
+    if (out.count > GAKU_FILE_DROP_MAX_FILES) { out.failure = "too-many-files"; return; }
+    for (UINT i = 0; i < out.count; ++i) {
+        const UINT length = DragQueryFileW(drop, i, nullptr, 0);
+        if (!length || length > 32767) {
+            out.failure = "invalid-path-length"; out.failureIndex = i; return;
+        }
+        std::wstring wide(static_cast<size_t>(length) + 1, L'\0');
+        if (DragQueryFileW(drop, i, wide.data(), length + 1) != length) {
+            out.failure = "path-copy-failed"; out.failureIndex = i; return;
+        }
+        const int bytes = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wide.data(),
+            static_cast<int>(length), nullptr, 0, nullptr, nullptr);
+        if (bytes <= 0) { out.failure = "invalid-unicode"; out.failureIndex = i; return; }
+        if (out.bytes + static_cast<size_t>(bytes) + 1 > GAKU_FILE_DROP_MAX_BYTES) {
+            out.failure = "payload-too-large"; out.failureIndex = i; return;
+        }
+        std::string path(static_cast<size_t>(bytes), '\0');
+        if (!WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wide.data(),
+            static_cast<int>(length), path.data(), bytes, nullptr, nullptr)) {
+            out.failure = "utf8-copy-failed"; out.failureIndex = i; return;
+        }
+        out.bytes += static_cast<size_t>(bytes) + 1;
+        out.paths.push_back(std::move(path));
+    }
+}
+bool ReadDataObjectPaths(IDataObject* data, DropPaths& out) {
+    if (!data) { out.failure = "no-data-object"; return false; }
+    FORMATETC format{static_cast<CLIPFORMAT>(CF_HDROP), nullptr, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
+    STGMEDIUM medium{};
+    if (FAILED(data->GetData(&format, &medium))) { out.failure = "no-hdrop"; return false; }
+    if (medium.tymed == TYMED_HGLOBAL && medium.hGlobal)
+        CollectDropPaths(static_cast<HDROP>(medium.hGlobal), out);
+    else out.failure = "unsupported-medium";
+    ReleaseStgMedium(&medium);
+    return out.failure == nullptr;
+}
+// Shared by both transports so the three-stage log line (received -> result /
+// not-consumed -> consumed) stays identical to the analysis operators rely on.
+bool FinishDrop(HWND window, const char* source, const DropPaths& drop, POINT point) {
+    LogInfo("[DesktopUI][FileDrop] received source=%s hwnd=%p owner=%s point=%ld,%ld files=%u",
+        source, window, g_selectedPlugin.c_str(), point.x, point.y, drop.count);
+    RECT client{};
+    if (!GetClientRect(window, &client) || !PtInRect(&client, point)) {
+        LogWarn("[DesktopUI][FileDrop] rejected reason=outside-client source=%s point=%ld,%ld",
+            source, point.x, point.y);
+        return false;
+    }
+    const auto result = g_fileDrop.AcceptDetailed(g_selectedPlugin.c_str(),
+        static_cast<float>(point.x), static_cast<float>(point.y), drop.paths);
+    const auto& target = g_fileDrop.Target();
+    LogInfo("[DesktopUI][FileDrop] result=%s source=%s selected=%s hasTarget=%d targetOwner=%s target=%.1f,%.1f,%.1f,%.1f bytes=%zu",
+        DesktopFileDrop::AcceptResultName(result), source, g_selectedPlugin.c_str(),
+        g_fileDrop.TargetOwner()[0] != '\0' ? 1 : 0, g_fileDrop.TargetOwner(),
+        target.left, target.top, target.right, target.bottom, drop.bytes);
+    if (result != DesktopFileDrop::AcceptResult::Accepted) {
+        // Event-level visibility for a drop delivered here but not consumed by
+        // the selected plugin's target. No file paths, no per-frame logging.
+        LogWarn("[DesktopUI][FileDrop] not-consumed reason=%s source=%s selected=%s targetOwner=%s files=%u",
+            DesktopFileDrop::AcceptResultName(result), source, g_selectedPlugin.c_str(),
+            g_fileDrop.TargetOwner(), drop.count);
+        return false;
+    }
+    return true;
+}
+// OLE drop target: hover state for plugins, plus the drop itself. Every method
+// runs on this window's UI thread, the same thread that owns the mailbox.
+class ShellDropTarget final : public IDropTarget {
+    LONG refs_ = 1;
+    HWND window_ = nullptr;
+    bool inside_ = false;
+public:
+    explicit ShellDropTarget(HWND window) : window_(window) {}
+    HRESULT STDMETHODCALLTYPE QueryInterface(REFIID id, void** out) override {
+        if (!out) return E_POINTER;
+        if (id == IID_IUnknown || id == IID_IDropTarget) {
+            *out = static_cast<IDropTarget*>(this); AddRef(); return S_OK;
+        }
+        *out = nullptr; return E_NOINTERFACE;
+    }
+    ULONG STDMETHODCALLTYPE AddRef() override { return static_cast<ULONG>(InterlockedIncrement(&refs_)); }
+    ULONG STDMETHODCALLTYPE Release() override {
+        const LONG remaining = InterlockedDecrement(&refs_);
+        if (!remaining) delete this;
+        return static_cast<ULONG>(remaining);
+    }
+    HRESULT STDMETHODCALLTYPE DragEnter(IDataObject* data, DWORD, POINTL point, DWORD* effect) override {
+        if (!effect) return E_POINTER;
+        *effect = DROPEFFECT_NONE;
+        inside_ = false;
+        DropPaths drop;
+        if (!ReadDataObjectPaths(data, drop)) {
+            g_fileDrop.EndDrag();
+            LogWarn("[DesktopUI][FileDrop] drag-enter rejected reason=%s index=%u",
+                drop.failure ? drop.failure : "unknown", drop.failureIndex);
+            return S_OK;
+        }
+        POINT client{point.x, point.y};
+        const bool converted = ScreenToClient(window_, &client) != FALSE;
+        g_fileDrop.BeginDrag(PackPaths(drop.paths), drop.count);
+        if (converted) g_fileDrop.UpdateDrag(static_cast<float>(client.x), static_cast<float>(client.y));
+        LogInfo("[DesktopUI][FileDrop] drag-enter files=%u bytes=%zu screen=%ld,%ld client=%ld,%ld owner=%s targetOwner=%s",
+            drop.count, drop.bytes, static_cast<long>(point.x), static_cast<long>(point.y),
+            client.x, client.y, g_selectedPlugin.c_str(), g_fileDrop.TargetOwner());
+        *effect = g_fileDrop.TargetOwner()[0] ? DROPEFFECT_COPY : DROPEFFECT_NONE;
+        return S_OK;
+    }
+    HRESULT STDMETHODCALLTYPE DragOver(DWORD, POINTL point, DWORD* effect) override {
+        if (!effect) return E_POINTER;
+        POINT client{point.x, point.y};
+        if (ScreenToClient(window_, &client))
+            g_fileDrop.UpdateDrag(static_cast<float>(client.x), static_cast<float>(client.y));
+        const bool inside = g_fileDrop.DragInsideTarget();
+        if (inside != inside_ && g_fileDrop.DragActive()) {
+            inside_ = inside;
+            // State flip only; DragOver fires continuously while the shell drag runs.
+            LogInfo("[DesktopUI][FileDrop] drag-hover inside-target=%d point=%ld,%ld",
+                inside ? 1 : 0, client.x, client.y);
+        }
+        *effect = g_fileDrop.TargetOwner()[0] ? DROPEFFECT_COPY : DROPEFFECT_NONE;
+        return S_OK;
+    }
+    HRESULT STDMETHODCALLTYPE DragLeave() override {
+        if (g_fileDrop.DragActive()) LogInfo("[DesktopUI][FileDrop] drag-leave files=%u", g_fileDrop.DragCount());
+        g_fileDrop.EndDrag(); inside_ = false;
+        return S_OK;
+    }
+    HRESULT STDMETHODCALLTYPE Drop(IDataObject* data, DWORD, POINTL point, DWORD* effect) override {
+        if (!effect) return E_POINTER;
+        *effect = DROPEFFECT_NONE;
+        DropPaths drop;
+        const bool read = ReadDataObjectPaths(data, drop);
+        POINT client{point.x, point.y};
+        const bool converted = ScreenToClient(window_, &client) != FALSE;
+        if (read && converted) {
+            // The effect reports whether the payload was taken, so a source that
+            // asked for a move never deletes a file this target ignored.
+            if (FinishDrop(window_, "ole-drop", drop, client)) *effect = DROPEFFECT_COPY;
+        } else {
+            LogWarn("[DesktopUI][FileDrop] rejected reason=%s index=%u source=ole-drop point=%ld,%ld",
+                read ? "coordinate-conversion" : (drop.failure ? drop.failure : "unknown"),
+                drop.failureIndex, static_cast<long>(point.x), static_cast<long>(point.y));
+        }
+        g_fileDrop.EndDrag(); inside_ = false;
+        return S_OK;
+    }
+};
+bool g_oleReady = false;
+ShellDropTarget* g_dropTarget = nullptr;
 GakuStatus Bind(const GakuImGuiAbi* abi, uint32_t size, GakuDesktopUiBinding* output) {
     if (!abi || !output) return GAKU_E_INVALID_ARGUMENT;
     if (size < sizeof(GakuDesktopUiBinding)) return GAKU_E_SIZE;
@@ -209,7 +414,19 @@ void UpdateTray(HWND window, bool add) {
     icon.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP; icon.uCallbackMessage = kTray;
     icon.hIcon = LoadIconW(nullptr, MAKEINTRESOURCEW(32512));
     lstrcpynW(icon.szTip, ManagerStrings::OpenControls(), ARRAYSIZE(icon.szTip));
-    if (add) g_trayAdded = Shell_NotifyIconW(g_trayAdded ? NIM_MODIFY : NIM_ADD, &icon) != FALSE;
+    if (add) {
+        const bool placed = Shell_NotifyIconW(g_trayAdded ? NIM_MODIFY : NIM_ADD, &icon) != FALSE;
+        // The return value used to be discarded, so a shell that refused the icon
+        // left a window that closes to "hidden" with no way back. One line, once.
+        if (!placed) {
+            static std::atomic_bool warnedFailure{false};
+            if (!warnedFailure.exchange(true)) {
+                LogWarn("[DesktopUI] tray icon rejected Win32=%lu; the panel keeps a taskbar entry",
+                    GetLastError());
+            }
+        }
+        g_trayAdded = placed;
+    }
     else if (g_trayAdded) { Shell_NotifyIconW(NIM_DELETE, &icon); g_trayAdded = false; }
 }
 LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wparam, LPARAM lparam) {
@@ -263,57 +480,51 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wparam, LPARAM lpa
         return 0;
     case WM_DROPFILES: {
         const HDROP drop = reinterpret_cast<HDROP>(wparam);
-        struct FinishDrop { HDROP value; ~FinishDrop() { DragFinish(value); } } finish{drop};
-        POINT point{};
-        // Shell DROPFILES fNC means pt is in screen coordinates. Convert it
-        // before checking the actual client rect and registered ImGui target.
-        // Some Explorer deliveries mark fNC even for our custom content area.
-        const bool reportedClient = DragQueryPoint(drop, &point) != FALSE;
-        const UINT count = DragQueryFileW(drop, 0xFFFFFFFF, nullptr, 0);
-        LogInfo("[DesktopUI][FileDrop] received hwnd=%p owner=%s client=%d point=%ld,%ld files=%u",
-            window, g_selectedPlugin.c_str(), reportedClient ? 1 : 0, point.x, point.y, count);
-        if (!reportedClient && !ScreenToClient(window, &point)) {
-            LogWarn("[DesktopUI][FileDrop] rejected reason=coordinate-conversion error=%lu", GetLastError()); return 0;
+        struct DragFinishScope { HDROP value; ~DragFinishScope() { DragFinish(value); } } finish{drop};
+        POINT reported{}; POINT point{};
+        // Documented contract: fNC clear means the point is already client
+        // pixels, fNC set means screen pixels to convert.
+        const bool reportedClient = DragQueryPoint(drop, &reported) != FALSE;
+        point = reported;
+        bool resolved = reportedClient;
+        if (!resolved) resolved = ScreenToClient(window, &point) != FALSE;
+        if (!resolved) {
+            LogWarn("[DesktopUI][FileDrop] rejected reason=coordinate-conversion error=%lu", GetLastError());
+            return 0;
         }
-        RECT client{};
-        if (!GetClientRect(window, &client) || !PtInRect(&client, point)) {
-            LogWarn("[DesktopUI][FileDrop] rejected reason=outside-client point=%ld,%ld", point.x, point.y); return 0;
+        const POINT documented = point;
+        // Real Explorer also sets fNC for client-area drops, so the documented
+        // conversion subtracts the client origin a second time and moves the hit
+        // point about one title bar up - which is why the drop region felt shifted
+        // down. The physical cursor at release time cannot be ambiguous, so trust
+        // it whenever it lands inside our client area and keep the documented
+        // mapping for synthetic drops (headless tests post WM_DROPFILES with no
+        // pointer over the window).
+        POINT cursor{};
+        const bool haveCursor = GetCursorPos(&cursor) != FALSE && ScreenToClient(window, &cursor) != FALSE;
+        bool usedCursor = false;
+#if !defined(GAKULOADER_DESKTOP_UI_TEST)
+        if (haveCursor) {
+            RECT client{};
+            if (GetClientRect(window, &client) && cursor.x >= client.left && cursor.x < client.right &&
+                cursor.y >= client.top && cursor.y < client.bottom) {
+                point = cursor;
+                usedCursor = true;
+            }
         }
-        if (!count || count > GAKU_FILE_DROP_MAX_FILES) {
-            LogWarn("[DesktopUI][FileDrop] rejected reason=%s", count ? "too-many-files" : "empty-batch"); return 0;
+#endif
+        LogInfo("[DesktopUI][FileDrop] wm-dropfiles hwnd=%p reported-client=%d reported=%ld,%ld documented=%ld,%ld cursor-client=%ld,%ld source=%s point=%ld,%ld",
+            window, reportedClient ? 1 : 0, reported.x, reported.y, documented.x, documented.y,
+            haveCursor ? cursor.x : -1L, haveCursor ? cursor.y : -1L,
+            usedCursor ? "cursor" : "reported", point.x, point.y);
+        DropPaths paths;
+        CollectDropPaths(drop, paths);
+        if (paths.failure) {
+            LogWarn("[DesktopUI][FileDrop] rejected reason=%s index=%u source=wm-dropfiles",
+                paths.failure, paths.failureIndex);
+            return 0;
         }
-        std::vector<std::string> paths;
-        size_t totalBytes = 0;
-        for (UINT i = 0; i < count; ++i) {
-            const UINT length = DragQueryFileW(drop, i, nullptr, 0);
-            if (!length || length > 32767) {
-                LogWarn("[DesktopUI][FileDrop] rejected reason=invalid-path-length index=%u length=%u", i, length); return 0;
-            }
-            std::wstring wide(static_cast<size_t>(length) + 1, L'\0');
-            if (DragQueryFileW(drop, i, wide.data(), length + 1) != length) {
-                LogWarn("[DesktopUI][FileDrop] rejected reason=path-copy-failed index=%u", i); return 0;
-            }
-            const int bytes = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wide.data(),
-                static_cast<int>(length), nullptr, 0, nullptr, nullptr);
-            if (bytes <= 0) {
-                LogWarn("[DesktopUI][FileDrop] rejected reason=invalid-unicode index=%u error=%lu", i, GetLastError()); return 0;
-            }
-            if (totalBytes + bytes + 1 > GAKU_FILE_DROP_MAX_BYTES) {
-                LogWarn("[DesktopUI][FileDrop] rejected reason=payload-too-large index=%u", i); return 0;
-            }
-            std::string path(static_cast<size_t>(bytes), '\0');
-            if (!WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wide.data(),
-                static_cast<int>(length), path.data(), bytes, nullptr, nullptr)) {
-                LogWarn("[DesktopUI][FileDrop] rejected reason=utf8-copy-failed index=%u error=%lu", i, GetLastError()); return 0;
-            }
-            totalBytes += bytes + 1; paths.push_back(std::move(path));
-        }
-        const auto result = g_fileDrop.AcceptDetailed(g_selectedPlugin.c_str(), static_cast<float>(point.x),
-            static_cast<float>(point.y), paths);
-        const auto& target = g_fileDrop.Target();
-        LogInfo("[DesktopUI][FileDrop] result=%s targetOwner=%s target=%.1f,%.1f,%.1f,%.1f bytes=%zu",
-            DesktopFileDrop::AcceptResultName(result), g_fileDrop.TargetOwner(),
-            target.left, target.top, target.right, target.bottom, totalBytes);
+        FinishDrop(window, "wm-dropfiles", paths, point);
         return 0;
     }
     case kShow:
@@ -408,6 +619,11 @@ bool CreatePresentation(HWND window) {
 }
 void DestroyPresentation(HWND window, HINSTANCE instance) {
     g_fileDrop.Clear();
+    if (g_dropTarget) {
+        if (window) RevokeDragDrop(window);
+        g_dropTarget->Release(); // our own reference; RegisterDragDrop held another
+        g_dropTarget = nullptr;
+    }
     if (window) DragAcceptFiles(window, FALSE);
     g_captureKeys = g_editorOpen = false; Hotkeys::SetCaptureActive(false);
     if (g_context) {
@@ -428,6 +644,9 @@ void DestroyPresentation(HWND window, HINSTANCE instance) {
     if (window) DestroyWindow(window);
     g_ownedWindow = nullptr;
     UnregisterClassW(kWindowClass, instance);
+    // Same thread that called OleInitialize owns the uninitialize, and every
+    // drop target reference is already gone above.
+    if (g_oleReady) { OleUninitialize(); g_oleReady = false; }
 }
 using Key = ManagerStrings::Key;
 const char* T(Key key) { return ManagerStrings::Text(key); }
@@ -795,11 +1014,19 @@ bool RenderFrame() {
     // thread — which is what a user experiences as "the settings froze".
     const double frameStarted = NowMs();
     static double previousFrame = 0.0;
-    static double lastGapReport = -1.0e9;
-    if (previousFrame > 0.0 && frameStarted - previousFrame >= 50.0 &&
-        frameStarted - lastGapReport >= 1000.0) {
-        lastGapReport = frameStarted;
-        LogWarn("[DesktopUI] frame gap %.0f ms before painting the shell", frameStarted - previousFrame);
+    static double lastGapWarn = -1.0e9;
+    static double lastGapNote = -1.0e9;
+    // Two bands, because one WARN cannot mean both "an alt-tab cost us three
+    // frames" and "the panel is wedged". 50-200 ms is the ordinary cost of a
+    // focus handover and is only interesting with [log] level=debug; >=200 ms is
+    // what a user perceives as a freeze and keeps warning severity.
+    const double frameGapMs = previousFrame > 0.0 ? frameStarted - previousFrame : 0.0;
+    if (frameGapMs >= 200.0 && frameStarted - lastGapWarn >= 1000.0) {
+        lastGapWarn = frameStarted;
+        LogWarn("[DesktopUI] frame gap %.0f ms before painting the shell", frameGapMs);
+    } else if (frameGapMs >= 50.0 && frameStarted - lastGapNote >= 1000.0) {
+        lastGapNote = frameStarted;
+        LogDebug("[DesktopUI] frame gap %.0f ms before painting the shell (below the 200 ms warn threshold)", frameGapMs);
     }
     previousFrame = frameStarted;
     {
@@ -887,6 +1114,54 @@ DWORD WorkerBody() {
     g_window.store(window, std::memory_order_release); UpdateTray(window, true);
     AllowShellFileDrops(window);
     DragAcceptFiles(window, TRUE);
+    // Explorer stops converting file drops into WM_DROPFILES for a window as
+    // soon as that window registers an IDropTarget, and UIPI refuses every
+    // cross-integrity IDropTarget call. Arming OLE above Explorer's integrity
+    // therefore deletes the one transport ChangeWindowMessageFilterEx keeps
+    // open and leaves nothing at all: the shell shows its no-drop cursor while
+    // the window receives neither OLE nor WM_DROPFILES. Only arm it when the
+    // shell can actually reach it.
+    const HostIntegrity integrity = ReadHostIntegrity();
+    const bool shellCanReachDropTarget =
+        integrity.known && !integrity.elevated && integrity.rid <= SECURITY_MANDATORY_MEDIUM_RID;
+    g_fileDrop.SetHostBlocked(!shellCanReachDropTarget, integrity.elevated);
+    // OLE is initialised either way: the apartment also backs the shell dialogs
+    // this thread opens, and only the target registration is integrity-bound.
+    if (SUCCEEDED(OleInitialize(nullptr))) {
+        g_oleReady = true;
+        if (!shellCanReachDropTarget) {
+            LogInfo("[DesktopUI] OLE drop target skipped: the shell cannot reach it at this "
+                "integrity level, and merely registering it would suppress the whitelisted "
+                "WM_DROPFILES path. WM_DROPFILES stays the live transport.");
+        } else {
+            auto* target = new (std::nothrow) ShellDropTarget(window);
+            if (target && SUCCEEDED(RegisterDragDrop(window, target))) {
+                g_dropTarget = target;
+                LogInfo("[DesktopUI] OLE drop target registered hwnd=%p; hover feedback transport armed", window);
+            } else {
+                if (target) target->Release();
+                LogWarn("[DesktopUI] RegisterDragDrop failed Win32=%lu; drag hover feedback disabled", GetLastError());
+            }
+        }
+    } else {
+        LogWarn("[DesktopUI] OleInitialize failed; file drop keeps WM_DROPFILES only");
+    }
+    // Report which transport is actually live. Registration succeeding does not
+    // mean the shell may call it, and a wrong transport is invisible at runtime.
+    LogInfo("[DesktopUI] host integrity rid=0x%04x elevated=%d known=%d drag-hover=%s transport=%s",
+        integrity.rid, integrity.elevated ? 1 : 0, integrity.known ? 1 : 0,
+        g_fileDrop.HostBlocked() ? "blocked-by-uipi" : "available",
+        g_dropTarget ? "ole" : "wm-dropfiles");
+    if (integrity.elevated) {
+        LogWarn("[DesktopUI] elevated host: Explorer runs at medium integrity, so UIPI blocks every "
+            "IDropTarget call, blocks the shell's low-level keyboard hook (Print Screen and the "
+            "Snipping Tool do nothing while this window has focus) and makes the shell show its "
+            "no-drop cursor. Drops still arrive through WM_DROPFILES. Run the game at the same "
+            "integrity level as Explorer to get the drag preview and the system screenshot key");
+    } else if (g_fileDrop.HostBlocked()) {
+        LogWarn("[DesktopUI] hover preview unavailable: host integrity is unknown, so the OLE drop "
+            "target was not armed; WM_DROPFILES remains the transport");
+    }
 #if defined(GAKULOADER_DESKTOP_UI_TEST)
     if (!g_testHooks.startHidden) ShowWindow(window, SW_SHOW);
 #else
@@ -960,15 +1235,47 @@ void Shutdown() {
 const GakuDesktopUiService* GetService() { return &g_service; }
 const GakuDesktopWindowService* GetWindowService() { return &g_windowService; }
 const GakuAppearanceService* GetAppearanceService() { return &g_appearanceService; }
+namespace {
+// Debounced, UI-thread-local diagnostics for file-drop service UNAVAILABLE.
+// A plugin may poll every frame; only a state change (first hit, new owner or
+// new reason) or a >=30s steady-clock gap emits one Warn, never a per-frame log.
+struct FileDropUnavailableDiag {
+    std::string owner, reason;
+    ULONGLONG lastWarnTick = 0;
+    bool primed = false;
+};
+void NoteFileDropUnavailable(FileDropUnavailableDiag& state, const char* api, const char* owner) {
+    const char* reason =
+          g_stop                              ? "stop"
+        : GetCurrentThreadId() != g_uiThread  ? "not-ui-thread"
+        : !g_inCallback                      ? "outside-callback"
+        : g_selectedPlugin != owner          ? "owner-mismatch"
+        : nullptr;
+    if (!reason) return;
+    const ULONGLONG now = GetTickCount64();
+    const bool changed = !state.primed || state.owner != owner || state.reason != reason;
+    if (changed || now - state.lastWarnTick >= 30000) {
+        LogWarn("[DesktopUI][FileDrop] unavailable api=%s owner=%s reason=%s", api, owner, reason);
+        state.owner = owner;
+        state.reason = reason;
+        state.lastWarnTick = now;
+        state.primed = true;
+    }
+}
+} // namespace
 GakuStatus SetFileDropTarget(const char* pluginId, const GakuFileDropTarget* target) {
+    static thread_local FileDropUnavailableDiag diag;
     if (!pluginId || !pluginId[0]) return GAKU_E_INVALID_ARGUMENT;
+    NoteFileDropUnavailable(diag, "SetFileDropTarget", pluginId);
     if (g_stop || GetCurrentThreadId() != g_uiThread || !g_inCallback || g_selectedPlugin != pluginId)
         return GAKU_E_UNAVAILABLE;
     return g_fileDrop.SetTarget(pluginId, target);
 }
 GakuStatus PollFileDrop(const char* pluginId, uint32_t size, GakuFileDropResult* result,
     uint32_t capacity, char* paths) {
+    static thread_local FileDropUnavailableDiag diag;
     if (!pluginId || !pluginId[0]) return GAKU_E_INVALID_ARGUMENT;
+    NoteFileDropUnavailable(diag, "PollFileDrop", pluginId);
     if (g_stop || GetCurrentThreadId() != g_uiThread || !g_inCallback || g_selectedPlugin != pluginId)
         return GAKU_E_UNAVAILABLE;
     const auto status = g_fileDrop.Poll(pluginId, size, result, capacity, paths);
@@ -976,6 +1283,15 @@ GakuStatus PollFileDrop(const char* pluginId, uint32_t size, GakuFileDropResult*
         LogInfo("[DesktopUI][FileDrop] consumed owner=%s files=%u bytes=%u",
             pluginId, result->fileCount, result->requiredBytes);
     return status;
+}
+GakuStatus PeekFileDrag(const char* pluginId, uint32_t size, GakuFileDragState* state,
+    uint32_t capacity, char* paths) {
+    static thread_local FileDropUnavailableDiag diag;
+    if (!pluginId || !pluginId[0]) return GAKU_E_INVALID_ARGUMENT;
+    NoteFileDropUnavailable(diag, "PeekFileDrag", pluginId);
+    if (g_stop || GetCurrentThreadId() != g_uiThread || !g_inCallback || g_selectedPlugin != pluginId)
+        return GAKU_E_UNAVAILABLE;
+    return g_fileDrop.QueryDrag(pluginId, size, state, capacity, paths);
 }
 GakuStatus RequestShowPanel(const char* pluginId) {
     if (!pluginId || !pluginId[0]) return GAKU_E_INVALID_ARGUMENT;
