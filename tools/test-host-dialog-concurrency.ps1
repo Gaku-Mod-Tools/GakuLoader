@@ -15,7 +15,7 @@ $repo = Split-Path -Parent $PSScriptRoot
 . (Join-Path $repo 'tests\test-common.ps1')
 
 $testRoot = Initialize-GakuTestRoot (Join-Path $repo 'build\host-dialog-concurrency')
-$plugins = Join-Path $testRoot 'gakumas-local\plugins'
+$plugins = Join-Path $testRoot 'GakuLoader\plugins'
 # Exactly one plugin may be resident: a second DLL would make the "one plugin" contract
 # non-deterministic, so anything else in this directory is reported instead of deleted.
 Assert-GakuPluginDir $plugins @('fixture-a.dll') | Out-Null

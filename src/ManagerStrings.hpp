@@ -12,6 +12,9 @@
 
 namespace GakuLoader::ManagerStrings {
 inline std::string FormatVersion(const std::string& version) {
+    // A version that already carries semver build metadata ("3.6.2+gaku.1") is
+    // a complete identifier: prefixes would obscure which build is installed.
+    if (version.find('+') != std::string::npos) return version;
     return !version.empty() && version[0] >= '0' && version[0] <= '9' ? "v" + version : version;
 }
 inline const wchar_t* OpenControls() {

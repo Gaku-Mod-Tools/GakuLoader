@@ -404,6 +404,13 @@ GakuStatus PollFileDrop(void* context, uint32_t size, GakuFileDropResult* result
     if (!owner->accepting) return GAKU_E_SHUTTING_DOWN;
     return DesktopUi::PollFileDrop(owner->id.c_str(), size, result, capacity, paths);
 }
+GakuStatus PeekFileDrag(void* context, uint32_t size, GakuFileDragState* state,
+    uint32_t capacity, char* paths) {
+    if (!context) return GAKU_E_INVALID_ARGUMENT;
+    auto* owner = static_cast<PluginOwner*>(context);
+    if (!owner->accepting) return GAKU_E_SHUTTING_DOWN;
+    return DesktopUi::PeekFileDrag(owner->id.c_str(), size, state, capacity, paths);
+}
 PluginOwner* FindPathOwner(void* context) {
     // Owner objects live until exit. Only borrow a pointer under the registry
     // lock, then use the owner's own path lock for filesystem operations.
@@ -510,6 +517,13 @@ GakuStatus QueryService(void* context, const char* name, uint32_t version, uint3
     if (strcmp(name, GAKU_SERVICE_FILE_DROP) == 0) {
         const GakuFileDropService table{GAKU_FILE_DROP_VERSION, sizeof(GakuFileDropService),
             context, SetFileDropTarget, PollFileDrop};
+        return CopyServiceTable(&table, sizeof(table), version, size, output);
+    }
+    if (strcmp(name, GAKU_SERVICE_FILE_DRAG) == 0) {
+        // Separate optional table so GakuFileDropService keeps its frozen size
+        // and already built plugins keep querying the drop service unchanged.
+        const GakuFileDragService table{GAKU_FILE_DRAG_VERSION, sizeof(GakuFileDragService),
+            context, PeekFileDrag};
         return CopyServiceTable(&table, sizeof(table), version, size, output);
     }
     if (strcmp(name, GAKU_SERVICE_HOTKEYS) == 0) {

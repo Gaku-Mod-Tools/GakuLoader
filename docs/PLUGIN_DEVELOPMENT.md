@@ -141,10 +141,17 @@ const auto status = host->queryService(host->hostContext, GAKU_SERVICE_LOG,
 | `gakuloader.desktop-window` | 宿主窗口 HWND、异步 `requestShow()`、`presentationKind`；不可销毁或 subclass |
 | `gakuloader.file-dialog` | `beginOpen` 立即复制参数返回 ticket；UI 帧里 `poll`；`release` 释放。每 owner 一个未释放 ticket |
 | `gakuloader.file-drop` | 可选 v1，独立 `GakuFileDrop.h`；选中面板在 `onDesktopUi` 每帧注册可见矩形并读取一批 UTF-8 文件路径。旧 v1 表布局保持不变 |
+| `gakuloader.file-drag` | 可选 v1，同一头文件；只读的悬停状态（是否拖动、是否命中已注册目标、光标本帧客户端坐标、被拖文件列表）。独立表，`GakuFileDropService` 布局与大小不变 |
 | `gakuloader.hotkeys` | 物理键边沿分发，只在主线程回调；同一组合被两个 owner 认领时两者一起失效并报冲突；F1 归 Loader |
 | `gakuloader.actor-entry` | 共享 actor 更新入口的 before/after 参与者，见下节 |
 
-文件拖入扩展的 `setTarget` 使用当前单视口 ImGui 的客户端像素坐标。目标每个已完成 UI 帧失效，应与实际可见裁剪区域相交；弹窗或业务忙碌时传 `NULL` 关闭目标。`poll(0, NULL)` 查询字节数，随后用足够的缓冲一次读取 `fileCount` 条以 NUL 结尾的 UTF-8 路径并消费；短缓冲不消费。批次上限为 256 个文件 / 1 MiB。服务只传递路径，文件类型判断、表单与导入确认由插件负责。宿主采用 Windows `WM_DROPFILES`，不提供拖动过程中的悬停预览。
+文件拖入扩展的 `setTarget` 使用当前单视口 ImGui 的客户端像素坐标。目标每个已完成 UI 帧失效，应与实际可见裁剪区域相交；弹窗或业务忙碌时传 `NULL` 关闭目标。`poll(0, NULL)` 查询字节数，随后用足够的缓冲一次读取 `fileCount` 条以 NUL 结尾的 UTF-8 路径并消费；短缓冲不消费。批次上限为 256 个文件 / 1 MiB。服务只传递路径，文件类型判断、表单与导入确认由插件负责。
+
+拖动过程中的悬停预览由 `gakuloader.file-drag` 提供：`peek` 是非消费读取，返回 `GAKU_FILE_DRAG_ACTIVE` / `GAKU_FILE_DRAG_INSIDE_TARGET` 标志、`generation`（每次新的拖动递增，供插件只校验一次文件类型）、被拖路径与客户端坐标。宿主通过窗口上的 OLE `IDropTarget` 获得这些事件，因此坐标是无歧义的屏幕像素经一次 `ScreenToClient` 得到；投放本身仍走 `file-drop`，两条链路互不影响。
+
+**OLE 目标只在宿主不高于 Explorer 完整性时才注册。** 窗口一旦注册 `IDropTarget`，Explorer 就不再为该窗口把文件投放转换成 `WM_DROPFILES`——无论完整性级别如何；而 UIPI 又会拦掉所有跨完整性级别的 `IDropTarget` 调用，`ChangeWindowMessageFilterEx` 无法放行（它只对 `WM_DROPFILES` 与 `WM_COPYGLOBALDATA` 生效）。两者叠加的结果是：提权宿主若注册 OLE 目标，既收不到 OLE 回调，也收不到原本还能送达的 `WM_DROPFILES`，投放彻底失效，系统光标显示禁止图标。因此宿主在启动时探测一次令牌完整性，仅在 `rid <= SECURITY_MEDIUM_RID` 且未提权时注册 OLE；否则保留 `WM_DROPFILES` 作为唯一传输，命中点由宿主在松开瞬间用物理光标注解。日志的 `transport=ole|wm-dropfiles` 字段说明当次运行实际使用的链路。
+
+宿主用两个常驻标志（无拖动时也置位）说明悬停能力：`GAKU_FILE_DRAG_HOST_BLOCKED` 表示宿主无法提供悬停事件，`GAKU_FILE_DRAG_HOST_ELEVATED` 单独标注原因是提权。插件应据此解释预览为何不亮，而不是等待永远不会到达的悬停事件；只有置位了 `ELEVATED` 时才可以把原因说成「管理员权限运行」。
 
 自定义服务用 `registerService(hostContext, name, tableSize, table)` 发布：宿主复制字节，不接管指针指向的资源；`gakuloader.` 前缀保留；名字最长 127 字节、进程最多 64 个自定义服务、table 最大 64 KiB。owner 退役（shutdown，或某个回调抛异常导致该 owner 被退役）时宿主一并撤下它的服务、任务、热键、participant 和 hook 租约，provider 不需要自己反注册。没有依赖排序，不要依赖扫描顺序。
 

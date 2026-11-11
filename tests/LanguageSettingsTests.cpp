@@ -48,6 +48,9 @@ int wmain(int argc, wchar_t** argv) {
     using namespace GakuLoader::ManagerStrings;
     assert(FormatVersion("0.1.0") == "v0.1.0");
     assert(FormatVersion("v3.6.2") == "v3.6.2");
+    // Build metadata is shown verbatim: the user must be able to tell
+    // "3.6.2+gaku.1" from plain upstream "3.6.2".
+    assert(FormatVersion("3.6.2+gaku.1") == "3.6.2+gaku.1");
     assert(FormatVersion("") == "" && FormatVersion("unknown") == "unknown");
     const std::array<std::pair<uint32_t, const wchar_t*>, 4> choices{{
         {GAKU_LANGUAGE_ENGLISH, L"en"}, {GAKU_LANGUAGE_SIMPLIFIED_CHINESE, L"zh-Hans"},
