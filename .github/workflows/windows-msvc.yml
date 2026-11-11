@@ -10,7 +10,7 @@ jobs:
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
-      - name: Validate frozen source (VS2022 / v143)
+      - name: Build and run headless validation (VS2022 / v143)
         shell: powershell
         run: ./tools/validate-source.ps1 -PlatformToolset v143
       - uses: actions/upload-artifact@v4

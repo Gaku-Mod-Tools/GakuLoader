@@ -51,7 +51,7 @@ $tools = Resolve-GakuBuildTools -PlatformToolset $PlatformToolset
 $msbuild = $tools.MSBuild
 foreach ($dependency in @('deps\imgui\imgui.cpp', 'deps\minhook\src\hook.c')) {
     if (-not (Test-Path -LiteralPath (Join-Path $projectRoot $dependency))) {
-        throw "Missing vendored source: $dependency. Restore this file from the frozen source snapshot; no external checkout is required."
+        throw "Missing vendored source: $dependency. Restore the vendored dependency; no external checkout is required."
     }
 }
 
