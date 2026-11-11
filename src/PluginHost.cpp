@@ -182,6 +182,22 @@ void WriteLineLocked(const std::string& line, LogLevel::Level level) {
     // OutputDebugString sink. Official reporting suppression is a separate hook.
 }
 
+// One record: "<local time> LEVEL [source] message". The level column sits
+// between the timestamp and the source tag so every line states its own
+// severity, whatever sink it lands in. Before this, only Warn and Error carried
+// a marker (hidden in the tag as ":WARN"), so an Info record was indistinguishable
+// from a record whose level nobody had set.
+std::string FormatRecord(const char* timestamp, LogLevel::Level level, const char* tag, const char* message) {
+    std::string line(timestamp);
+    line += ' ';
+    line += LogLevel::Token(level);
+    line += " [";
+    line += tag;
+    line += "] ";
+    line += message;
+    return line;
+}
+
 // Written once per real host initialization. The log file is opened in append
 // mode across runs, so every startup session gets one boundary block before
 // any other line; the g_initialized guard in Initialize() keeps repeat
@@ -192,15 +208,15 @@ void WriteSessionStarted(LogLevel::Level level) {
     std::lock_guard<std::mutex> lock(g_logMutex);
     char timestamp[40];
     FormatLocalTimestamp(timestamp, sizeof(timestamp));
-    WriteLineLocked(kRule, LogLevel::Level::Info);
-    WriteLineLocked(std::string(timestamp) + " [GakuLoader] Session started", LogLevel::Level::Info);
-    WriteLineLocked(kRule, LogLevel::Level::Info);
+    WriteLineLocked(FormatRecord(timestamp, LogLevel::Level::Info, "GakuLoader", kRule), LogLevel::Level::Info);
+    WriteLineLocked(FormatRecord(timestamp, LogLevel::Level::Info, "GakuLoader", "Session started"), LogLevel::Level::Info);
+    WriteLineLocked(FormatRecord(timestamp, LogLevel::Level::Info, "GakuLoader", kRule), LogLevel::Level::Info);
     // Always printed, whatever the threshold: a log that hides its own filter
     // makes every later "why is this missing" question unanswerable.
     char levelLine[96];
     snprintf(levelLine, sizeof(levelLine), "log level=%ls (gakuloader.ini [log] level)",
         LogLevel::Name(level));
-    WriteLineLocked(std::string(timestamp) + " [GakuLoader] " + levelLine, LogLevel::Level::Info);
+    WriteLineLocked(FormatRecord(timestamp, LogLevel::Level::Info, "GakuLoader", levelLine), LogLevel::Level::Info);
     FlushLogLocked(true); // a session boundary must survive an immediate crash
 }
 
@@ -210,7 +226,7 @@ void WriteToConsoleAndLog(LogLevel::Level level, const char* tag, const char* me
     std::lock_guard<std::mutex> lock(g_logMutex);
     char timestamp[40];
     FormatLocalTimestamp(timestamp, sizeof(timestamp));
-    WriteLineLocked(std::string(timestamp) + " [" + tag + "] " + message, level);
+    WriteLineLocked(FormatRecord(timestamp, level, tag, message), level);
 }
 void HostLogInfo(const char* format, ...) {
     va_list args; va_start(args, format); char buffer[2048];
@@ -220,26 +236,26 @@ void HostLogInfo(const char* format, ...) {
 void HostLogWarn(const char* format, ...) {
     va_list args; va_start(args, format); char buffer[2048];
     vsnprintf(buffer, sizeof(buffer), format, args); va_end(args);
-    WriteToConsoleAndLog(LogLevel::Level::Warn, "GakuLoader:WARN", buffer);
+    WriteToConsoleAndLog(LogLevel::Level::Warn, "GakuLoader", buffer);
 }
 void HostLogError(const char* format, ...) {
     va_list args; va_start(args, format); char buffer[2048];
     vsnprintf(buffer, sizeof(buffer), format, args); va_end(args);
-    WriteToConsoleAndLog(LogLevel::Level::Error, "GakuLoader:ERROR", buffer);
+    WriteToConsoleAndLog(LogLevel::Level::Error, "GakuLoader", buffer);
 }
 void HostLogDebug(const char* format, ...) {
     va_list args; va_start(args, format); char buffer[2048];
     vsnprintf(buffer, sizeof(buffer), format, args); va_end(args);
-    WriteToConsoleAndLog(LogLevel::Level::Debug, "GakuLoader:DEBUG", buffer);
+    WriteToConsoleAndLog(LogLevel::Level::Debug, "GakuLoader", buffer);
 }
 void* GetGameAssembly() { return GetModuleHandleW(L"GameAssembly.dll"); }
 void ServiceLog(void*, GakuLogLevel level, const char* message) {
     // The wire enum keeps its three values. Debug is host-only and never
     // reaches this function, so an old plugin cannot send an unknown level.
+    // The severity now travels in the record's level column, not in the tag.
     const auto mapped = level == GAKU_LOG_ERROR ? LogLevel::Level::Error :
         level == GAKU_LOG_WARNING ? LogLevel::Level::Warn : LogLevel::Level::Info;
-    WriteToConsoleAndLog(mapped, level == GAKU_LOG_ERROR ? "Plugin:ERROR" :
-        level == GAKU_LOG_WARNING ? "Plugin:WARN" : "Plugin", message);
+    WriteToConsoleAndLog(mapped, "Plugin", message);
 }
 uint32_t IsMainThread(void*) {
     const DWORD thread = g_mainThreadId.load(std::memory_order_acquire);
@@ -782,17 +798,17 @@ void LogInfo(const char* format, ...) {
 void LogWarn(const char* format, ...) {
     va_list args; va_start(args, format); char buffer[2048];
     vsnprintf(buffer, sizeof(buffer), format, args); va_end(args);
-    WriteToConsoleAndLog(LogLevel::Level::Warn, "GakuLoader:WARN", buffer);
+    WriteToConsoleAndLog(LogLevel::Level::Warn, "GakuLoader", buffer);
 }
 void LogError(const char* format, ...) {
     va_list args; va_start(args, format); char buffer[2048];
     vsnprintf(buffer, sizeof(buffer), format, args); va_end(args);
-    WriteToConsoleAndLog(LogLevel::Level::Error, "GakuLoader:ERROR", buffer);
+    WriteToConsoleAndLog(LogLevel::Level::Error, "GakuLoader", buffer);
 }
 void LogDebug(const char* format, ...) {
     va_list args; va_start(args, format); char buffer[2048];
     vsnprintf(buffer, sizeof(buffer), format, args); va_end(args);
-    WriteToConsoleAndLog(LogLevel::Level::Debug, "GakuLoader:DEBUG", buffer);
+    WriteToConsoleAndLog(LogLevel::Level::Debug, "GakuLoader", buffer);
 }
 std::filesystem::path LogPath() {
     std::lock_guard<std::mutex> lock(g_logMutex);

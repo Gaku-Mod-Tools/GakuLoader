@@ -224,6 +224,7 @@ std::filesystem::path ConfigPath() { return ""; }
 void LogInfo(const char* format, ...) { va_list args; va_start(args, format); vprintf(format, args); puts(""); va_end(args); }
 void LogWarn(const char* format, ...) { va_list args; va_start(args, format); vprintf(format, args); puts(""); va_end(args); }
 void LogError(const char* format, ...) { va_list args; va_start(args, format); vprintf(format, args); puts(""); va_end(args); }
+void LogDebug(const char*, ...) {}
 // Actual mutex contention is tested with the real PluginHost+DLL fixtures by
 // test-host.ps1. This adapter forces denial to test the production GPU branch.
 bool TryDispatchDesktopFrame(void (*build)(void*), void* data) {

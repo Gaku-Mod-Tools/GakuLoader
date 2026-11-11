@@ -100,6 +100,7 @@ void RunInCallbackGate(void (*body)(void*), void* userData) { body(userData); }
 void LogInfo(const char*, ...) {}
 void LogWarn(const char*, ...) {}
 void LogError(const char*, ...) {}
+void LogDebug(const char*, ...) {}
 bool HooksDisabledForDiagnosis() { return false; }
 void LogExitDiagnosisMode() {}
 bool InstallDiagnosticBoundary() { return true; }

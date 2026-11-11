@@ -59,4 +59,17 @@ inline const wchar_t* Name(Level level) {
     return L"info";
 }
 
+// Fixed five-character token for the record prefix. The padding is deliberate:
+// a column that shifts by one character between INFO and ERROR is unreadable
+// when a 30-line burst goes past in a console.
+inline const char* Token(Level level) {
+    switch (level) {
+    case Level::Debug: return "DEBUG";
+    case Level::Info: return "INFO ";
+    case Level::Warn: return "WARN ";
+    case Level::Error: return "ERROR";
+    }
+    return "INFO ";
+}
+
 } // namespace GakuLoader::LogLevel

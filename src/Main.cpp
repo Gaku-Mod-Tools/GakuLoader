@@ -41,7 +41,21 @@ DWORD WINAPI LoaderStartupThread(LPVOID) {
     const auto localRoot = gameRoot / L"GakuLoader";
     const auto config = localRoot / L"Configs" / L"gakuloader.ini";
     if (GakuLoader::ReadConfigFlag(config, L"host", L"console", false) && !GetConsoleWindow()) {
-        if (AllocConsole()) SetConsoleTitleW(L"GakuLoader");
+        if (AllocConsole()) {
+            SetConsoleTitleW(L"GakuLoader");
+            // AllocConsole only rebinds the standard handles when they were
+            // unset. A launcher that started the game with redirected stdout
+            // leaves them pointing at its pipe, so the window the user asked
+            // for stays blank while every record goes to the file. Bind
+            // CONOUT$ explicitly: the loader never writes to a redirected
+            // stdout anyway (WriteLineLocked requires a real console).
+            if (const HANDLE conout = CreateFileW(L"CONOUT$", GENERIC_READ | GENERIC_WRITE,
+                    FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, 0, nullptr);
+                conout != INVALID_HANDLE_VALUE) {
+                SetStdHandle(STD_OUTPUT_HANDLE, conout);
+                SetStdHandle(STD_ERROR_HANDLE, conout);
+            }
+        }
     }
     try {
         GakuLoader::Initialize(gameRoot, localRoot);

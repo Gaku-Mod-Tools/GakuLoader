@@ -155,6 +155,7 @@ std::filesystem::path ConfigPath() { return configPath; }
 void LogInfo(const char* format, ...) { va_list args; va_start(args, format); vprintf(format, args); puts(""); va_end(args); }
 void LogWarn(const char* format, ...) { va_list args; va_start(args, format); vprintf(format, args); puts(""); va_end(args); }
 void LogError(const char* format, ...) { va_list args; va_start(args, format); vprintf(format, args); puts(""); va_end(args); }
+void LogDebug(const char*, ...) {}
 bool TryDispatchDesktopFrame(void (*build)(void*), void* data) {
     if (callbackGateBusy) return false;
     build(data); return true;

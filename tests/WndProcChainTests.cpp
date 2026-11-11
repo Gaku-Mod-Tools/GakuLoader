@@ -76,6 +76,7 @@ void RequestUnityQuit(HWND) { ++::g_counts.quitRequests; }
 void LogInfo(const char*, ...) {}
 void LogWarn(const char*, ...) {}
 void LogError(const char*, ...) {}
+void LogDebug(const char*, ...) {}
 void Shutdown() {}
 void LogShutdownProgress() {}
 UnityQuitPhase GetUnityQuitPhase() { return UnityQuitPhase::Idle; }
