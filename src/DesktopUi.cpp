@@ -414,7 +414,19 @@ void UpdateTray(HWND window, bool add) {
     icon.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP; icon.uCallbackMessage = kTray;
     icon.hIcon = LoadIconW(nullptr, MAKEINTRESOURCEW(32512));
     lstrcpynW(icon.szTip, ManagerStrings::OpenControls(), ARRAYSIZE(icon.szTip));
-    if (add) g_trayAdded = Shell_NotifyIconW(g_trayAdded ? NIM_MODIFY : NIM_ADD, &icon) != FALSE;
+    if (add) {
+        const bool placed = Shell_NotifyIconW(g_trayAdded ? NIM_MODIFY : NIM_ADD, &icon) != FALSE;
+        // The return value used to be discarded, so a shell that refused the icon
+        // left a window that closes to "hidden" with no way back. One line, once.
+        if (!placed) {
+            static std::atomic_bool warnedFailure{false};
+            if (!warnedFailure.exchange(true)) {
+                LogWarn("[DesktopUI] tray icon rejected Win32=%lu; the panel keeps a taskbar entry",
+                    GetLastError());
+            }
+        }
+        g_trayAdded = placed;
+    }
     else if (g_trayAdded) { Shell_NotifyIconW(NIM_DELETE, &icon); g_trayAdded = false; }
 }
 LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wparam, LPARAM lparam) {
@@ -1002,11 +1014,19 @@ bool RenderFrame() {
     // thread — which is what a user experiences as "the settings froze".
     const double frameStarted = NowMs();
     static double previousFrame = 0.0;
-    static double lastGapReport = -1.0e9;
-    if (previousFrame > 0.0 && frameStarted - previousFrame >= 50.0 &&
-        frameStarted - lastGapReport >= 1000.0) {
-        lastGapReport = frameStarted;
-        LogWarn("[DesktopUI] frame gap %.0f ms before painting the shell", frameStarted - previousFrame);
+    static double lastGapWarn = -1.0e9;
+    static double lastGapNote = -1.0e9;
+    // Two bands, because one WARN cannot mean both "an alt-tab cost us three
+    // frames" and "the panel is wedged". 50-200 ms is the ordinary cost of a
+    // focus handover and is only interesting with [log] level=debug; >=200 ms is
+    // what a user perceives as a freeze and keeps warning severity.
+    const double frameGapMs = previousFrame > 0.0 ? frameStarted - previousFrame : 0.0;
+    if (frameGapMs >= 200.0 && frameStarted - lastGapWarn >= 1000.0) {
+        lastGapWarn = frameStarted;
+        LogWarn("[DesktopUI] frame gap %.0f ms before painting the shell", frameGapMs);
+    } else if (frameGapMs >= 50.0 && frameStarted - lastGapNote >= 1000.0) {
+        lastGapNote = frameStarted;
+        LogDebug("[DesktopUI] frame gap %.0f ms before painting the shell (below the 200 ms warn threshold)", frameGapMs);
     }
     previousFrame = frameStarted;
     {

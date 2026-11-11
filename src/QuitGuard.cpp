@@ -82,61 +82,19 @@ LRESULT CALLBACK GuardedWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 // 前置声明：看门狗在终止前会清理崩溃处理器孤儿，定义在其下方。
 void CleanUpCrashHandlerOrphans();
 
-// 诊断：把窗口过程链的真实形态打印出来。
+// 诊断：只保留「自调用环」这一项不变式。
 //
-// 关注三件事：
-//   1. g_prevWndProc 是否等于 GuardedWndProc 自身 —— 若相等则存在自调用环，
-//      WM_CLOSE 会在本进程内打转，Unity 原生窗口过程永远收不到它。
-//   2. 当前 GWLP_WNDPROC 是谁 —— 判断本钩子是否已被后来的 ModLoader/VRify 覆盖。
-//   3. 转发目标的模块归属 —— 落在 UnityPlayer.dll 才是真正的原生窗口过程。
-//
-// 每个阶段各打印一次：装钩时一次，收到 WM_CLOSE 时一次。
-// 两者必须分开——装钩发生在 VRify 装钩之前，而 VRify 的
-// InstallWindowProcedure 挂在 il2cpp_init 上、时机更晚，关游戏时的链形态
-// 与装钩时不一定相同。早期版本用单一 static 开关导致第二段被吞掉。
+// 原来的 5 行链形态转储（self / prev / current 三个模块路径）在发布版里没有
+// 增量信息：三个地址每次启动都相同，而它带来的 3 行空消息反而污染会话头。
+// 真正会让 WM_CLOSE 在本进程内打转的只有 prev == GuardedWndProc 这一种形态，
+// 其余情况一律不打印。
 void DiagnoseWndProcChain(HWND hWnd, const char* stage) {
+    (void)hWnd;
     static std::atomic_int printed{0};
-    const int slot = printed.fetch_add(1, std::memory_order_acq_rel);
-    // 0 = 装钩，1 = WM_CLOSE。超过则不再输出，避免刷屏。
-    if (slot > 1) return;
-
-    HMODULE selfMod = nullptr;
-    GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
-                       GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-                       reinterpret_cast<LPCWSTR>(&GuardedWndProc), &selfMod);
-
-    HMODULE targetMod = nullptr;
-    if (g_prevWndProc != nullptr) {
-        GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
-                           GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-                           reinterpret_cast<LPCWSTR>(g_prevWndProc), &targetMod);
-    }
-
-    // 当前链顶：若不是自己，说明有后来的 Mod（VRify）把窗口过程覆盖到了本钩子之上。
-    HMODULE currentMod = nullptr;
-    const auto current = reinterpret_cast<WNDPROC>(GetWindowLongPtrW(hWnd, GWLP_WNDPROC));
-    if (current != nullptr) {
-        GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
-                           GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-                           reinterpret_cast<LPCWSTR>(current), &currentMod);
-    }
-
-    wchar_t selfPath[MAX_PATH]{};
-    wchar_t targetPath[MAX_PATH]{};
-    wchar_t currentPath[MAX_PATH]{};
-    if (selfMod)    GetModuleFileNameW(selfMod, selfPath, MAX_PATH);
-    if (targetMod)  GetModuleFileNameW(targetMod, targetPath, MAX_PATH);
-    if (currentMod) GetModuleFileNameW(currentMod, currentPath, MAX_PATH);
-
-    LogInfo("[QuitGuard][DIAG] %s", stage);
-    LogInfo("[QuitGuard][DIAG]   self  (GuardedWndProc) = %p  [%ls]",
-            reinterpret_cast<void*>(GuardedWndProc), selfPath);
-    LogInfo("[QuitGuard][DIAG]   g_prevWndProc(forward to) = %p  [%ls]",
-            reinterpret_cast<void*>(g_prevWndProc), targetPath);
-    LogInfo("[QuitGuard][DIAG]   current GWLP_WNDPROC         = %p  [%ls]",
-            reinterpret_cast<void*>(current), currentPath);
-    LogInfo("[QuitGuard][DIAG]   self-call loop = %s",
-            g_prevWndProc == reinterpret_cast<WNDPROC>(&GuardedWndProc) ? "YES (prev == self!)" : "no");
+    if (printed.fetch_add(1, std::memory_order_acq_rel) > 1) return;
+    if (g_prevWndProc != reinterpret_cast<WNDPROC>(&GuardedWndProc)) return;
+    LogError("[QuitGuard][DIAG] %s: self-call loop detected (prev == GuardedWndProc); "
+             "WM_CLOSE would spin inside this process", stage);
 }
 
 // 清理 UnityCrashHandler64 孤儿。
@@ -173,7 +131,7 @@ void CleanUpCrashHandlerOrphans() {
     CloseHandle(snap);
 
     if (killed == 0) {
-        LogInfo("[QuitGuard] no UnityCrashHandler orphan found (it may exit on its own)");
+        LogDebug("[QuitGuard] no UnityCrashHandler orphan found (it may exit on its own)");
     }
 }
 

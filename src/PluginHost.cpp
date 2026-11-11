@@ -9,6 +9,7 @@
 #include "Host.hpp"
 #include "HostContracts.hpp"
 #include "HostConfig.hpp"
+#include "LogLevel.hpp"
 #include "ActorEntry.hpp"
 #include "DesktopUi.hpp"
 #include "DesktopDialogs.hpp"
@@ -120,7 +121,43 @@ void FormatLocalTimestamp(char* out, size_t outBytes) {
 // One complete formatted line (no trailing newline) to the real console when
 // present and to the private log file. The caller holds g_logMutex so the
 // timestamp, source tag and message body can never interleave across threads.
-void WriteLineLocked(const std::string& line) {
+//
+// The file handle is kept open for the process lifetime instead of one
+// _wfopen/_fclose per line. The previous shape paid a CreateFile per message:
+// a single scene load that logged 60 errors also performed 60 opens, which is
+// exactly where the stutter came from. Durability is preserved by flushing on
+// every Warn/Error and otherwise every 64 lines or 250 ms.
+FILE* g_logFile = nullptr;
+int g_logLinesSinceFlush = 0;
+ULONGLONG g_logLastFlushTick = 0;
+bool g_logDisabled = false;
+
+FILE* LogFileLocked() {
+    if (g_logFile || g_logDisabled) return g_logFile;
+    const auto path = g_logPath.empty() ? std::filesystem::path(L"GakuLoader/Logs/gakuloader.log") : g_logPath;
+    g_logFile = _wfopen(path.c_str(), L"a");
+    if (!g_logFile) g_logDisabled = true; // one failure is enough; never retry per line
+    return g_logFile;
+}
+void FlushLogLocked(bool force) {
+    if (!g_logFile) return;
+    const ULONGLONG now = GetTickCount64();
+    if (!force && g_logLinesSinceFlush < 64 && now - g_logLastFlushTick < 250) return;
+    fflush(g_logFile);
+    g_logLinesSinceFlush = 0;
+    g_logLastFlushTick = now;
+}
+// Called once the host has finished stopping plugins. Anything that logs after
+// this reopens the file in append mode, so a late QuitGuard line is not lost.
+void CloseLog() {
+    std::lock_guard<std::mutex> lock(g_logMutex);
+    if (!g_logFile) return;
+    fflush(g_logFile);
+    fclose(g_logFile);
+    g_logFile = nullptr;
+    g_logLinesSinceFlush = 0;
+}
+void WriteLineLocked(const std::string& line, LogLevel::Level level) {
     const HANDLE out = GetStdHandle(STD_OUTPUT_HANDLE);
     DWORD consoleMode = 0;
     if (out && out != INVALID_HANDLE_VALUE && GetConsoleMode(out, &consoleMode)) {
@@ -136,9 +173,11 @@ void WriteLineLocked(const std::string& line) {
             WriteConsoleW(out, wide.data(), static_cast<DWORD>(wide.size()), &written, nullptr);
         }
     }
-    const auto path = g_logPath.empty() ? std::filesystem::path(L"GakuLoader/Logs/gakuloader.log") : g_logPath;
-    FILE* file = _wfopen(path.c_str(), L"a");
-    if (file) { fprintf(file, "%s\n", line.c_str()); fclose(file); }
+    if (FILE* file = LogFileLocked()) {
+        fprintf(file, "%s\n", line.c_str());
+        ++g_logLinesSinceFlush;
+        FlushLogLocked(level >= LogLevel::Level::Warn);
+    }
     // Never route mod diagnostics through Unity Debug, Player.log or a shared
     // OutputDebugString sink. Official reporting suppression is a separate hook.
 }
@@ -147,42 +186,59 @@ void WriteLineLocked(const std::string& line) {
 // mode across runs, so every startup session gets one boundary block before
 // any other line; the g_initialized guard in Initialize() keeps repeat
 // initialization callbacks from duplicating it.
-void WriteSessionStarted() {
+void WriteSessionStarted(LogLevel::Level level) {
     constexpr const char* kRule =
         "============================================================";
     std::lock_guard<std::mutex> lock(g_logMutex);
     char timestamp[40];
     FormatLocalTimestamp(timestamp, sizeof(timestamp));
-    WriteLineLocked(kRule);
-    WriteLineLocked(std::string(timestamp) + " [GakuLoader] Session started");
-    WriteLineLocked(kRule);
+    WriteLineLocked(kRule, LogLevel::Level::Info);
+    WriteLineLocked(std::string(timestamp) + " [GakuLoader] Session started", LogLevel::Level::Info);
+    WriteLineLocked(kRule, LogLevel::Level::Info);
+    // Always printed, whatever the threshold: a log that hides its own filter
+    // makes every later "why is this missing" question unanswerable.
+    char levelLine[96];
+    snprintf(levelLine, sizeof(levelLine), "log level=%ls (gakuloader.ini [log] level)",
+        LogLevel::Name(level));
+    WriteLineLocked(std::string(timestamp) + " [GakuLoader] " + levelLine, LogLevel::Level::Info);
+    FlushLogLocked(true); // a session boundary must survive an immediate crash
 }
 
-void WriteToConsoleAndLog(const char* level, const char* message) {
+void WriteToConsoleAndLog(LogLevel::Level level, const char* tag, const char* message) {
     if (!message) return;
+    if (!LogLevel::Enabled(level)) return;
     std::lock_guard<std::mutex> lock(g_logMutex);
     char timestamp[40];
     FormatLocalTimestamp(timestamp, sizeof(timestamp));
-    WriteLineLocked(std::string(timestamp) + " [" + level + "] " + message);
+    WriteLineLocked(std::string(timestamp) + " [" + tag + "] " + message, level);
 }
 void HostLogInfo(const char* format, ...) {
     va_list args; va_start(args, format); char buffer[2048];
     vsnprintf(buffer, sizeof(buffer), format, args); va_end(args);
-    WriteToConsoleAndLog("GakuLoader", buffer);
+    WriteToConsoleAndLog(LogLevel::Level::Info, "GakuLoader", buffer);
 }
 void HostLogWarn(const char* format, ...) {
     va_list args; va_start(args, format); char buffer[2048];
     vsnprintf(buffer, sizeof(buffer), format, args); va_end(args);
-    WriteToConsoleAndLog("GakuLoader:WARN", buffer);
+    WriteToConsoleAndLog(LogLevel::Level::Warn, "GakuLoader:WARN", buffer);
 }
 void HostLogError(const char* format, ...) {
     va_list args; va_start(args, format); char buffer[2048];
     vsnprintf(buffer, sizeof(buffer), format, args); va_end(args);
-    WriteToConsoleAndLog("GakuLoader:ERROR", buffer);
+    WriteToConsoleAndLog(LogLevel::Level::Error, "GakuLoader:ERROR", buffer);
+}
+void HostLogDebug(const char* format, ...) {
+    va_list args; va_start(args, format); char buffer[2048];
+    vsnprintf(buffer, sizeof(buffer), format, args); va_end(args);
+    WriteToConsoleAndLog(LogLevel::Level::Debug, "GakuLoader:DEBUG", buffer);
 }
 void* GetGameAssembly() { return GetModuleHandleW(L"GameAssembly.dll"); }
 void ServiceLog(void*, GakuLogLevel level, const char* message) {
-    WriteToConsoleAndLog(level == GAKU_LOG_ERROR ? "Plugin:ERROR" :
+    // The wire enum keeps its three values. Debug is host-only and never
+    // reaches this function, so an old plugin cannot send an unknown level.
+    const auto mapped = level == GAKU_LOG_ERROR ? LogLevel::Level::Error :
+        level == GAKU_LOG_WARNING ? LogLevel::Level::Warn : LogLevel::Level::Info;
+    WriteToConsoleAndLog(mapped, level == GAKU_LOG_ERROR ? "Plugin:ERROR" :
         level == GAKU_LOG_WARNING ? "Plugin:WARN" : "Plugin", message);
 }
 uint32_t IsMainThread(void*) {
@@ -720,15 +776,23 @@ void ShutdownOnMainThread() {
 
 void LogInfo(const char* format, ...) {
     va_list args; va_start(args, format); char buffer[2048];
-    vsnprintf(buffer, sizeof(buffer), format, args); va_end(args); WriteToConsoleAndLog("GakuLoader", buffer);
+    vsnprintf(buffer, sizeof(buffer), format, args); va_end(args);
+    WriteToConsoleAndLog(LogLevel::Level::Info, "GakuLoader", buffer);
 }
 void LogWarn(const char* format, ...) {
     va_list args; va_start(args, format); char buffer[2048];
-    vsnprintf(buffer, sizeof(buffer), format, args); va_end(args); WriteToConsoleAndLog("GakuLoader:WARN", buffer);
+    vsnprintf(buffer, sizeof(buffer), format, args); va_end(args);
+    WriteToConsoleAndLog(LogLevel::Level::Warn, "GakuLoader:WARN", buffer);
 }
 void LogError(const char* format, ...) {
     va_list args; va_start(args, format); char buffer[2048];
-    vsnprintf(buffer, sizeof(buffer), format, args); va_end(args); WriteToConsoleAndLog("GakuLoader:ERROR", buffer);
+    vsnprintf(buffer, sizeof(buffer), format, args); va_end(args);
+    WriteToConsoleAndLog(LogLevel::Level::Error, "GakuLoader:ERROR", buffer);
+}
+void LogDebug(const char* format, ...) {
+    va_list args; va_start(args, format); char buffer[2048];
+    vsnprintf(buffer, sizeof(buffer), format, args); va_end(args);
+    WriteToConsoleAndLog(LogLevel::Level::Debug, "GakuLoader:DEBUG", buffer);
 }
 std::filesystem::path LogPath() {
     std::lock_guard<std::mutex> lock(g_logMutex);
@@ -807,6 +871,11 @@ void Initialize(const std::filesystem::path& gameRoot, const std::filesystem::pa
     }
     g_configPath = configDir / L"gakuloader.ini";
     LanguageSettings::Load(g_configPath);
+    // Threshold before anything is written: a support case can ask for
+    // [log] level=debug without a rebuild, and the default keeps every line the
+    // loader emitted before this switch existed.
+    LogLevel::SetThreshold(LogLevel::Parse(
+        ReadConfigValue(g_configPath, L"log", L"level").c_str(), LogLevel::Level::Info));
     Trace::Configure(ReadConfigFlag(g_configPath, L"diagnostics", L"trace", false));
     if (Trace::Enabled()) {
         const auto crashPath = logsDir / "crash.log";
@@ -815,7 +884,7 @@ void Initialize(const std::filesystem::path& gameRoot, const std::filesystem::pa
         CrashTrace::Arm(crashPath);
     }
     { std::lock_guard<std::mutex> logLock(g_logMutex); g_logPath = logsDir / "gakuloader.log"; }
-    WriteSessionStarted();
+    WriteSessionStarted(LogLevel::Threshold());
     Hotkeys::LoadOverrides(g_configPath);
     g_initialized = true;
     PublishDesktopHostSnapshot();
@@ -930,7 +999,7 @@ void NotifyRuntimeReady() {
         }
         try {
             const auto started = Trace::UptimeMs();
-            HostLogInfo("[StartupTiming] runtime callback begin plugin=%s uptime_ms=%llu thread=%lu", plugin.id.c_str(), started, GetCurrentThreadId());
+            HostLogDebug("[StartupTiming] runtime callback begin plugin=%s uptime_ms=%llu thread=%lu", plugin.id.c_str(), started, GetCurrentThreadId());
             plugin.descriptor.onRuntimeReady(plugin.state);
             plugin.runtimeReady = true;
             PublishDesktopHostSnapshot();
@@ -1077,6 +1146,7 @@ void Shutdown() {
     std::lock_guard<std::recursive_mutex> lock(g_callbacks);
     if (!g_initialized) return;
     ShutdownOnMainThread();
+    CloseLog();
 }
 void RequestShutdown() { g_shutdownRequested.store(true, std::memory_order_release); }
 const std::vector<LoadedPlugin>& GetLoadedPlugins() { return g_plugins; }
