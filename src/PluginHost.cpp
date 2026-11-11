@@ -94,29 +94,76 @@ void (*g_actorEntryRegisterObserver)() = nullptr;
 std::atomic<DWORD> g_hotkeyThreadId{0};
 std::atomic_bool g_hotkeyStop{false};
 
-void WriteToConsoleAndLog(const char* level, const char* message) {
-    if (!message) return;
-    std::lock_guard<std::mutex> lock(g_logMutex);
+// Local wall clock with milliseconds and UTC offset, e.g.
+// "2026-11-11T23:09:12.482+09:00". Windows-native only: GetLocalTime and
+// GetTimeZoneInformation need no Unity, IL2CPP, CRT locale or main thread and
+// stay valid for the earliest loader diagnostics.
+void FormatLocalTimestamp(char* out, size_t outBytes) {
+    SYSTEMTIME local{};
+    GetLocalTime(&local);
+    TIME_ZONE_INFORMATION zone{};
+    const DWORD zoneId = GetTimeZoneInformation(&zone);
+    LONG bias = zone.Bias;
+    if (zoneId == TIME_ZONE_ID_DAYLIGHT) bias += zone.DaylightBias;
+    else if (zoneId == TIME_ZONE_ID_STANDARD) bias += zone.StandardBias;
+    const LONG offset = -bias; // minutes east of UTC (local = UTC + offset)
+    const char sign = offset < 0 ? '-' : '+';
+    const unsigned long magnitude = static_cast<unsigned long>(offset < 0 ? -offset : offset);
+    snprintf(out, outBytes, "%04u-%02u-%02uT%02u:%02u:%02u.%03u%c%02lu:%02lu",
+        static_cast<unsigned>(local.wYear), static_cast<unsigned>(local.wMonth),
+        static_cast<unsigned>(local.wDay), static_cast<unsigned>(local.wHour),
+        static_cast<unsigned>(local.wMinute), static_cast<unsigned>(local.wSecond),
+        static_cast<unsigned>(local.wMilliseconds), sign,
+        magnitude / 60, magnitude % 60);
+}
+
+// One complete formatted line (no trailing newline) to the real console when
+// present and to the private log file. The caller holds g_logMutex so the
+// timestamp, source tag and message body can never interleave across threads.
+void WriteLineLocked(const std::string& line) {
     const HANDLE out = GetStdHandle(STD_OUTPUT_HANDLE);
     DWORD consoleMode = 0;
     if (out && out != INVALID_HANDLE_VALUE && GetConsoleMode(out, &consoleMode)) {
         DWORD written = 0;
-        const std::string line = std::string("[") + level + "] " + message + "\r\n";
+        const std::string consoleLine = line + "\r\n";
         // A plain string crosses the ABI; percent characters never become a format.
         // A launcher may redirect stdout into Player.log or a reporting pipe.
         // Only an actual Console is an allowed sink, never stdout disk/pipe.
-        const int count = MultiByteToWideChar(CP_UTF8, 0, line.data(), static_cast<int>(line.size()), nullptr, 0);
+        const int count = MultiByteToWideChar(CP_UTF8, 0, consoleLine.data(), static_cast<int>(consoleLine.size()), nullptr, 0);
         if (count > 0) {
             std::wstring wide(static_cast<size_t>(count), L'\0');
-            MultiByteToWideChar(CP_UTF8, 0, line.data(), static_cast<int>(line.size()), wide.data(), count);
+            MultiByteToWideChar(CP_UTF8, 0, consoleLine.data(), static_cast<int>(consoleLine.size()), wide.data(), count);
             WriteConsoleW(out, wide.data(), static_cast<DWORD>(wide.size()), &written, nullptr);
         }
     }
     const auto path = g_logPath.empty() ? std::filesystem::path(L"GakuLoader/Logs/gakuloader.log") : g_logPath;
     FILE* file = _wfopen(path.c_str(), L"a");
-    if (file) { fprintf(file, "[%s] %s\n", level, message); fclose(file); }
+    if (file) { fprintf(file, "%s\n", line.c_str()); fclose(file); }
     // Never route mod diagnostics through Unity Debug, Player.log or a shared
     // OutputDebugString sink. Official reporting suppression is a separate hook.
+}
+
+// Written once per real host initialization. The log file is opened in append
+// mode across runs, so every startup session gets one boundary block before
+// any other line; the g_initialized guard in Initialize() keeps repeat
+// initialization callbacks from duplicating it.
+void WriteSessionStarted() {
+    constexpr const char* kRule =
+        "============================================================";
+    std::lock_guard<std::mutex> lock(g_logMutex);
+    char timestamp[40];
+    FormatLocalTimestamp(timestamp, sizeof(timestamp));
+    WriteLineLocked(kRule);
+    WriteLineLocked(std::string(timestamp) + " [GakuLoader] Session started");
+    WriteLineLocked(kRule);
+}
+
+void WriteToConsoleAndLog(const char* level, const char* message) {
+    if (!message) return;
+    std::lock_guard<std::mutex> lock(g_logMutex);
+    char timestamp[40];
+    FormatLocalTimestamp(timestamp, sizeof(timestamp));
+    WriteLineLocked(std::string(timestamp) + " [" + level + "] " + message);
 }
 void HostLogInfo(const char* format, ...) {
     va_list args; va_start(args, format); char buffer[2048];
@@ -768,6 +815,7 @@ void Initialize(const std::filesystem::path& gameRoot, const std::filesystem::pa
         CrashTrace::Arm(crashPath);
     }
     { std::lock_guard<std::mutex> logLock(g_logMutex); g_logPath = logsDir / "gakuloader.log"; }
+    WriteSessionStarted();
     Hotkeys::LoadOverrides(g_configPath);
     g_initialized = true;
     PublishDesktopHostSnapshot();

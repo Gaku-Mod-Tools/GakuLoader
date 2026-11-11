@@ -51,6 +51,18 @@ foreach ($marker in @('[Shutdown] begin plugin=Fixture A', '[Shutdown] end plugi
     if (-not $privateOutput.Contains($marker)) { throw "Log marker missing: $marker" }
 }
 
+# Timestamped log contract: every record carries exactly one local-time prefix
+# with milliseconds and a UTC offset, and one host run writes one session
+# header. A torn interleaved line would not match the prefix and fails here.
+$timestampPrefix = '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}[+-]\d{2}:\d{2} \['
+$logLines = @(Get-Content -LiteralPath (Join-Path $testRoot 'GakuLoader\Logs\gakuloader.log') |
+    Where-Object { $_ -ne '' -and $_ -notmatch '^=+$' })
+foreach ($line in $logLines) {
+    if ($line -notmatch $timestampPrefix) { throw "Log line missing timestamp prefix: $line" }
+}
+$sessions = @($logLines | Where-Object { $_ -match '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}[+-]\d{2}:\d{2} \[GakuLoader\] Session started$' })
+if ($sessions.Count -ne 1) { throw "Expected exactly one Session started header after one host run, got $($sessions.Count)" }
+
 # A disabled filename must be skipped before LoadLibrary, so the pre-reset DLL
 # never runs its DllMain and no legacy entry point is probed.
 $filteredRoot = Join-Path $testRoot 'filtered'
@@ -70,6 +82,13 @@ if ($LASTEXITCODE -ne 0) { throw 'Plugin filename filter failed' }
 # Cancellation stays readable and prevents later runtime callbacks from starting.
 & $hostTests $testRoot 'cancel-runtime'
 if ($LASTEXITCODE -ne 0) { throw 'Runtime initialization cancellation failed' }
+
+# The cancel-runtime run appends to the same log as a second process: exactly two
+# session headers prove append mode survived and each process marks its session
+# once and only once.
+$sessionsTotal = @(Get-Content -LiteralPath (Join-Path $testRoot 'GakuLoader\Logs\gakuloader.log') |
+    Where-Object { $_ -match '\[GakuLoader\] Session started$' })
+if ($sessionsTotal.Count -ne 2) { throw "Expected two Session started headers after two host runs on one log, got $($sessionsTotal.Count)" }
 
 $report = [ordered]@{
     suite = 'host'
