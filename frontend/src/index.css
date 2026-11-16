@@ -170,6 +170,7 @@
   }
   body {
     @apply bg-background text-foreground font-sans antialiased;
+    font-family: "Microsoft YaHei", "Microsoft YaHei UI", "Segoe UI", system-ui, sans-serif;
     margin: 0;
     overflow: hidden;
     font-size: 14px;

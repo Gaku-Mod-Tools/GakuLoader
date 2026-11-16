@@ -43,6 +43,7 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND, UINT, WPARAM,
 namespace GakuLoader::DesktopUi {
 namespace {
 constexpr wchar_t kWindowClass[] = L"GakuModLoader.DesktopControl";
+constexpr wchar_t kDropCatcherClass[] = L"GakuModLoader.WebDropCatcher";
 constexpr UINT kShow = WM_APP + 81, kStop = WM_APP + 82, kTray = WM_APP + 83, kToggleManager = WM_APP + 84;
 constexpr const char* kManagerPanel = "gakuloader.manager";
 constexpr UINT kTrayShow = 1;
@@ -351,6 +352,15 @@ public:
 };
 bool g_oleReady = false;
 ShellDropTarget* g_dropTarget = nullptr;
+HWND g_dropCatcher = nullptr;
+bool g_dropCatcherVisible = false;
+bool g_externalDragArmed = false;
+void HideWebDropCatcher() {
+    if (g_dropCatcher && g_dropCatcherVisible) {
+        ShowWindow(g_dropCatcher, SW_HIDE);
+        g_dropCatcherVisible = false;
+    }
+}
 GakuStatus Bind(const GakuImGuiAbi* abi, uint32_t size, GakuDesktopUiBinding* output) {
     if (!abi || !output) return GAKU_E_INVALID_ARGUMENT;
     if (size < sizeof(GakuDesktopUiBinding)) return GAKU_E_SIZE;
@@ -721,7 +731,15 @@ void DestroyPresentation(HWND window, HINSTANCE instance) {
     Release(g_target); Release(g_swapchain); Release(g_deviceContext); Release(g_device);
     UpdateTray(window, false);
     g_window.store(nullptr, std::memory_order_release);
+    if (g_dropCatcher) {
+        DragAcceptFiles(g_dropCatcher, FALSE);
+        DestroyWindow(g_dropCatcher);
+        g_dropCatcher = nullptr;
+        g_dropCatcherVisible = false;
+    }
+    g_externalDragArmed = false;
     if (window) DestroyWindow(window);
+    UnregisterClassW(kDropCatcherClass, instance);
     g_ownedWindow = nullptr;
     UnregisterClassW(kWindowClass, instance);
     // Same thread that called OleInitialize owns the uninitialize, and every
@@ -1294,6 +1312,7 @@ void UnbindWebPanel(bool shutdownService) {
 }
 
 void HideWebPanel() {
+    HideWebDropCatcher();
     if (g_webPanel.bound && g_webPanel.shown) {
         if (g_webPanel.service.onHide) {
             try { g_webPanel.service.onHide(g_webPanel.service.context); }
@@ -1468,6 +1487,78 @@ RECT ComputeWebPanelBounds(const ImVec2& cursor, const ImVec2& avail, const ImVe
     return bounds;
 }
 
+LRESULT CALLBACK DropCatcherProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam) {
+    if (message == WM_DROPFILES) {
+        const HDROP drop = reinterpret_cast<HDROP>(wparam);
+        struct DragFinishScope { HDROP value; ~DragFinishScope() { DragFinish(value); } } finish{drop};
+        const HWND target = g_window.load(std::memory_order_acquire);
+        HideWebDropCatcher();
+        g_externalDragArmed = false;
+        if (!target) return 0;
+        POINT point{};
+        POINT cursor{};
+        if (GetCursorPos(&cursor) && ScreenToClient(target, &cursor)) {
+            point = cursor;
+        } else if (DragQueryPoint(drop, &point)) {
+            MapWindowPoints(hwnd, target, &point, 1);
+        }
+        DropPaths paths;
+        CollectDropPaths(drop, paths);
+        if (paths.failure) {
+            LogWarn("[DesktopUI][FileDrop] rejected reason=%s index=%u source=wm-dropfiles-webview",
+                paths.failure, paths.failureIndex);
+            return 0;
+        }
+        FinishDrop(target, "wm-dropfiles-webview", paths, point);
+        return 0;
+    }
+    return DefWindowProcW(hwnd, message, wparam, lparam);
+}
+
+void SyncWebDropCatcher(HWND parent) {
+    if (!g_dropCatcher || !g_fileDrop.HostBlocked()) return;
+    const bool lbuttonDown = (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0;
+    if (!lbuttonDown) {
+        g_externalDragArmed = false;
+        HideWebDropCatcher();
+        return;
+    }
+    POINT cursor{};
+    RECT winRect{};
+    if (!GetCursorPos(&cursor) || !GetWindowRect(parent, &winRect)) {
+        HideWebDropCatcher();
+        return;
+    }
+    if (!PtInRect(&winRect, cursor)) {
+        const HWND fg = GetForegroundWindow();
+        if (fg != parent && GetAncestor(fg, GA_ROOTOWNER) != parent)
+            g_externalDragArmed = true;
+        HideWebDropCatcher();
+        return;
+    }
+    if (!g_externalDragArmed || !g_webViewActive.load(std::memory_order_acquire) ||
+        !g_webPanel.hasBounds || !g_fileDrop.HasTarget()) {
+        HideWebDropCatcher();
+        return;
+    }
+    POINT tl{g_webPanel.bounds.left, g_webPanel.bounds.top};
+    POINT br{g_webPanel.bounds.right, g_webPanel.bounds.bottom};
+    if (!ClientToScreen(parent, &tl) || !ClientToScreen(parent, &br) ||
+        br.x <= tl.x || br.y <= tl.y) {
+        HideWebDropCatcher();
+        return;
+    }
+    RECT webScreen{tl.x, tl.y, br.x, br.y};
+    if (!PtInRect(&webScreen, cursor)) {
+        HideWebDropCatcher();
+        return;
+    }
+    SetWindowPos(g_dropCatcher, HWND_TOP, webScreen.left, webScreen.top,
+        webScreen.right - webScreen.left, webScreen.bottom - webScreen.top,
+        SWP_NOACTIVATE | SWP_SHOWWINDOW);
+    g_dropCatcherVisible = true;
+}
+
 DWORD WorkerBody() {
     g_uiThread = GetCurrentThreadId();
     g_taskbarCreated = RegisterWindowMessageW(L"TaskbarCreated");
@@ -1539,6 +1630,23 @@ DWORD WorkerBody() {
         LogWarn("[DesktopUI] hover preview unavailable: host integrity is unknown, so the OLE drop "
             "target was not armed; WM_DROPFILES remains the transport");
     }
+    if (!shellCanReachDropTarget) {
+        WNDCLASSEXW dropCls{};
+        dropCls.cbSize = sizeof(dropCls);
+        dropCls.hInstance = instance;
+        dropCls.lpfnWndProc = DropCatcherProc;
+        dropCls.lpszClassName = kDropCatcherClass;
+        RegisterClassExW(&dropCls);
+        g_dropCatcher = CreateWindowExW(
+            WS_EX_LAYERED | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE | WS_EX_ACCEPTFILES,
+            kDropCatcherClass, L"", WS_POPUP, 0, 0, 0, 0,
+            window, nullptr, instance, nullptr);
+        if (g_dropCatcher) {
+            SetLayeredWindowAttributes(g_dropCatcher, 0, 1, LWA_ALPHA);
+            AllowShellFileDrops(g_dropCatcher);
+            DragAcceptFiles(g_dropCatcher, TRUE);
+        }
+    }
     g_uiMode = ResolveUiMode();
 #if defined(GAKULOADER_DESKTOP_UI_TEST)
     if (!g_testHooks.startHidden) ShowWindow(window, SW_SHOW);
@@ -1563,6 +1671,7 @@ DWORD WorkerBody() {
             LogWarn("[DesktopUI] control-window device lost; desktop stops, game rendering is untouched");
             break;
         }
+        if (render) SyncWebDropCatcher(window);
         FlushClipboard();
         // Modal dialogs run with every ImGui/callback scope unwound, including
         // when the controls were minimized after submitting the request.

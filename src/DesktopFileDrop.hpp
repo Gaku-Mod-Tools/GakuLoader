@@ -63,6 +63,7 @@ public:
     void EndFrame() { if (targetOwner_ != batchOwner_) ClearBatch(); }
     void ClearBatch() { batchOwner_.clear(); paths_.clear(); count_ = 0; }
     void Clear() { targetOwner_.clear(); ClearBatch(); EndDrag(); }
+    bool HasTarget() const { return !targetOwner_.empty(); }
     bool TargetContains(float x, float y) const {
         return std::isfinite(x) && std::isfinite(y) &&
             x >= target_.left && x < target_.right && y >= target_.top && y < target_.bottom;

@@ -35,7 +35,7 @@ export default {
         sm: 'calc(var(--radius) - 4px)',
       },
       fontFamily: {
-        sans: ['Segoe UI Variable', 'Segoe UI', 'Yu Gothic UI', 'Microsoft YaHei', 'system-ui', 'sans-serif'],
+        sans: ['"Microsoft YaHei"', '"Microsoft YaHei UI"', '"Segoe UI"', 'system-ui', 'sans-serif'],
         mono: ['Cascadia Code', 'Consolas', 'monospace'],
       },
       keyframes: {
