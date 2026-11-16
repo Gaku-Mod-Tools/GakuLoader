@@ -67,8 +67,11 @@ void PublishDesktopHostSnapshot() {
     result->pluginFiles = g_pluginFiles;
     result->plugins.reserve(g_plugins.size());
     for (const auto& plugin : g_plugins) {
+        GakuWebPanelServiceV1 webPanel{};
+        const bool hasWebPanel = QueryWebPanelService(plugin.id.c_str(), &webPanel) == GAKU_OK;
         result->plugins.push_back({plugin.id, plugin.name, plugin.version,
-            plugin.activated, plugin.runtimeReady, plugin.failed, plugin.descriptor.onDesktopUi != nullptr});
+            plugin.activated, plugin.runtimeReady, plugin.failed,
+            plugin.descriptor.onDesktopUi != nullptr || hasWebPanel});
     }
     g_desktopSnapshot.store(std::move(result), std::memory_order_release);
 }

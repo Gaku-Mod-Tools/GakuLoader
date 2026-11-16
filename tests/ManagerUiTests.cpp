@@ -270,7 +270,7 @@ int main(int argc, char** argv) {
         { std::ofstream html(webDir / "index.html"); html << "<!doctype html><html></html>"; }
         webAssetsDir = webDir.wstring();
         WebView2Ui::TestHooks webHooks{};
-        webHooks.initialize = [&](const WebView2Ui::Config&) { ++webInitCount; };
+        webHooks.initializePanel = [&](const std::string&, const WebView2Ui::PanelConfig&) { ++webInitCount; };
         webHooks.shutdown = [&] { ++webShutdownHookCount; };
         WebView2Ui::ConfigureTest(webHooks);
         DesktopUi::TestHooks hooks{true, InspectFrame, BeginFrame, [] { ++presentedFrames; }};
@@ -401,8 +401,8 @@ int main(int argc, char** argv) {
             "failed web panel did not fall back to ImGui plugin panel");
         Check(webOnShutdownCount == 0, "switching to another web panel must not call onShutdown");
         Click("nav.test.web");
-        Wait([] { return CheckWebState("test.web", true, true) && webInitCount == 2 && webOnShowCount == 4; },
-            "re-binding web panel after another web panel failed");
+        Wait([] { return CheckWebState("test.web", true, true) && webInitCount == 1 && webOnShowCount == 4; },
+            "restoring resident web panel after another web panel failed");
         Check(webPanelLegacyImGuiCount == 0, "web panel unexpectedly invoked legacy ImGui callback");
 
         DesktopUi::Shutdown();

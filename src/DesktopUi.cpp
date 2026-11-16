@@ -36,6 +36,7 @@
 #include <functional>
 #include <cmath>
 #include <cstdio>
+#include <unordered_map>
 #include <vector>
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND, UINT, WPARAM, LPARAM);
@@ -412,14 +413,20 @@ struct WebPanelState {
     bool focusPending = false;
     bool hasFocus = false;
     uint64_t generation = 0;
+    std::string diagnostic;
     RECT bounds{};
     bool hasBounds = false;
 };
-WebPanelState g_webPanel;
+std::unordered_map<std::string, std::unique_ptr<WebPanelState>> g_webPanels;
+std::string g_activeWebPanelId;
+std::mutex g_webSinkMutex;
+std::unordered_map<uint64_t, std::string> g_webSinkRoutes;
 std::atomic<uint64_t> g_webPanelGeneration{0};
 bool g_returnFocusToImGui = false;
+WebPanelState* FindWebPanel(const std::string& pluginId);
 void HideWebPanel();
-void UnbindWebPanel(bool shutdownService);
+void UnbindWebPanel(const std::string& pluginId, bool shutdownService);
+void UnbindAllWebPanels(bool shutdownService);
 void ServiceWebPanelSelection(const std::string& selected);
 void DispatchWebPanelTick(const char* pluginId);
 RECT ComputeWebPanelBounds(const ImVec2& cursor, const ImVec2& avail, const ImVec2& scale, const RECT& client);
@@ -707,7 +714,7 @@ void DestroyPresentation(HWND window, HINSTANCE instance) {
     // UI thread before ImGui/D3D teardown, window destruction and OleUninitialize.
     g_webViewActive.store(false);
     g_webWantsTextInput.store(false);
-    UnbindWebPanel(true);
+    UnbindAllWebPanels(true);
     g_fileDrop.Clear();
     if (g_dropTarget) {
         if (window) RevokeDragDrop(window);
@@ -1076,24 +1083,25 @@ void DrawHostShell(bool pluginGateHeld) {
     const RECT webBounds = ComputeWebPanelBounds(contentCursor, contentAvail, io.DisplayFramebufferScale, clientBounds);
     const auto selected = std::find_if(g_hostSnapshot.plugins.begin(), g_hostSnapshot.plugins.end(),
         [](const auto& plugin) { return plugin.id == g_selectedPlugin; });
-    const bool webOwned = selected != g_hostSnapshot.plugins.end() &&
-        g_webPanel.bound && !g_webPanel.failed && g_webPanel.pluginId == selected->id;
+    WebPanelState* activePanel = selected != g_hostSnapshot.plugins.end() ? FindWebPanel(selected->id) : nullptr;
+    const bool webOwned = activePanel && activePanel->bound && !activePanel->failed;
+    const bool webFailed = activePanel && activePanel->failed;
     const bool popupOpen = ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopup);
-    const bool webActive = webOwned && g_webPanel.shown &&
-        WebView2Ui::IsReady() && WebView2Ui::IsDocumentReady() && !popupOpen;
+    const bool webActive = webOwned && activePanel->shown &&
+        WebView2Ui::IsReady(selected->id) && WebView2Ui::IsDocumentReady(selected->id) && !popupOpen;
     if (g_selectedPlugin == kManagerPanel) {
         DrawManagerPage(g_hostSnapshot);
     } else if (selected == g_hostSnapshot.plugins.end()) {
         ImGui::TextUnformatted("GakuLoader"); ImGui::Separator();
         ImGui::TextWrapped("%s", T(Key::SelectPanel));
     } else if (webActive) {
-        g_webPanel.bounds = webBounds;
-        g_webPanel.hasBounds = true;
-        WebView2Ui::SetBounds(webBounds);
-        WebView2Ui::SetVisible(true);
-        if (g_webPanel.focusPending) {
-            WebView2Ui::Focus();
-            g_webPanel.focusPending = false;
+        activePanel->bounds = webBounds;
+        activePanel->hasBounds = true;
+        WebView2Ui::SetBounds(selected->id, webBounds);
+        WebView2Ui::SetVisible(selected->id, true);
+        if (activePanel->focusPending) {
+            WebView2Ui::Focus(selected->id);
+            activePanel->focusPending = false;
         }
         ImGui::PushID(selected->id.c_str());
         g_inCallback = true;
@@ -1137,6 +1145,10 @@ void DrawHostShell(bool pluginGateHeld) {
                 DrawSpinner(); ImGui::SameLine();
                 ImGui::TextUnformatted(T(Key::Waiting));
             }
+            if (webFailed && !activePanel->diagnostic.empty()) {
+                ImGui::Spacing();
+                ImGui::TextWrapped("%s", activePanel->diagnostic.c_str());
+            }
             static double lastSlowPanelReport = -1.0e9;
             if (panelElapsed >= 16.0 && panelStarted - lastSlowPanelReport >= 2000.0) {
                 lastSlowPanelReport = panelStarted;
@@ -1146,7 +1158,7 @@ void DrawHostShell(bool pluginGateHeld) {
         }
     }
     if (!webActive) {
-        if (g_webPanel.bound) WebView2Ui::SetVisible(false);
+        if (!g_activeWebPanelId.empty()) WebView2Ui::SetVisible(g_activeWebPanelId, false);
         g_webViewActive.store(false);
         g_webWantsTextInput.store(false);
     } else {
@@ -1154,7 +1166,8 @@ void DrawHostShell(bool pluginGateHeld) {
     }
 #if defined(GAKULOADER_DESKTOP_UI_TEST)
     if (g_testHooks.inspectWebPanel)
-        g_testHooks.inspectWebPanel(g_selectedPlugin.c_str(), webActive, WebView2Ui::IsVisible(),
+        g_testHooks.inspectWebPanel(g_selectedPlugin.c_str(), webActive,
+            !g_activeWebPanelId.empty() && WebView2Ui::IsVisible(g_activeWebPanelId),
             webBounds, g_webWantsTextInput.load(std::memory_order_acquire));
 #endif
     ImGui::EndChild();
@@ -1255,16 +1268,20 @@ bool RenderFrame() {
 #endif
     return presented != DXGI_ERROR_DEVICE_REMOVED && presented != DXGI_ERROR_DEVICE_RESET;
 }
-std::wstring WebPanelUserDataName(const std::string& pluginId) {
-    std::wstring name;
-    for (const char ch : pluginId) {
-        const wchar_t wide = static_cast<wchar_t>(static_cast<unsigned char>(ch));
-        const bool safe = (wide >= L'a' && wide <= L'z') || (wide >= L'A' && wide <= L'Z') ||
-            (wide >= L'0' && wide <= L'9') || wide == L'.' || wide == L'-' || wide == L'_';
-        name.push_back(safe ? wide : L'_');
-    }
-    if (name.empty()) name = L"panel";
-    return name;
+WebPanelState* FindWebPanel(const std::string& pluginId) {
+    const auto it = g_webPanels.find(pluginId);
+    return it == g_webPanels.end() ? nullptr : it->second.get();
+}
+
+WebView2Ui::EnvironmentConfig BuildWebEnvironmentConfig() {
+    WebView2Ui::EnvironmentConfig envConfig;
+    envConfig.userDataDir = ConfigPath().parent_path().parent_path() / L"WebView2" / L"Shared";
+    envConfig.languageTag = LanguageSettings::kTags[LanguageSettings::Current()];
+#if !defined(GAKULOADER_DESKTOP_UI_TEST)
+    wchar_t env[8]{};
+    envConfig.devToolsEnabled = GetEnvironmentVariableW(L"GAKULOADER_WEBVIEW_DEVTOOLS", env, 8) > 0 && env[0] == L'1';
+#endif
+    return envConfig;
 }
 
 std::string CallWebPanelService(const GakuWebPanelServiceV1& service, const std::string& request) {
@@ -1284,28 +1301,60 @@ std::string CallWebPanelService(const GakuWebPanelServiceV1& service, const std:
 }
 
 void WebPanelEventSink(void* userData, const char* json) {
+    if (g_stop || !json) return;
     const auto generation = static_cast<uint64_t>(reinterpret_cast<uintptr_t>(userData));
-    if (g_stop || generation != g_webPanelGeneration.load(std::memory_order_acquire) ||
-        !g_webPanel.bound || !json) return;
-    WebView2Ui::PostMessageJson(json);
+    std::string pluginId;
+    {
+        std::lock_guard<std::mutex> lock(g_webSinkMutex);
+        const auto it = g_webSinkRoutes.find(generation);
+        if (it == g_webSinkRoutes.end()) return;
+        pluginId = it->second;
+    }
+    WebView2Ui::PostMessageJson(pluginId, json);
 }
 
-void UnbindWebPanel(bool shutdownService) {
-    if (g_webPanel.bound) {
-        GakuWebPanelServiceV1 current{};
-        const bool accepting = QueryWebPanelService(g_webPanel.pluginId.c_str(), &current) == GAKU_OK;
-        if (shutdownService && accepting && g_webPanel.service.onShutdown) {
-            try { g_webPanel.service.onShutdown(g_webPanel.service.context); }
-            catch (...) { LogWarn("[DesktopUI] web panel onShutdown threw for %s", g_webPanel.pluginId.c_str()); }
+void UnbindWebPanel(const std::string& pluginId, bool shutdownService) {
+    WebPanelState* panel = FindWebPanel(pluginId);
+    if (panel) {
+        {
+            std::lock_guard<std::mutex> lock(g_webSinkMutex);
+            g_webSinkRoutes.erase(panel->generation);
         }
-        if (accepting && g_webPanel.service.setEventSink) {
-            try { g_webPanel.service.setEventSink(g_webPanel.service.context, nullptr, nullptr); }
-            catch (...) {}
+        if (panel->bound) {
+            GakuWebPanelServiceV1 current{};
+            const bool accepting = QueryWebPanelService(pluginId.c_str(), &current) == GAKU_OK;
+            if (shutdownService && accepting && panel->service.onShutdown) {
+                try { panel->service.onShutdown(panel->service.context); }
+                catch (...) { LogWarn("[DesktopUI] web panel onShutdown threw for %s", pluginId.c_str()); }
+            }
+            if (accepting && panel->service.setEventSink) {
+                try { panel->service.setEventSink(panel->service.context, nullptr, nullptr); }
+                catch (...) {}
+            }
         }
+        WebView2Ui::DestroyPanel(pluginId);
+        g_webPanels.erase(pluginId);
+    }
+    if (g_activeWebPanelId == pluginId) {
+        g_activeWebPanelId.clear();
+        g_webViewActive.store(false);
+        g_webWantsTextInput.store(false);
+        g_fileDrop.Clear();
+    }
+}
+
+void UnbindAllWebPanels(bool shutdownService) {
+    std::vector<std::string> ids;
+    ids.reserve(g_webPanels.size());
+    for (const auto& [id, panel] : g_webPanels) {
+        (void)panel;
+        ids.push_back(id);
+    }
+    for (const auto& id : ids) {
+        UnbindWebPanel(id, shutdownService);
     }
     WebView2Ui::Shutdown();
-    g_webPanel = {};
-    g_webPanelGeneration.fetch_add(1, std::memory_order_acq_rel);
+    g_activeWebPanelId.clear();
     g_webViewActive.store(false);
     g_webWantsTextInput.store(false);
     g_fileDrop.Clear();
@@ -1313,16 +1362,18 @@ void UnbindWebPanel(bool shutdownService) {
 
 void HideWebPanel() {
     HideWebDropCatcher();
-    if (g_webPanel.bound && g_webPanel.shown) {
-        if (g_webPanel.service.onHide) {
-            try { g_webPanel.service.onHide(g_webPanel.service.context); }
-            catch (...) { LogWarn("[DesktopUI] web panel onHide threw for %s", g_webPanel.pluginId.c_str()); }
+    if (!g_activeWebPanelId.empty()) {
+        if (WebPanelState* panel = FindWebPanel(g_activeWebPanelId)) {
+            if (panel->bound && panel->shown && panel->service.onHide) {
+                try { panel->service.onHide(panel->service.context); }
+                catch (...) { LogWarn("[DesktopUI] web panel onHide threw for %s", panel->pluginId.c_str()); }
+            }
+            panel->shown = false;
+            panel->focusPending = false;
+            panel->hasFocus = false;
         }
+        WebView2Ui::SetVisible(g_activeWebPanelId, false);
     }
-    g_webPanel.shown = false;
-    g_webPanel.focusPending = false;
-    g_webPanel.hasFocus = false;
-    WebView2Ui::SetVisible(false);
     g_webViewActive.store(false);
     g_webWantsTextInput.store(false);
     g_fileDrop.Clear();
@@ -1330,13 +1381,18 @@ void HideWebPanel() {
 
 bool BindWebPanel(const std::string& pluginId) {
     if (g_uiMode != UiMode::WebView2 || pluginId.empty() || pluginId == kManagerPanel) return false;
-    if (g_webPanel.bound && g_webPanel.pluginId == pluginId && !g_webPanel.failed) return true;
-    if (g_webPanel.bound) UnbindWebPanel(false);
+    if (WebPanelState* existing = FindWebPanel(pluginId)) {
+        if (existing->bound && !existing->failed) return true;
+        if (existing->failed) return false;
+    }
+    auto entry = std::make_unique<WebPanelState>();
+    entry->pluginId = pluginId;
     auto failBind = [&](const std::string& diag) {
         g_webviewDiag = diag;
-        g_webPanel = {};
-        g_webPanel.pluginId = pluginId;
-        g_webPanel.failed = true;
+        entry->bound = false;
+        entry->failed = true;
+        entry->diagnostic = diag;
+        g_webPanels[pluginId] = std::move(entry);
         LogWarn("[DesktopUI] WebView2 plugin panel unavailable for %s; using ImGui content panel. %s",
             pluginId.c_str(), diag.c_str());
         return false;
@@ -1349,126 +1405,167 @@ bool BindWebPanel(const std::string& pluginId) {
         assets.structSize != sizeof(assets) || !assets.assetsDir || !assets.entryPath || !assets.virtualHost) {
         return failBind("Web panel assets are unavailable (status " + std::to_string(assetStatus) + ").");
     }
-    WebView2Ui::Config config;
-    config.assetsDir = assets.assetsDir;
-    config.entryPath = assets.entryPath;
-    config.virtualHost = assets.virtualHost;
-    config.userDataDir = ConfigPath().parent_path().parent_path() / L"WebView2" / WebPanelUserDataName(pluginId);
-    config.languageTag = LanguageSettings::kTags[LanguageSettings::Current()];
-    config.dpiScale = g_windowDpiScale;
-#if !defined(GAKULOADER_DESKTOP_UI_TEST)
-    wchar_t env[8]{};
-    config.devToolsEnabled = GetEnvironmentVariableW(L"GAKULOADER_WEBVIEW_DEVTOOLS", env, 8) > 0 && env[0] == L'1';
-#endif
+    const auto envConfig = BuildWebEnvironmentConfig();
+    WebView2Ui::PanelConfig panelConfig;
+    panelConfig.assetsDir = assets.assetsDir;
+    panelConfig.entryPath = assets.entryPath;
+    panelConfig.virtualHost = assets.virtualHost;
+    panelConfig.dpiScale = g_windowDpiScale;
     std::error_code ec;
-    if (!std::filesystem::exists(config.assetsDir / config.entryPath, ec) || ec) {
+    if (!std::filesystem::exists(panelConfig.assetsDir / panelConfig.entryPath, ec) || ec) {
         return failBind("Web panel entry document is missing.");
     }
-    g_webPanel.pluginId = pluginId;
+    const uint64_t generation = g_webPanelGeneration.fetch_add(1, std::memory_order_acq_rel) + 1;
+    entry->generation = generation;
     WebView2Ui::Callbacks callbacks;
-    callbacks.onMessage = [](const std::string& message) {
-        if (g_stop || !g_webPanel.bound) return;
-        const auto response = ManagerBridge::ForwardRequest(message, [](const std::string& request) {
-            return CallWebPanelService(g_webPanel.service, request);
+    callbacks.onMessage = [pluginId, generation](const std::string& message) {
+        WebPanelState* p = FindWebPanel(pluginId);
+        if (g_stop || !p || !p->bound || p->generation != generation) return;
+        const auto response = ManagerBridge::ForwardRequest(message, [p](const std::string& request) {
+            return CallWebPanelService(p->service, request);
         });
-        if (!response.empty()) WebView2Ui::PostMessageJson(response);
+        if (!response.empty()) WebView2Ui::PostMessageJson(pluginId, response);
     };
-    callbacks.onReady = [](bool ok, const std::string& diagnostic) {
+    callbacks.onReady = [pluginId, generation](bool ok, const std::string& diagnostic) {
+        WebPanelState* p = FindWebPanel(pluginId);
+        if (!p || p->generation != generation) return;
         if (ok) {
-            if (g_stop) { WebView2Ui::Shutdown(); return; }
-            LogInfo("[DesktopUI] WebView2 plugin panel ready: %s", g_webPanel.pluginId.c_str());
+            if (g_stop) { UnbindAllWebPanels(false); return; }
+            LogInfo("[DesktopUI] WebView2 plugin panel ready: %s", pluginId.c_str());
         } else {
             g_webviewDiag = diagnostic;
-            g_webPanel.failed = true;
-            g_webViewActive.store(false);
-            g_webWantsTextInput.store(false);
-            WebView2Ui::SetVisible(false);
-            LogWarn("[DesktopUI] WebView2 plugin panel unavailable; using ImGui content panel. %s", diagnostic.c_str());
+            p->failed = true;
+            p->diagnostic = diagnostic;
+            if (g_activeWebPanelId == pluginId) {
+                g_webViewActive.store(false);
+                g_webWantsTextInput.store(false);
+            }
+            WebView2Ui::SetVisible(pluginId, false);
+            LogWarn("[DesktopUI] WebView2 plugin panel unavailable for %s; using ImGui content panel. %s",
+                pluginId.c_str(), diagnostic.c_str());
         }
     };
-    callbacks.onDocumentReady = [] {
-        if (g_stop || !g_webPanel.bound) return;
-        if (g_webPanel.shown) g_webPanel.focusPending = true;
+    callbacks.onDocumentReady = [pluginId, generation] {
+        WebPanelState* p = FindWebPanel(pluginId);
+        if (g_stop || !p || !p->bound || p->generation != generation) return;
+        if (p->shown) p->focusPending = true;
     };
-    callbacks.onFocusChanged = [](bool focused) {
-        g_webPanel.hasFocus = focused;
-        if (focused) g_webPanel.focusPending = false;
+    callbacks.onFocusChanged = [pluginId, generation](bool focused) {
+        WebPanelState* p = FindWebPanel(pluginId);
+        if (!p || p->generation != generation) return;
+        p->hasFocus = focused;
+        if (focused) p->focusPending = false;
     };
-    callbacks.onTextInputChanged = [](bool active) { g_webWantsTextInput.store(active); };
-    callbacks.onTabLeave = [](bool) {
-        g_webPanel.focusPending = false;
-        g_webPanel.hasFocus = false;
-        g_webWantsTextInput.store(false);
+    callbacks.onTextInputChanged = [pluginId, generation](bool active) {
+        WebPanelState* p = FindWebPanel(pluginId);
+        if (!p || p->generation != generation) return;
+        if (g_activeWebPanelId == pluginId) g_webWantsTextInput.store(active);
+    };
+    callbacks.onTabLeave = [pluginId, generation](bool) {
+        WebPanelState* p = FindWebPanel(pluginId);
+        if (!p || p->generation != generation) return;
+        p->focusPending = false;
+        p->hasFocus = false;
+        if (g_activeWebPanelId == pluginId) g_webWantsTextInput.store(false);
         g_returnFocusToImGui = true;
         if (HWND window = g_window.load()) SetFocus(window);
     };
-    if (!WebView2Ui::Initialize(g_window.load(), config, std::move(callbacks))) {
-        return failBind(WebView2Ui::LastDiagnostic());
+    if (!WebView2Ui::InitializePanel(pluginId, g_window.load(), envConfig, panelConfig, std::move(callbacks))) {
+        return failBind(WebView2Ui::LastDiagnostic(pluginId));
     }
-    g_webPanel.pluginId = pluginId;
-    g_webPanel.service = service;
-    g_webPanel.bound = true;
-    g_webPanel.failed = false;
-    g_webPanel.generation = g_webPanelGeneration.fetch_add(1, std::memory_order_acq_rel) + 1;
+    entry->service = service;
+    entry->bound = true;
+    entry->failed = false;
+    entry->shown = true;
+    entry->focusPending = true;
+    {
+        std::lock_guard<std::mutex> lock(g_webSinkMutex);
+        g_webSinkRoutes[generation] = pluginId;
+    }
+    g_webPanels[pluginId] = std::move(entry);
     if (service.setEventSink)
         service.setEventSink(service.context, WebPanelEventSink,
-            reinterpret_cast<void*>(static_cast<uintptr_t>(g_webPanel.generation)));
+            reinterpret_cast<void*>(static_cast<uintptr_t>(generation)));
     if (service.onShow) {
         try { service.onShow(service.context); }
         catch (...) { LogWarn("[DesktopUI] web panel onShow threw for %s", pluginId.c_str()); }
     }
-    g_webPanel.shown = true;
-    g_webPanel.focusPending = true;
     return true;
 }
 
 void ServiceWebPanelSelection(const std::string& selected) {
     if (g_uiMode != UiMode::WebView2) {
-        if (g_webPanel.bound) UnbindWebPanel(true);
+        if (!g_webPanels.empty() || WebView2Ui::IsEnvironmentReady()) UnbindAllWebPanels(true);
         return;
     }
+    // Retire panels whose plugin web-panel service is no longer available (e.g. unloaded).
+    std::vector<std::string> staleIds;
+    for (const auto& [id, panel] : g_webPanels) {
+        if (panel && panel->bound) {
+            GakuWebPanelServiceV1 current{};
+            if (QueryWebPanelService(id.c_str(), &current) != GAKU_OK) {
+                staleIds.push_back(id);
+            }
+        }
+    }
+    for (const auto& id : staleIds) {
+        UnbindWebPanel(id, false);
+    }
+
+    // Lazily warm up the shared CoreWebView2Environment when any enabled plugin provides a web panel.
+    bool anyWebPlugin = false;
+    for (const auto& plugin : g_hostSnapshot.plugins) {
+        GakuWebPanelServiceV1 svc{};
+        if (QueryWebPanelService(plugin.id.c_str(), &svc) == GAKU_OK) {
+            anyWebPlugin = true;
+            break;
+        }
+    }
+    if (anyWebPlugin && !WebView2Ui::IsEnvironmentReady() && !WebView2Ui::HasEnvironmentFailed()) {
+        WebView2Ui::EnsureEnvironment(BuildWebEnvironmentConfig());
+    }
+
     if (selected.empty() || selected == kManagerPanel) {
         HideWebPanel();
+        g_activeWebPanelId.clear();
         return;
     }
     GakuWebPanelServiceV1 targetService{};
     const bool selectedHasWeb = (QueryWebPanelService(selected.c_str(), &targetService) == GAKU_OK);
     if (!selectedHasWeb) {
-        // Keep any already-bound WebView2 panel warm and hidden while viewing
+        // Keep all already-bound WebView2 panels warm and hidden while viewing
         // Manager or legacy ImGui plugins so switching back is instant.
         HideWebPanel();
-    } else {
-        if (g_webPanel.bound && g_webPanel.pluginId != selected) {
-            HideWebPanel();
-            UnbindWebPanel(false);
-        }
-        if (!g_webPanel.bound) {
-            if (!(g_webPanel.failed && g_webPanel.pluginId == selected)) {
-                if (g_webPanel.pluginId != selected) g_webPanel = {};
-                BindWebPanel(selected);
-            }
-        } else if (!g_webPanel.failed && !g_webPanel.shown) {
-            if (g_webPanel.service.onShow) {
-                try { g_webPanel.service.onShow(g_webPanel.service.context); }
-                catch (...) { LogWarn("[DesktopUI] web panel onShow threw for %s", g_webPanel.pluginId.c_str()); }
-            }
-            g_webPanel.shown = true;
-            g_webPanel.focusPending = true;
-        }
+        g_activeWebPanelId.clear();
+        return;
     }
-    if (g_webPanel.bound) {
-        GakuWebPanelServiceV1 current{};
-        if (QueryWebPanelService(g_webPanel.pluginId.c_str(), &current) != GAKU_OK)
-            UnbindWebPanel(false);
+
+    if (!g_activeWebPanelId.empty() && g_activeWebPanelId != selected) {
+        // Hide the previous web plugin panel without destroying it, preserving its state.
+        HideWebPanel();
+    }
+    g_activeWebPanelId = selected;
+    WebPanelState* panel = FindWebPanel(selected);
+    if (!panel) {
+        BindWebPanel(selected);
+    } else if (panel->bound && !panel->failed && !panel->shown) {
+        if (panel->service.onShow) {
+            try { panel->service.onShow(panel->service.context); }
+            catch (...) { LogWarn("[DesktopUI] web panel onShow threw for %s", selected.c_str()); }
+        }
+        panel->shown = true;
+        panel->focusPending = true;
     }
 }
 
 void DispatchWebPanelTick(const char* pluginId) {
-    if (!g_webPanel.bound || g_webPanel.pluginId != pluginId || !g_webPanel.service.onUiTick) return;
-    try { g_webPanel.service.onUiTick(g_webPanel.service.context); }
+    if (!pluginId) return;
+    WebPanelState* panel = FindWebPanel(pluginId);
+    if (!panel || !panel->bound || !panel->service.onUiTick) return;
+    try { panel->service.onUiTick(panel->service.context); }
     catch (...) {
         LogWarn("[DesktopUI] web panel onUiTick threw for %s; falling back to ImGui", pluginId);
-        UnbindWebPanel(false);
+        UnbindWebPanel(pluginId, false);
     }
 }
 
@@ -1536,13 +1633,14 @@ void SyncWebDropCatcher(HWND parent) {
         HideWebDropCatcher();
         return;
     }
+    WebPanelState* activePanel = !g_activeWebPanelId.empty() ? FindWebPanel(g_activeWebPanelId) : nullptr;
     if (!g_externalDragArmed || !g_webViewActive.load(std::memory_order_acquire) ||
-        !g_webPanel.hasBounds || !g_fileDrop.HasTarget()) {
+        !activePanel || !activePanel->hasBounds || !g_fileDrop.HasTarget()) {
         HideWebDropCatcher();
         return;
     }
-    POINT tl{g_webPanel.bounds.left, g_webPanel.bounds.top};
-    POINT br{g_webPanel.bounds.right, g_webPanel.bounds.bottom};
+    POINT tl{activePanel->bounds.left, activePanel->bounds.top};
+    POINT br{activePanel->bounds.right, activePanel->bounds.bottom};
     if (!ClientToScreen(parent, &tl) || !ClientToScreen(parent, &br) ||
         br.x <= tl.x || br.y <= tl.y) {
         HideWebDropCatcher();

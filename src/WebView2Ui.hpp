@@ -7,14 +7,17 @@
 // See LICENSE and LICENSES/GakuLoader-Plugin-Exception.txt.
 
 #pragma once
-// WebView2 host for a plugin content panel. Owns the environment/controller/webview
-// COM lifecycle on the desktop UI thread (the same STA that pumps the control
-// window). The app-local WebView2Loader.dll is resolved dynamically so the proxy
-// version.dll stays loadable when it is absent, and both Debug/Release CRTs work.
+// WebView2 host for plugin content panels. Owns a single shared
+// CoreWebView2Environment and per-plugin CoreWebView2Controller/WebView
+// instances on the desktop UI thread (the same STA that pumps the control
+// window). The app-local WebView2Loader.dll is resolved dynamically so the
+// proxy version.dll stays loadable when it is absent, and both Debug/Release
+// CRTs work.
 //
-// Assets are served from a provider-owned virtual host mapped to a local folder;
-// navigation and web messages are restricted to that origin. There is no remote
-// content and no arbitrary native command surface.
+// Each plugin panel serves assets from its own provider-owned virtual host
+// mapped to a local folder; navigation and web messages are restricted to that
+// plugin's origin, keeping DOM/storage, native bridge permissions, and
+// lifecycles isolated across plugins while sharing the browser environment.
 
 #include <windows.h>
 #include <cstdint>
@@ -24,13 +27,16 @@
 
 namespace GakuLoader::WebView2Ui {
 
-struct Config {
-    std::filesystem::path assetsDir;
+struct EnvironmentConfig {
     std::filesystem::path userDataDir;
-    std::wstring entryPath = L"index.html";
-    std::wstring virtualHost;
     std::wstring languageTag;
     bool devToolsEnabled = false;
+};
+
+struct PanelConfig {
+    std::filesystem::path assetsDir;
+    std::wstring entryPath = L"index.html";
+    std::wstring virtualHost;
     float dpiScale = 1.0f;
 };
 
@@ -46,41 +52,63 @@ struct Callbacks {
     std::function<void(bool forward)> onTabLeave;
 };
 
-// Kick off asynchronous creation. Returns false (with LastDiagnostic) when the
-// runtime, loader, or assets are missing; otherwise returns true and reports the
-// final result through Callbacks::onReady. Must be called on the UI thread.
-bool Initialize(HWND parent, const Config& config, Callbacks callbacks);
+// Warm up or ensure the shared CoreWebView2Environment on the UI thread.
+// Returns false (with LastEnvironmentDiagnostic) if the runtime, loader, or
+// userDataDir is unavailable; otherwise returns true and starts async creation
+// if not already started. Safe to call repeatedly.
+bool EnsureEnvironment(const EnvironmentConfig& config);
 
-void SetVisible(bool visible);
-void SetBounds(const RECT& clientBounds);
+// Create and initialize a per-plugin WebView2 panel on the UI thread, sharing
+// the single CoreWebView2Environment. Replaces any prior panel with the same
+// panelId. Returns false (with LastDiagnostic(panelId)) on immediate failure;
+// otherwise returns true and reports the final result via Callbacks::onReady.
+bool InitializePanel(const std::string& panelId, HWND parent,
+    const EnvironmentConfig& envConfig, const PanelConfig& panelConfig, Callbacks callbacks);
+
+void SetVisible(const std::string& panelId, bool visible);
+void SetBounds(const std::string& panelId, const RECT& clientBounds);
 void SetDpiScale(float scale);
 void NotifyParentMoved();
-void Focus();
-void PostMessageJson(const std::string& json);
-// Release controller/environment on the UI thread. Safe to call repeatedly.
+void Focus(const std::string& panelId);
+void PostMessageJson(const std::string& panelId, const std::string& json);
+
+// Destroy a single plugin panel (controller + webview) while keeping the shared
+// CoreWebView2Environment alive for other panels. Safe to call repeatedly.
+void DestroyPanel(const std::string& panelId);
+
+// Release all plugin panels and the shared CoreWebView2Environment on the UI
+// thread. Safe to call repeatedly.
 void Shutdown();
 
-bool IsReady();
-bool IsDocumentReady();
-bool IsVisible();
-std::string LastDiagnostic();
+bool IsEnvironmentReady();
+bool HasEnvironmentFailed();
+std::string LastEnvironmentDiagnostic();
+
+bool HasPanel(const std::string& panelId);
+bool IsReady(const std::string& panelId);
+bool IsDocumentReady(const std::string& panelId);
+bool IsVisible(const std::string& panelId);
+std::string LastDiagnostic(const std::string& panelId);
 
 #if defined(GAKULOADER_WEBVIEW2_TEST)
 struct TestHooks {
     bool failInitialize = false;
+    bool failEnvironment = false;
     bool failDocument = false;
-    std::function<void(const Config&)> initialize;
-    std::function<void(bool)> visible;
-    std::function<void(const RECT&)> bounds;
+    std::function<void(const EnvironmentConfig&)> ensureEnvironment;
+    std::function<void(const std::string&, const PanelConfig&)> initializePanel;
+    std::function<void(const std::string&, bool)> visible;
+    std::function<void(const std::string&, const RECT&)> bounds;
     std::function<void(float)> dpi;
-    std::function<void()> focus;
-    std::function<void(const std::string&)> postMessage;
+    std::function<void(const std::string&)> focus;
+    std::function<void(const std::string&, const std::string&)> postMessage;
+    std::function<void(const std::string&)> destroyPanel;
     std::function<void()> shutdown;
 };
 void ConfigureTest(const TestHooks& hooks);
-void SimulateProcessFailedForTest(const std::string& diagnostic);
-void SimulateFocusForTest(bool focused);
-void SimulateTabLeaveForTest(bool forward);
+void SimulateProcessFailedForTest(const std::string& panelId, const std::string& diagnostic, bool browserExited = false);
+void SimulateFocusForTest(const std::string& panelId, bool focused);
+void SimulateTabLeaveForTest(const std::string& panelId, bool forward);
 #endif
 
 } // namespace GakuLoader::WebView2Ui
