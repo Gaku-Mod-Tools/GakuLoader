@@ -1,0 +1,29 @@
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64"><Configuration>Debug</Configuration><Platform>x64</Platform></ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64"><Configuration>Release</Configuration><Platform>x64</Platform></ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>17.0</VCProjectVersion>
+    <ProjectGuid>{6D8A4F2E-9C31-4B7A-8E5D-1F2A3B4C5D6E}</ProjectGuid>
+    <RootNamespace>ManagerBridgeTests</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries Condition="'$(Configuration)' == 'Debug'">true</UseDebugLibraries>
+    <UseDebugLibraries Condition="'$(Configuration)' == 'Release'">false</UseDebugLibraries>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <PropertyGroup>
+    <OutDir>$(GakuBuildDir)tests\$(Configuration)\</OutDir>
+    <TargetName>manager-bridge-tests</TargetName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ClCompile Include="ManagerBridgeTests.cpp" />
+    <ClCompile Include="..\src\ManagerBridge.cpp" />
+    <ClCompile Include="..\src\ManagerBackend.cpp" />
+    <ClCompile Include="..\src\Hotkeys.cpp" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>

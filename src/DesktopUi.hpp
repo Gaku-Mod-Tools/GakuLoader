@@ -9,6 +9,7 @@
 #pragma once
 #include "GakuPlugin.h"
 #include "GakuFileDrop.h"
+#include <windows.h>
 
 namespace GakuLoader::DesktopUi {
 // Starts the standalone Win32/D3D11 desktop window. Never call from DllMain.
@@ -45,6 +46,8 @@ struct TestHooks {
     uint32_t (*clipboardSequence)() = nullptr;
     void* clipboardUserData = nullptr;
     void (*inspectUiItem)(const char* key, const char* value, float left, float top, float right, float bottom) = nullptr;
+    void (*inspectWebPanel)(const char* pluginId, bool active, bool visible, const RECT& bounds, bool wantsTextInput) = nullptr;
+    bool enableWebPanel = false;
 };
 void ConfigureTest(const TestHooks& hooks);
 #endif

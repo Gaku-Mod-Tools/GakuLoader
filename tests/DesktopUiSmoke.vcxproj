@@ -43,6 +43,9 @@
     <ClCompile Include="..\src\DesktopUi.cpp" />
     <ClCompile Include="..\src\DesktopDialogs.cpp" />
     <ClCompile Include="..\src\Hotkeys.cpp" />
+    <ClCompile Include="..\src\ManagerBridge.cpp" />
+    <ClCompile Include="..\src\ManagerBackend.cpp" />
+    <ClCompile Include="..\src\WebView2Ui.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ImGui.vcxproj">

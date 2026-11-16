@@ -225,6 +225,7 @@ void LogInfo(const char* format, ...) { va_list args; va_start(args, format); vp
 void LogWarn(const char* format, ...) { va_list args; va_start(args, format); vprintf(format, args); puts(""); va_end(args); }
 void LogError(const char* format, ...) { va_list args; va_start(args, format); vprintf(format, args); puts(""); va_end(args); }
 void LogDebug(const char*, ...) {}
+bool IsShuttingDown() { return false; }
 // Actual mutex contention is tested with the real PluginHost+DLL fixtures by
 // test-host.ps1. This adapter forces denial to test the production GPU branch.
 bool TryDispatchDesktopFrame(void (*build)(void*), void* data) {
@@ -315,6 +316,7 @@ void DispatchDesktopPanel(const char* id) {
     } catch (const std::exception& problem) { Fail(problem.what()); }
     callbackRunning = false;
 }
+GakuStatus QueryWebPanelService(const char*, GakuWebPanelServiceV1*) { return GAKU_E_UNAVAILABLE; }
 }
 int main(int argc, char** argv) {
     HWND game = nullptr;

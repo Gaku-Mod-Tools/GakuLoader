@@ -17,7 +17,7 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <PropertyGroup><OutDir>$(GakuBuildDir)tests\$(Configuration)\</OutDir><TargetName>manager-ui-tests</TargetName></PropertyGroup>
   <ItemDefinitionGroup>
-    <ClCompile><PreprocessorDefinitions>GAKULOADER_DESKTOP_UI_TEST;%(PreprocessorDefinitions)</PreprocessorDefinitions></ClCompile>
+    <ClCompile><PreprocessorDefinitions>GAKULOADER_DESKTOP_UI_TEST;GAKULOADER_WEBVIEW2_TEST;%(PreprocessorDefinitions)</PreprocessorDefinitions></ClCompile>
     <Link><AdditionalDependencies>d3d11.lib;dxgi.lib;d3dcompiler.lib;dwmapi.lib;imm32.lib;ole32.lib;uuid.lib;shell32.lib;user32.lib;gdi32.lib;%(AdditionalDependencies)</AdditionalDependencies></Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -25,6 +25,9 @@
     <ClCompile Include="..\src\DesktopUi.cpp" />
     <ClCompile Include="..\src\DesktopDialogs.cpp" />
     <ClCompile Include="..\src\Hotkeys.cpp" />
+    <ClCompile Include="..\src\ManagerBridge.cpp" />
+    <ClCompile Include="..\src\ManagerBackend.cpp" />
+    <ClCompile Include="..\src\WebView2Ui.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ImGui.vcxproj"><Project>{6F1A2B30-4C5D-4E6F-8A90-1B2C3D4E5F02}</Project></ProjectReference>

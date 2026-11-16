@@ -28,7 +28,7 @@ function Get-GakuSourceStamp {
       stale artifact: a PASS from a binary older than its sources is worse than no result.
     #>
     param([string]$Repo)
-    $roots = @('src', 'tests', 'include', 'deps\imgui', 'deps\minhook')
+    $roots = @('src', 'tests', 'include', 'deps\imgui', 'deps\minhook', 'deps\webview2', 'deps\nlohmann')
     $newest = [DateTime]::MinValue
     foreach ($root in $roots) {
         $dir = Join-Path $Repo $root

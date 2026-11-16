@@ -66,10 +66,14 @@
     <ClCompile Include="src\DesktopUi.cpp" />
     <ClCompile Include="src\DesktopDialogs.cpp" />
     <ClCompile Include="src\DiagnosticBoundary.cpp" />
+    <ClCompile Include="src\ManagerBridge.cpp" />
+    <ClCompile Include="src\ManagerBackend.cpp" />
+    <ClCompile Include="src\WebView2Ui.cpp" />
   </ItemGroup>
 
   <ItemGroup>
     <ClInclude Include="include\GakuPlugin.h" />
+    <ClInclude Include="include\GakuWebPanel.h" />
     <ClInclude Include="include\GakuFileDrop.h" />
     <ClInclude Include="include\GakuPaths.h" />
     <ClInclude Include="include\GakuPaths.hpp" />
@@ -95,6 +99,9 @@
     <ClInclude Include="src\DiagnosticBoundary.hpp" />
     <ClInclude Include="src\ActorEntry.hpp" />
     <ClInclude Include="src\CrashTrace.hpp" />
+    <ClInclude Include="src\ManagerBridge.hpp" />
+    <ClInclude Include="src\ManagerBackend.hpp" />
+    <ClInclude Include="src\WebView2Ui.hpp" />
   </ItemGroup>
 
   <ItemGroup>

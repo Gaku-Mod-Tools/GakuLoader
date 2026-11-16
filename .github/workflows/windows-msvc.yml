@@ -21,3 +21,24 @@ jobs:
             build/validation/
             build/tests/report.json
             build/examples/minimal-plugin/Release/activation.log
+  frontend-validation:
+    runs-on: windows-2022
+    defaults:
+      run:
+        shell: powershell
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install locked frontend dependencies
+        run: npm ci
+      - name: Typecheck frontend
+        run: npm run typecheck
+      - name: Test frontend bridge and manager state
+        run: npm test
+      - name: Build offline frontend assets
+        run: npm run build

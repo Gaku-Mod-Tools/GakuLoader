@@ -38,7 +38,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <!-- NOMINMAX: MSVC 的 windows.h 会定义 min/max 宏，掐死 std::min。源码无裸 min/max 用法。 -->
       <PreprocessorDefinitions>WIN32;_WINDOWS;UNICODE;_UNICODE;_CRT_SECURE_NO_WARNINGS;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(RepoRoot)include;$(RepoRoot)src;$(GakuDepsDir)imgui;$(GakuDepsDir)minhook\include;$(GakuDepsDir)minhook\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(RepoRoot)include;$(RepoRoot)src;$(GakuDepsDir);$(GakuDepsDir)webview2\include;$(GakuDepsDir)imgui;$(GakuDepsDir)minhook\include;$(GakuDepsDir)minhook\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>

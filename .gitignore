@@ -1,5 +1,7 @@
 build/
 x64/
+!deps/webview2/x64/
+!deps/webview2/x64/WebView2Loader.dll
 .vs/
 *.user
 *.suo
@@ -11,3 +13,7 @@ x64/
 *.tlog
 *.lastbuildstate
 __pycache__/
+frontend/node_modules/
+frontend/dist/
+frontend/visual-check/
+*.tsbuildinfo

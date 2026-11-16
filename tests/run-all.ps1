@@ -30,6 +30,8 @@ New-Item -ItemType Directory -Path $logDir -Force | Out-Null
 # does not hide the headless results.
 $suites = @(
     [ordered]@{ name = 'language-settings'; script = 'tests\test-language-settings.ps1'; evidence = @() }
+    [ordered]@{ name = 'manager-bridge'; script = 'tests\test-manager-bridge.ps1'; evidence = @('build\manager-bridge-tests\report.json') }
+    [ordered]@{ name = 'web-panel-host'; script = 'tests\test-web-panel-host.ps1'; evidence = @('build\web-panel-host-tests\report.json') }
     [ordered]@{ name = 'desktop-fonts'; script = 'tests\test-desktop-fonts.ps1'; evidence = @('build\desktop-fonts-tests.log') }
     [ordered]@{ name = 'manager-ui'; script = 'tests\test-manager-ui.ps1'; evidence = @('build\manager-ui-tests\manager-ui-tests.log') }
     [ordered]@{ name = 'docs'; script = 'tools\test-docs.ps1'; evidence = @() }

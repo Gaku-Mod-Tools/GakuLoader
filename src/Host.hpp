@@ -8,6 +8,7 @@
 
 #pragma once
 #include "GakuPlugin.h"
+#include "GakuWebPanel.h"
 #include <filesystem>
 #include <string>
 #include <vector>
@@ -74,6 +75,10 @@ struct DesktopHostSnapshot {
 // Non-blocking copies and selected-panel dispatch; UI never borrows the list.
 bool SnapshotDesktopHost(DesktopHostSnapshot& output);
 void DispatchDesktopPanel(const char* pluginId);
+// Loader-internal optional web-panel discovery. The public plugin ABI is unchanged.
+// Validates that <pluginId>.web-panel/v1 is registered by that plugin's owner and
+// that the owner is still accepting work.
+GakuStatus QueryWebPanelService(const char* pluginId, GakuWebPanelServiceV1* output);
 // On other threads this requests shutdown; callbacks run at next main dispatch.
 // UnityQuit calls this on the main thread before disabling owned hooks.
 void Shutdown();

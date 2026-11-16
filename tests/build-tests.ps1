@@ -70,6 +70,8 @@ foreach ($fixture in $pathsFixtures) {
 $testDir = Join-Path $repo "build\tests\$Configuration"
 $expected = @('host-tests.exe', 'minhook-isolation.exe', 'frame-pump-tests.exe',
     'wndproc-chain-tests.exe', 'language-settings-tests.exe', 'desktop-fonts-tests.exe', 'manager-ui-tests.exe',
+    'manager-bridge-tests.exe',
+    'web-panel-host-tests.exe',
     'diagnostic-boundary-tests.exe', 'c-abi-test.exe', 'desktop-ui-smoke.exe', 'desktop-appearance-tests.exe',
     'desktop-dialogs-tests.exe', 'desktop-file-drop-tests.exe', 'host-dialog-concurrency.exe', 'paths-tests.exe',
     'paths-fixtures\paths-alpha.dll', 'paths-fixtures\paths-beta.dll', 'paths-fixtures\paths-uppercase.dll')

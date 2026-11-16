@@ -14,6 +14,9 @@
 #include "Hotkeys.hpp"
 #include "DesktopFonts.hpp"
 #include "ManagerStrings.hpp"
+#include "WebView2Ui.hpp"
+#include "ManagerBridge.hpp"
+#include "GakuWebPanel.h"
 #include <windows.h>
 #include <shellapi.h>
 #include <ole2.h>
@@ -25,6 +28,7 @@
 #include <backends/imgui_impl_dx11.h>
 #include <atomic>
 #include <mutex>
+#include <memory>
 #include <cstring>
 #include <new>
 #include <algorithm>
@@ -32,6 +36,7 @@
 #include <functional>
 #include <cmath>
 #include <cstdio>
+#include <vector>
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND, UINT, WPARAM, LPARAM);
 
@@ -379,6 +384,36 @@ const GakuDesktopUiService g_service{GAKU_SERVICE_VERSION, sizeof(g_service), Bi
 const GakuDesktopWindowService g_windowService{GAKU_SERVICE_VERSION, sizeof(g_windowService),
     nullptr, GetWindow, RequestShow, GAKU_DESKTOP_PRESENTATION_PLUGIN_PANEL};
 
+// ---------------------------------------------------------------- web panel host
+// The ImGui shell is always drawn. A selected plugin may optionally provide a
+// web-panel service; only its ##PluginContent rectangle is covered by WebView2.
+// Manager, settings, sidebar, status bar and legacy plugins remain ImGui.
+enum class UiMode { ImGui, WebView2 };
+UiMode g_uiMode = UiMode::ImGui;
+std::atomic_bool g_webViewActive{false};
+std::atomic_bool g_webWantsTextInput{false};
+std::string g_webviewDiag;
+struct WebPanelState {
+    std::string pluginId;
+    GakuWebPanelServiceV1 service{};
+    bool bound = false;
+    bool shown = false;
+    bool failed = false;
+    bool focusPending = false;
+    bool hasFocus = false;
+    uint64_t generation = 0;
+    RECT bounds{};
+    bool hasBounds = false;
+};
+WebPanelState g_webPanel;
+std::atomic<uint64_t> g_webPanelGeneration{0};
+bool g_returnFocusToImGui = false;
+void HideWebPanel();
+void UnbindWebPanel(bool shutdownService);
+void ServiceWebPanelSelection(const std::string& selected);
+void DispatchWebPanelTick(const char* pluginId);
+RECT ComputeWebPanelBounds(const ImVec2& cursor, const ImVec2& avail, const ImVec2& scale, const RECT& client);
+
 GakuUiTheme g_currentTheme = GAKU_UI_THEME_DARK;
 float g_currentUiScale = 1.0f;
 float g_currentDpiScale = 1.0f;
@@ -405,6 +440,34 @@ GakuStatus GetAppearanceImpl(uint32_t outputSize, GakuUiAppearanceV1* output) {
     return GAKU_OK;
 }
 const GakuAppearanceService g_appearanceService{GAKU_SERVICE_VERSION, sizeof(g_appearanceService), GetAppearanceImpl};
+UiMode ResolveUiMode() {
+#if defined(GAKULOADER_DESKTOP_UI_TEST)
+    return g_testHooks.enableWebPanel ? UiMode::WebView2 : UiMode::ImGui;
+#else
+    const auto value = ReadConfigValue(ConfigPath(), L"host", L"ui");
+    if (lstrcmpiW(value.c_str(), L"imgui") == 0) return UiMode::ImGui;
+    return UiMode::WebView2;
+#endif
+}
+
+std::filesystem::path ModuleDir() {
+    HMODULE self = nullptr;
+    GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+        reinterpret_cast<LPCWSTR>(&ModuleDir), &self);
+    wchar_t path[32768]{};
+    const DWORD length = GetModuleFileNameW(self, path, ARRAYSIZE(path));
+    if (!length || length >= ARRAYSIZE(path)) return {};
+    return std::filesystem::path(path).parent_path();
+}
+
+void SelectPanelInternal(const std::string& id) {
+    g_selectedPlugin = id.empty() ? kManagerPanel : id;
+    g_fileDrop.Clear();
+    if (g_selectedPlugin != kManagerPanel && g_editorOpen) {
+        g_editorOpen = g_captureKeys = false; Hotkeys::SetCaptureActive(false);
+    }
+}
+
 void ShowControlWindow(HWND window) {
     ShowWindow(window, IsIconic(window) ? SW_RESTORE : SW_SHOW);
     SetForegroundWindow(window);
@@ -446,15 +509,20 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wparam, LPARAM lpa
         g_minimized = wparam == SIZE_MINIMIZED;
         if (g_minimized) { g_captureKeys = false; Hotkeys::SetCaptureActive(false); }
         if (!g_minimized) { g_resizeWidth = LOWORD(lparam); g_resizeHeight = HIWORD(lparam); }
+        if (g_minimized) HideWebPanel();
         return 0;
-    case WM_KILLFOCUS:
-        g_captureKeys = false; Hotkeys::SetCaptureActive(false);
+    case WM_KILLFOCUS: {
+        const HWND receiving = reinterpret_cast<HWND>(wparam);
+        if (!receiving || GetAncestor(receiving, GA_ROOT) != window) {
+            g_captureKeys = false; Hotkeys::SetCaptureActive(false);
+        }
         break;
+    }
     case WM_ACTIVATEAPP:
         if (!wparam) { g_captureKeys = false; Hotkeys::SetCaptureActive(false); }
         break;
     case WM_SHOWWINDOW:
-        if (!wparam) { g_captureKeys = false; Hotkeys::SetCaptureActive(false); }
+        if (!wparam) { g_captureKeys = false; Hotkeys::SetCaptureActive(false); HideWebPanel(); }
         break;
     case WM_GETMINMAXINFO:
         reinterpret_cast<MINMAXINFO*>(lparam)->ptMinTrackSize = {720, 480};
@@ -466,14 +534,21 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wparam, LPARAM lpa
             rectangle->right - rectangle->left, rectangle->bottom - rectangle->top, SWP_NOZORDER | SWP_NOACTIVATE);
         g_currentDpiScale = g_windowDpiScale = static_cast<float>(LOWORD(wparam)) / 96.0f;
         g_fontsDirty = g_appearanceDirty = true;
+        WebView2Ui::SetDpiScale(g_windowDpiScale);
+        WebView2Ui::NotifyParentMoved();
         return 0;
     }
+    case WM_MOVE:
+    case WM_WINDOWPOSCHANGED:
+        WebView2Ui::NotifyParentMoved();
+        break;
     case WM_SYSCOMMAND:
         if ((wparam & 0xFFF0) == SC_KEYMENU) return 0;
         break;
     case WM_CLOSE:
         g_fileDrop.Clear();
         g_captureKeys = g_editorOpen = false; Hotkeys::SetCaptureActive(false);
+        HideWebPanel();
         // Closing the controls never sends a close request to the game.
         // If Explorer cannot accept a tray icon, keep a minimized taskbar entry.
         ShowWindow(window, g_trayAdded ? SW_HIDE : SW_MINIMIZE);
@@ -618,6 +693,11 @@ bool CreatePresentation(HWND window) {
     return g_dx11Ready;
 }
 void DestroyPresentation(HWND window, HINSTANCE instance) {
+    // Release the plugin web panel and WebView2 controller/view/environment on the
+    // UI thread before ImGui/D3D teardown, window destruction and OleUninitialize.
+    g_webViewActive.store(false);
+    g_webWantsTextInput.store(false);
+    UnbindWebPanel(true);
     g_fileDrop.Clear();
     if (g_dropTarget) {
         if (window) RevokeDragDrop(window);
@@ -926,13 +1006,14 @@ void DrawHostShell(bool pluginGateHeld) {
     SnapshotDesktopHost(g_hostSnapshot);
     g_wantsTextInput.store(ImGui::GetIO().WantTextInput, std::memory_order_release);
     if (g_selectedPlugin.empty()) g_selectedPlugin = kManagerPanel;
-    if (g_selectedPlugin != kManagerPanel && g_editorOpen) {
-        g_editorOpen = g_captureKeys = false; Hotkeys::SetCaptureActive(false);
-    }
     const ImGuiIO& io = ImGui::GetIO();
     ImGui::SetNextWindowPos(ImVec2(0, 0)); ImGui::SetNextWindowSize(io.DisplaySize);
     ImGui::Begin("##GakuLoaderDesktopShell", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove |
         ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_MenuBar);
+    if (g_returnFocusToImGui) {
+        ImGui::SetWindowFocus();
+        g_returnFocusToImGui = false;
+    }
     if (ImGui::BeginMenuBar()) {
         if (ImGui::BeginMenu(Label(Key::File, "FileMenu").c_str())) {
             if (ImGui::MenuItem(T(Key::Hide))) PostMessageW(g_window, WM_CLOSE, 0, 0);
@@ -954,60 +1035,142 @@ void DrawHostShell(bool pluginGateHeld) {
     const float navWidth = (std::max)(160.0f, 190.0f * (g_currentUiScale * g_currentDpiScale));
     ImGui::BeginChild("##PluginNavigation", ImVec2(navWidth, -footer), true);
     if (ImGui::Selectable(Label(Key::Manager, "ManagerNav").c_str(), g_selectedPlugin == kManagerPanel)) g_selectedPlugin = kManagerPanel;
+    InspectUiItem("nav.Manager", g_selectedPlugin == kManagerPanel ? "selected" : "");
     ImGui::Separator();
     ImGui::TextUnformatted(T(Key::Plugins));
     for (const auto& plugin : g_hostSnapshot.plugins) {
         ImGui::PushID(plugin.id.c_str());
         if (ImGui::Selectable(plugin.name.c_str(), g_selectedPlugin == plugin.id)) g_selectedPlugin = plugin.id;
+        InspectUiItem(("nav." + plugin.id).c_str(), g_selectedPlugin == plugin.id ? "selected" : "");
         ImGui::PopID();
     }
     ImGui::EndChild(); ImGui::SameLine();
+    if (g_selectedPlugin.empty()) g_selectedPlugin = kManagerPanel;
+    ServiceWebPanelSelection(g_selectedPlugin);
+    if (g_selectedPlugin != kManagerPanel && g_editorOpen) {
+        g_editorOpen = g_captureKeys = false; Hotkeys::SetCaptureActive(false);
+    }
     ImGui::BeginChild("##PluginContent", ImVec2(0, -footer), true);
+    const ImVec2 contentCursor = ImGui::GetCursorScreenPos();
+    const ImVec2 contentAvail = ImGui::GetContentRegionAvail();
+    RECT clientBounds{};
+    if (HWND window = g_window.load()) GetClientRect(window, &clientBounds);
+    const RECT webBounds = ComputeWebPanelBounds(contentCursor, contentAvail, io.DisplayFramebufferScale, clientBounds);
+    const auto selected = std::find_if(g_hostSnapshot.plugins.begin(), g_hostSnapshot.plugins.end(),
+        [](const auto& plugin) { return plugin.id == g_selectedPlugin; });
+    const bool webOwned = selected != g_hostSnapshot.plugins.end() &&
+        g_webPanel.bound && !g_webPanel.failed && g_webPanel.pluginId == selected->id;
+    const bool popupOpen = ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopup);
+    const bool webActive = webOwned && g_webPanel.shown &&
+        WebView2Ui::IsReady() && WebView2Ui::IsDocumentReady() && !popupOpen;
     if (g_selectedPlugin == kManagerPanel) {
         DrawManagerPage(g_hostSnapshot);
+    } else if (selected == g_hostSnapshot.plugins.end()) {
+        ImGui::TextUnformatted("GakuLoader"); ImGui::Separator();
+        ImGui::TextWrapped("%s", T(Key::SelectPanel));
+    } else if (webActive) {
+        g_webPanel.bounds = webBounds;
+        g_webPanel.hasBounds = true;
+        WebView2Ui::SetBounds(webBounds);
+        WebView2Ui::SetVisible(true);
+        if (g_webPanel.focusPending) {
+            WebView2Ui::Focus();
+            g_webPanel.focusPending = false;
+        }
+        ImGui::PushID(selected->id.c_str());
+        g_inCallback = true;
+        if (pluginGateHeld) DispatchWebPanelTick(selected->id.c_str());
+        else TryDispatchDesktopFrame([](void* panel) {
+            DispatchWebPanelTick(static_cast<DesktopPluginPanel*>(panel)->id.c_str());
+        }, &*selected);
+        g_inCallback = false;
+        ImGui::PopID();
+    } else if (webOwned) {
+        // WebView2 is still loading its document or temporarily hidden behind an
+        // ImGui popup menu. Never fall through to the legacy ImGui plugin UI.
+        ImGui::Text("%s  %s", selected->name.c_str(), ManagerStrings::FormatVersion(selected->version).c_str()); ImGui::Separator();
+        DrawSpinner(); ImGui::SameLine();
+        ImGui::TextUnformatted(T(Key::Waiting));
+        ImGui::PushID(selected->id.c_str());
+        g_inCallback = true;
+        if (pluginGateHeld) DispatchWebPanelTick(selected->id.c_str());
+        else TryDispatchDesktopFrame([](void* panel) {
+            DispatchWebPanelTick(static_cast<DesktopPluginPanel*>(panel)->id.c_str());
+        }, &*selected);
+        g_inCallback = false;
+        ImGui::PopID();
     } else {
-        const auto selected = std::find_if(g_hostSnapshot.plugins.begin(), g_hostSnapshot.plugins.end(),
-            [](const auto& plugin) { return plugin.id == g_selectedPlugin; });
-        if (selected == g_hostSnapshot.plugins.end()) {
-            ImGui::TextUnformatted("GakuLoader"); ImGui::Separator();
-            ImGui::TextWrapped("%s", T(Key::SelectPanel));
-        } else {
-            ImGui::Text("%s  %s", selected->name.c_str(), ManagerStrings::FormatVersion(selected->version).c_str()); ImGui::Separator();
-            if (selected->failed) ImGui::TextWrapped("%s", T(Key::FailedHelp));
-            else if (!selected->hasPanel) ImGui::TextWrapped("%s", T(Key::NoPanel));
-            else {
-                ImGui::PushID(selected->id.c_str());
-                g_inCallback = true;
-                const double panelStarted = NowMs();
-                bool dispatched = true;
-                if (pluginGateHeld) DispatchDesktopPanel(selected->id.c_str());
-                else dispatched = TryDispatchDesktopFrame([](void* panel) {
-                    DispatchDesktopPanel(static_cast<DesktopPluginPanel*>(panel)->id.c_str());
-                }, &*selected);
-                const double panelElapsed = NowMs() - panelStarted;
-                g_inCallback = false;
-                ImGui::PopID();
-                if (!dispatched) {
-                    DrawSpinner(); ImGui::SameLine();
-                    ImGui::TextUnformatted(T(Key::Waiting));
-                }
-                // One frame is 16.7 ms at 60 Hz; anything above that is visible
-                // as a hitch. Rate-limited so a permanently slow panel reports
-                // itself once every two seconds instead of every frame.
-                static double lastSlowPanelReport = -1.0e9;
-                if (panelElapsed >= 16.0 && panelStarted - lastSlowPanelReport >= 2000.0) {
-                    lastSlowPanelReport = panelStarted;
-                    LogWarn("[DesktopUI] plugin panel callback %s blocked the shell for %.1f ms",
-                        selected->id.c_str(), panelElapsed);
-                }
+        ImGui::Text("%s  %s", selected->name.c_str(), ManagerStrings::FormatVersion(selected->version).c_str()); ImGui::Separator();
+        if (selected->failed) ImGui::TextWrapped("%s", T(Key::FailedHelp));
+        else if (!selected->hasPanel) ImGui::TextWrapped("%s", T(Key::NoPanel));
+        else {
+            ImGui::PushID(selected->id.c_str());
+            g_inCallback = true;
+            const double panelStarted = NowMs();
+            bool dispatched = true;
+            if (pluginGateHeld) DispatchDesktopPanel(selected->id.c_str());
+            else dispatched = TryDispatchDesktopFrame([](void* panel) {
+                DispatchDesktopPanel(static_cast<DesktopPluginPanel*>(panel)->id.c_str());
+            }, &*selected);
+            const double panelElapsed = NowMs() - panelStarted;
+            g_inCallback = false;
+            ImGui::PopID();
+            if (!dispatched) {
+                DrawSpinner(); ImGui::SameLine();
+                ImGui::TextUnformatted(T(Key::Waiting));
+            }
+            static double lastSlowPanelReport = -1.0e9;
+            if (panelElapsed >= 16.0 && panelStarted - lastSlowPanelReport >= 2000.0) {
+                lastSlowPanelReport = panelStarted;
+                LogWarn("[DesktopUI] plugin panel callback %s blocked the shell for %.1f ms",
+                    selected->id.c_str(), panelElapsed);
             }
         }
     }
+    if (!webActive) {
+        if (g_webPanel.bound) WebView2Ui::SetVisible(false);
+        g_webViewActive.store(false);
+        g_webWantsTextInput.store(false);
+    } else {
+        g_webViewActive.store(true);
+    }
+#if defined(GAKULOADER_DESKTOP_UI_TEST)
+    if (g_testHooks.inspectWebPanel)
+        g_testHooks.inspectWebPanel(g_selectedPlugin.c_str(), webActive, WebView2Ui::IsVisible(),
+            webBounds, g_webWantsTextInput.load(std::memory_order_acquire));
+#endif
     ImGui::EndChild();
     ImGui::Text("GakuLoader: %zu | Gakumas: %s", g_hostSnapshot.plugins.size(),
         T(g_hostSnapshot.shuttingDown ? Key::Stopping : g_hostSnapshot.runtimeReady ? Key::Ready : Key::Waiting));
     ImGui::End();
 }
+// Atlas rebuild, live appearance apply and deferred save. Runs under a
+// ContextScope on the UI thread, outside the host callback gate. Shared by the
+// ImGui frame and the WebView2 manager path so a React appearance change keeps
+// plugin panels (still ImGui) and the published appearance service in sync, and
+// preserves the atlas-limit revert + save-failed semantics exactly.
+bool ServiceAppearance() {
+    if (g_fontsDirty) {
+        ImGui_ImplDX11_InvalidateDeviceObjects();
+        const auto fonts = DesktopFonts::BuildFonts(g_currentUiScale, g_currentDpiScale);
+        g_scaleLimited = !fonts.ready;
+        if (!fonts.ready) { g_currentUiScale = g_appliedUiScale; g_currentDpiScale = g_appliedDpiScale; }
+        if (!ImGui_ImplDX11_CreateDeviceObjects()) return false;
+        g_fontsDirty = false;
+    }
+    if (g_appearanceDirty) {
+        DesktopAppearance::ApplyAppearance(g_currentTheme, g_currentUiScale, g_currentDpiScale);
+        g_appliedUiScale = g_currentUiScale; g_appliedDpiScale = g_currentDpiScale;
+        g_publishedTheme = g_currentTheme; g_publishedScale = g_currentUiScale;
+        g_appearanceDirty = false;
+    }
+    if (g_saveAppearance) {
+        g_saveFailed = !DesktopAppearance::SaveAppearanceSettings(ConfigPath(), g_currentTheme, g_currentUiScale);
+        g_saveAppearance = false;
+    }
+    return true;
+}
+
 bool RenderFrame() {
     // The shell paints on its own thread. A gap here means the whole window
     // stopped painting — focus handover, a device reset or a blocked UI
@@ -1033,24 +1196,7 @@ bool RenderFrame() {
         ContextScope scope;
         // Rebuild atlas and upload outside the host callback gate, before any
         // NewFrame/draw data can borrow fonts from the old atlas.
-        if (g_fontsDirty) {
-            ImGui_ImplDX11_InvalidateDeviceObjects();
-            const auto fonts = DesktopFonts::BuildFonts(g_currentUiScale, g_currentDpiScale);
-            g_scaleLimited = !fonts.ready;
-            if (!fonts.ready) { g_currentUiScale = g_appliedUiScale; g_currentDpiScale = g_appliedDpiScale; }
-            if (!ImGui_ImplDX11_CreateDeviceObjects()) return false;
-            g_fontsDirty = false;
-        }
-        if (g_appearanceDirty) {
-            DesktopAppearance::ApplyAppearance(g_currentTheme, g_currentUiScale, g_currentDpiScale);
-            g_appliedUiScale = g_currentUiScale; g_appliedDpiScale = g_currentDpiScale;
-            g_publishedTheme = g_currentTheme; g_publishedScale = g_currentUiScale;
-            g_appearanceDirty = false;
-        }
-        if (g_saveAppearance) {
-            g_saveFailed = !DesktopAppearance::SaveAppearanceSettings(ConfigPath(), g_currentTheme, g_currentUiScale);
-            g_saveAppearance = false;
-        }
+        if (!ServiceAppearance()) return false;
         // The manager owns only copied status and UI-thread state, so its
         // spinners keep painting while initialization owns the plugin gate.
         // Selected plugin pages retain their last complete image on contention
@@ -1091,6 +1237,237 @@ bool RenderFrame() {
 #endif
     return presented != DXGI_ERROR_DEVICE_REMOVED && presented != DXGI_ERROR_DEVICE_RESET;
 }
+std::wstring WebPanelUserDataName(const std::string& pluginId) {
+    std::wstring name;
+    for (const char ch : pluginId) {
+        const wchar_t wide = static_cast<wchar_t>(static_cast<unsigned char>(ch));
+        const bool safe = (wide >= L'a' && wide <= L'z') || (wide >= L'A' && wide <= L'Z') ||
+            (wide >= L'0' && wide <= L'9') || wide == L'.' || wide == L'-' || wide == L'_';
+        name.push_back(safe ? wide : L'_');
+    }
+    if (name.empty()) name = L"panel";
+    return name;
+}
+
+std::string CallWebPanelService(const GakuWebPanelServiceV1& service, const std::string& request) {
+    constexpr uint32_t kInitialCapacity = 65536;
+    constexpr uint32_t kMaxCapacity = 4u * 1024u * 1024u;
+    std::vector<char> buffer(kInitialCapacity);
+    uint32_t required = 0;
+    GakuStatus status = service.handleMessage(service.context, request.c_str(),
+        static_cast<uint32_t>(buffer.size()), buffer.data(), &required);
+    if (status == GAKU_E_SIZE && required > buffer.size() && required <= kMaxCapacity) {
+        buffer.resize(required);
+        status = service.handleMessage(service.context, request.c_str(),
+            static_cast<uint32_t>(buffer.size()), buffer.data(), &required);
+    }
+    if (status != GAKU_OK || required == 0 || required > buffer.size()) return {};
+    return std::string(buffer.data(), required - 1);
+}
+
+void WebPanelEventSink(void* userData, const char* json) {
+    const auto generation = static_cast<uint64_t>(reinterpret_cast<uintptr_t>(userData));
+    if (g_stop || generation != g_webPanelGeneration.load(std::memory_order_acquire) ||
+        !g_webPanel.bound || !json) return;
+    WebView2Ui::PostMessageJson(json);
+}
+
+void UnbindWebPanel(bool shutdownService) {
+    if (g_webPanel.bound) {
+        GakuWebPanelServiceV1 current{};
+        const bool accepting = QueryWebPanelService(g_webPanel.pluginId.c_str(), &current) == GAKU_OK;
+        if (shutdownService && accepting && g_webPanel.service.onShutdown) {
+            try { g_webPanel.service.onShutdown(g_webPanel.service.context); }
+            catch (...) { LogWarn("[DesktopUI] web panel onShutdown threw for %s", g_webPanel.pluginId.c_str()); }
+        }
+        if (accepting && g_webPanel.service.setEventSink) {
+            try { g_webPanel.service.setEventSink(g_webPanel.service.context, nullptr, nullptr); }
+            catch (...) {}
+        }
+    }
+    WebView2Ui::Shutdown();
+    g_webPanel = {};
+    g_webPanelGeneration.fetch_add(1, std::memory_order_acq_rel);
+    g_webViewActive.store(false);
+    g_webWantsTextInput.store(false);
+    g_fileDrop.Clear();
+}
+
+void HideWebPanel() {
+    if (g_webPanel.bound && g_webPanel.shown) {
+        if (g_webPanel.service.onHide) {
+            try { g_webPanel.service.onHide(g_webPanel.service.context); }
+            catch (...) { LogWarn("[DesktopUI] web panel onHide threw for %s", g_webPanel.pluginId.c_str()); }
+        }
+    }
+    g_webPanel.shown = false;
+    g_webPanel.focusPending = false;
+    g_webPanel.hasFocus = false;
+    WebView2Ui::SetVisible(false);
+    g_webViewActive.store(false);
+    g_webWantsTextInput.store(false);
+    g_fileDrop.Clear();
+}
+
+bool BindWebPanel(const std::string& pluginId) {
+    if (g_uiMode != UiMode::WebView2 || pluginId.empty() || pluginId == kManagerPanel) return false;
+    if (g_webPanel.bound && g_webPanel.pluginId == pluginId && !g_webPanel.failed) return true;
+    if (g_webPanel.bound) UnbindWebPanel(false);
+    auto failBind = [&](const std::string& diag) {
+        g_webviewDiag = diag;
+        g_webPanel = {};
+        g_webPanel.pluginId = pluginId;
+        g_webPanel.failed = true;
+        LogWarn("[DesktopUI] WebView2 plugin panel unavailable for %s; using ImGui content panel. %s",
+            pluginId.c_str(), diag.c_str());
+        return false;
+    };
+    GakuWebPanelServiceV1 service{};
+    if (QueryWebPanelService(pluginId.c_str(), &service) != GAKU_OK) return false;
+    GakuWebPanelAssetsV1 assets{};
+    const GakuStatus assetStatus = service.getAssets ? service.getAssets(service.context, &assets) : GAKU_E_UNAVAILABLE;
+    if (assetStatus != GAKU_OK || assets.abiVersion != GAKU_WEB_PANEL_VERSION ||
+        assets.structSize != sizeof(assets) || !assets.assetsDir || !assets.entryPath || !assets.virtualHost) {
+        return failBind("Web panel assets are unavailable (status " + std::to_string(assetStatus) + ").");
+    }
+    WebView2Ui::Config config;
+    config.assetsDir = assets.assetsDir;
+    config.entryPath = assets.entryPath;
+    config.virtualHost = assets.virtualHost;
+    config.userDataDir = ConfigPath().parent_path().parent_path() / L"WebView2" / WebPanelUserDataName(pluginId);
+    config.languageTag = LanguageSettings::kTags[LanguageSettings::Current()];
+    config.dpiScale = g_windowDpiScale;
+#if !defined(GAKULOADER_DESKTOP_UI_TEST)
+    wchar_t env[8]{};
+    config.devToolsEnabled = GetEnvironmentVariableW(L"GAKULOADER_WEBVIEW_DEVTOOLS", env, 8) > 0 && env[0] == L'1';
+#endif
+    std::error_code ec;
+    if (!std::filesystem::exists(config.assetsDir / config.entryPath, ec) || ec) {
+        return failBind("Web panel entry document is missing.");
+    }
+    g_webPanel.pluginId = pluginId;
+    WebView2Ui::Callbacks callbacks;
+    callbacks.onMessage = [](const std::string& message) {
+        if (g_stop || !g_webPanel.bound) return;
+        const auto response = ManagerBridge::ForwardRequest(message, [](const std::string& request) {
+            return CallWebPanelService(g_webPanel.service, request);
+        });
+        if (!response.empty()) WebView2Ui::PostMessageJson(response);
+    };
+    callbacks.onReady = [](bool ok, const std::string& diagnostic) {
+        if (ok) {
+            if (g_stop) { WebView2Ui::Shutdown(); return; }
+            LogInfo("[DesktopUI] WebView2 plugin panel ready: %s", g_webPanel.pluginId.c_str());
+        } else {
+            g_webviewDiag = diagnostic;
+            g_webPanel.failed = true;
+            g_webViewActive.store(false);
+            g_webWantsTextInput.store(false);
+            WebView2Ui::SetVisible(false);
+            LogWarn("[DesktopUI] WebView2 plugin panel unavailable; using ImGui content panel. %s", diagnostic.c_str());
+        }
+    };
+    callbacks.onDocumentReady = [] {
+        if (g_stop || !g_webPanel.bound) return;
+        if (g_webPanel.shown) g_webPanel.focusPending = true;
+    };
+    callbacks.onFocusChanged = [](bool focused) {
+        g_webPanel.hasFocus = focused;
+        if (focused) g_webPanel.focusPending = false;
+    };
+    callbacks.onTextInputChanged = [](bool active) { g_webWantsTextInput.store(active); };
+    callbacks.onTabLeave = [](bool) {
+        g_webPanel.focusPending = false;
+        g_webPanel.hasFocus = false;
+        g_webWantsTextInput.store(false);
+        g_returnFocusToImGui = true;
+        if (HWND window = g_window.load()) SetFocus(window);
+    };
+    if (!WebView2Ui::Initialize(g_window.load(), config, std::move(callbacks))) {
+        return failBind(WebView2Ui::LastDiagnostic());
+    }
+    g_webPanel.pluginId = pluginId;
+    g_webPanel.service = service;
+    g_webPanel.bound = true;
+    g_webPanel.failed = false;
+    g_webPanel.generation = g_webPanelGeneration.fetch_add(1, std::memory_order_acq_rel) + 1;
+    if (service.setEventSink)
+        service.setEventSink(service.context, WebPanelEventSink,
+            reinterpret_cast<void*>(static_cast<uintptr_t>(g_webPanel.generation)));
+    if (service.onShow) {
+        try { service.onShow(service.context); }
+        catch (...) { LogWarn("[DesktopUI] web panel onShow threw for %s", pluginId.c_str()); }
+    }
+    g_webPanel.shown = true;
+    g_webPanel.focusPending = true;
+    return true;
+}
+
+void ServiceWebPanelSelection(const std::string& selected) {
+    if (g_uiMode != UiMode::WebView2) {
+        if (g_webPanel.bound) UnbindWebPanel(true);
+        return;
+    }
+    if (selected.empty() || selected == kManagerPanel) {
+        HideWebPanel();
+        return;
+    }
+    GakuWebPanelServiceV1 targetService{};
+    const bool selectedHasWeb = (QueryWebPanelService(selected.c_str(), &targetService) == GAKU_OK);
+    if (!selectedHasWeb) {
+        // Keep any already-bound WebView2 panel warm and hidden while viewing
+        // Manager or legacy ImGui plugins so switching back is instant.
+        HideWebPanel();
+    } else {
+        if (g_webPanel.bound && g_webPanel.pluginId != selected) {
+            HideWebPanel();
+            UnbindWebPanel(false);
+        }
+        if (!g_webPanel.bound) {
+            if (!(g_webPanel.failed && g_webPanel.pluginId == selected)) {
+                if (g_webPanel.pluginId != selected) g_webPanel = {};
+                BindWebPanel(selected);
+            }
+        } else if (!g_webPanel.failed && !g_webPanel.shown) {
+            if (g_webPanel.service.onShow) {
+                try { g_webPanel.service.onShow(g_webPanel.service.context); }
+                catch (...) { LogWarn("[DesktopUI] web panel onShow threw for %s", g_webPanel.pluginId.c_str()); }
+            }
+            g_webPanel.shown = true;
+            g_webPanel.focusPending = true;
+        }
+    }
+    if (g_webPanel.bound) {
+        GakuWebPanelServiceV1 current{};
+        if (QueryWebPanelService(g_webPanel.pluginId.c_str(), &current) != GAKU_OK)
+            UnbindWebPanel(false);
+    }
+}
+
+void DispatchWebPanelTick(const char* pluginId) {
+    if (!g_webPanel.bound || g_webPanel.pluginId != pluginId || !g_webPanel.service.onUiTick) return;
+    try { g_webPanel.service.onUiTick(g_webPanel.service.context); }
+    catch (...) {
+        LogWarn("[DesktopUI] web panel onUiTick threw for %s; falling back to ImGui", pluginId);
+        UnbindWebPanel(false);
+    }
+}
+
+RECT ComputeWebPanelBounds(const ImVec2& cursor, const ImVec2& avail, const ImVec2& scale, const RECT& client) {
+    RECT bounds{};
+    bounds.left = static_cast<LONG>(std::floor(cursor.x * scale.x));
+    bounds.top = static_cast<LONG>(std::floor(cursor.y * scale.y));
+    bounds.right = static_cast<LONG>(std::ceil((cursor.x + (std::max)(0.0f, avail.x)) * scale.x));
+    bounds.bottom = static_cast<LONG>(std::ceil((cursor.y + (std::max)(0.0f, avail.y)) * scale.y));
+    bounds.left = (std::max)(bounds.left, client.left);
+    bounds.top = (std::max)(bounds.top, client.top);
+    bounds.right = (std::min)(bounds.right, client.right);
+    bounds.bottom = (std::min)(bounds.bottom, client.bottom);
+    if (bounds.right < bounds.left) bounds.right = bounds.left;
+    if (bounds.bottom < bounds.top) bounds.bottom = bounds.top;
+    return bounds;
+}
+
 DWORD WorkerBody() {
     g_uiThread = GetCurrentThreadId();
     g_taskbarCreated = RegisterWindowMessageW(L"TaskbarCreated");
@@ -1162,6 +1539,7 @@ DWORD WorkerBody() {
         LogWarn("[DesktopUI] hover preview unavailable: host integrity is unknown, so the OLE drop "
             "target was not armed; WM_DROPFILES remains the transport");
     }
+    g_uiMode = ResolveUiMode();
 #if defined(GAKULOADER_DESKTOP_UI_TEST)
     if (!g_testHooks.startHidden) ShowWindow(window, SW_SHOW);
 #else
@@ -1179,8 +1557,7 @@ DWORD WorkerBody() {
 #if !defined(GAKULOADER_DESKTOP_UI_TEST)
         render = render && IsWindowVisible(window);
 #endif
-        // Read before the frame, so the first paste sees the current clipboard.
-        // Default ImGui/Win32 callbacks may block here, outside the callback gate.
+        if (!render) HideWebPanel();
         if (render) RefreshClipboard();
         if (render && !RenderFrame()) {
             LogWarn("[DesktopUI] control-window device lost; desktop stops, game rendering is untouched");
@@ -1309,7 +1686,13 @@ void ToggleManager() {
     const HWND window = g_window.load(std::memory_order_acquire);
     if (window) PostMessageW(window, kToggleManager, 0, 0);
 }
-bool WantsTextInput() { return g_wantsTextInput.load(std::memory_order_acquire); }
+bool WantsTextInput() {
+    // While a plugin web panel owns keyboard focus, suppress plugin hotkeys;
+    // otherwise ImGui text input does.
+    if (g_webViewActive.load(std::memory_order_acquire))
+        return g_webWantsTextInput.load(std::memory_order_acquire);
+    return g_wantsTextInput.load(std::memory_order_acquire);
+}
 #if defined(GAKULOADER_DESKTOP_UI_TEST)
 void ConfigureTest(const TestHooks& hooks) { g_testHooks = hooks; }
 #endif

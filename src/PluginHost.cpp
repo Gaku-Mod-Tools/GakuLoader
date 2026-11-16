@@ -707,13 +707,15 @@ DWORD WINAPI HotkeyPoller(LPVOID) {
         const HWND hostWindow = window && window->getWindow ? static_cast<HWND>(window->getWindow()) : nullptr;
         wchar_t foregroundClass[64]{};
         if (foreground) GetClassNameW(foreground, foregroundClass, 64);
+        const bool foregroundIsHostOrChild = hostWindow &&
+            (foreground == hostWindow || GetAncestor(foreground, GA_ROOT) == hostWindow);
         // Same-process Shell dialogs are not game input targets. Suppress both
         // plugin actions and F1 there, while still tracking physical edges.
         context.foregroundOwnedByThisProcess = ours &&
-            (foreground == hostWindow || lstrcmpW(foregroundClass, L"UnityWndClass") == 0);
+            (foregroundIsHostOrChild || lstrcmpW(foregroundClass, L"UnityWndClass") == 0);
         // Text fields inside the control window consume letter keys; F1 and
         // game-side hotkeys stay inert so typing never triggers a plugin action.
-        context.hostWindowWantsTextInput = ours && hostWindow && foreground == hostWindow &&
+        context.hostWindowWantsTextInput = ours && foregroundIsHostOrChild &&
             DesktopUi::WantsTextInput();
         Hotkeys::Poll(context, result);
         if (result.managerToggle) DesktopUi::ToggleManager();
@@ -1145,6 +1147,25 @@ void DispatchDesktopPanel(const char* pluginId) {
         }
         return;
     }
+}
+GakuStatus QueryWebPanelService(const char* pluginId, GakuWebPanelServiceV1* output) {
+    if (!pluginId || !pluginId[0] || !output) return GAKU_E_INVALID_ARGUMENT;
+    if (g_shutdownRequested.load(std::memory_order_acquire)) return GAKU_E_SHUTTING_DOWN;
+    const std::string serviceName = std::string(pluginId) + GAKU_WEB_PANEL_SERVICE_SUFFIX;
+    std::lock_guard<std::mutex> lock(g_servicesMutex);
+    const auto found = g_services.find(serviceName);
+    if (found == g_services.end()) return GAKU_E_UNAVAILABLE;
+    const auto& registered = found->second;
+    if (!registered.owner || registered.owner->id != pluginId) return GAKU_E_CONFLICT;
+    if (!registered.owner->accepting.load(std::memory_order_acquire)) return GAKU_E_SHUTTING_DOWN;
+    if (registered.table.size() < sizeof(GakuWebPanelServiceV1)) return GAKU_E_SIZE;
+    GakuWebPanelServiceV1 table{};
+    std::memcpy(&table, registered.table.data(), sizeof(table));
+    if (table.abiVersion != GAKU_WEB_PANEL_VERSION) return GAKU_E_VERSION;
+    if (table.structSize != registered.table.size()) return GAKU_E_SIZE;
+    if (!table.getAssets || !table.handleMessage) return GAKU_E_UNAVAILABLE;
+    *output = table;
+    return GAKU_OK;
 }
 void Shutdown() {
     if (std::strcmp(g_shutdownPhase.load(std::memory_order_acquire), "complete") == 0) return;

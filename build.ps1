@@ -29,6 +29,8 @@ if (-not (Test-Path $buildDir)) {
 $artifactDir = if ($Configuration -eq 'Release') { $buildDir } else { Join-Path $buildDir 'debug' }
 $builtDll = Join-Path $artifactDir 'version.dll'
 $builtPdb = Join-Path $artifactDir 'version.pdb'
+$builtLoader = Join-Path $artifactDir 'WebView2Loader.dll'
+$loaderSource = Join-Path $projectRoot 'deps\webview2\x64\WebView2Loader.dll'
 $projectFile = Join-Path $projectRoot 'GakuLoader.vcxproj'
 
 function Copy-Artifact {
@@ -54,6 +56,9 @@ foreach ($dependency in @('deps\imgui\imgui.cpp', 'deps\minhook\src\hook.c')) {
         throw "Missing vendored source: $dependency. Restore the vendored dependency; no external checkout is required."
     }
 }
+if (-not (Test-Path -LiteralPath $loaderSource -PathType Leaf)) {
+    throw "Missing vendored WebView2Loader.dll: $loaderSource. Restore deps/webview2/x64/WebView2Loader.dll; see deps/webview2/PROVENANCE.md."
+}
 
 Write-Host "Building version.dll with MSVC/$Configuration..." -ForegroundColor Cyan
 
@@ -76,6 +81,7 @@ if ($LASTEXITCODE -ne 0) {
 if (-not (Test-Path $builtDll)) {
     throw "Build reported success but $builtDll is missing."
 }
+Copy-Item -LiteralPath $loaderSource -Destination $builtLoader -Force
 
 $dllSize = (Get-Item $builtDll).Length
 Write-Host "Successfully built: $builtDll ($dllSize bytes) via MSVC/$Configuration" -ForegroundColor Green
@@ -93,5 +99,6 @@ if (-not [string]::IsNullOrWhiteSpace($OutputDll)) {
     if (Test-Path $builtPdb) {
         Copy-Artifact $builtPdb (Join-Path $candidateDir 'version.pdb') | Out-Null
     }
+    Copy-Item -LiteralPath $loaderSource -Destination (Join-Path $candidateDir 'WebView2Loader.dll') -Force
     Write-Host "Candidate written to: $targetCandidate" -ForegroundColor Yellow
 }

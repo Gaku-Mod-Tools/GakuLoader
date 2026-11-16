@@ -12,6 +12,7 @@
 | 选择插件用户数据、配置与缓存目录 | [插件数据路径](PLUGIN_PATHS.md) |
 | 使用 Hook 或共享 actor 入口 | [Hooks](../wiki/Hooks.md) |
 | 理解 F1 窗口与 ImGui | [界面](../wiki/UI.md) |
+| 构建 GakuMotion WebView2 前端或离线打包 | [WebView2 构建与打包](webview2-build.md) |
 | 注册或重映射热键 | [快捷键](../wiki/Hotkeys.md) |
 | 从源码构建或执行测试 | [构建](../wiki/Building.md) |
 

@@ -4,6 +4,8 @@
 #include "Host.hpp"
 #include "Hotkeys.hpp"
 #include "LanguageSettings.hpp"
+#include "WebView2Ui.hpp"
+#include "GakuWebPanel.h"
 #include <windows.h>
 #include <d3d11.h>
 #include <dxgi.h>
@@ -33,9 +35,27 @@ std::string workerError;
 std::atomic_uint cpuFrames{0}, presentedFrames{0}, completedInput{0}, screenshots{0};
 std::atomic<float> rasterSize{0}, bitmapScale{0}, background{0};
 std::atomic_bool callbackGateBusy{false};
+std::atomic_bool includeWebPlugins{false};
 std::atomic<double> spinnerTime{0};
 unsigned nextInput = 0;
 int hotkeyOwner = 0;
+std::wstring webAssetsDir;
+std::atomic_uint webInitCount{0}, webShutdownHookCount{0};
+std::atomic_uint webOnShowCount{0}, webOnHideCount{0}, webOnTickCount{0}, webOnShutdownCount{0};
+std::atomic_uint webPanelLegacyImGuiCount{0}, imguiPanelDispatchCount{0}, failedWebPanelDispatchCount{0};
+std::mutex webInspectMutex;
+std::string observedWebPlugin;
+bool observedWebActive = false, observedWebVisible = false;
+void InspectWebPanel(const char* pluginId, bool active, bool visible, const RECT&, bool) {
+    std::lock_guard lock(webInspectMutex);
+    observedWebPlugin = pluginId ? pluginId : "";
+    observedWebActive = active;
+    observedWebVisible = visible;
+}
+bool CheckWebState(const char* pluginId, bool active, bool visible) {
+    std::lock_guard lock(webInspectMutex);
+    return observedWebPlugin == pluginId && observedWebActive == active && observedWebVisible == visible;
+}
 void Check(bool okay, const char* message) { if (!okay) throw std::runtime_error(message); }
 void Fail(const char* message) { std::lock_guard lock(errorMutex); if (workerError.empty()) workerError = message; }
 void CheckWorker() { std::lock_guard lock(errorMutex); Check(workerError.empty(), workerError.c_str()); }
@@ -156,6 +176,7 @@ void LogInfo(const char* format, ...) { va_list args; va_start(args, format); vp
 void LogWarn(const char* format, ...) { va_list args; va_start(args, format); vprintf(format, args); puts(""); va_end(args); }
 void LogError(const char* format, ...) { va_list args; va_start(args, format); vprintf(format, args); puts(""); va_end(args); }
 void LogDebug(const char*, ...) {}
+bool IsShuttingDown() { return false; }
 bool TryDispatchDesktopFrame(void (*build)(void*), void* data) {
     if (callbackGateBusy) return false;
     build(data); return true;
@@ -165,11 +186,69 @@ bool SnapshotDesktopHost(DesktopHostSnapshot& output) {
     output.plugins = {{"test.waiting", "Waiting plugin", "1.0", true, false, false, false},
         {"test.failed", "Failed plugin", "1.0", true, true, true, false},
         {"test.ready", "Ready plugin", "1.0", true, true, false, false}};
+    if (includeWebPlugins) {
+        output.plugins.push_back({"test.web", "Web plugin", "1.0", true, true, false, true});
+        output.plugins.push_back({"test.imgui", "Legacy plugin", "1.0", true, true, false, true});
+        output.plugins.push_back({"test.webfail", "Failed web plugin", "1.0", true, true, false, true});
+    }
     output.pluginFiles = {L"test-ready.dll"};
     output.runtimeReady = false; output.shuttingDown = false; output.activated = true;
     return true;
 }
-void DispatchDesktopPanel(const char*) { Fail("manager test unexpectedly dispatched a plugin panel"); }
+void DispatchDesktopPanel(const char* id) {
+    if (!includeWebPlugins || !id) {
+        Fail("manager test unexpectedly dispatched a plugin panel");
+        return;
+    }
+    if (std::strcmp(id, "test.web") == 0) {
+        ++webPanelLegacyImGuiCount;
+        Fail("web panel plugin unexpectedly fell through to legacy ImGui callback");
+        return;
+    }
+    if (std::strcmp(id, "test.imgui") == 0) {
+        ++imguiPanelDispatchCount;
+        return;
+    }
+    if (std::strcmp(id, "test.webfail") == 0) {
+        ++failedWebPanelDispatchCount;
+        return;
+    }
+    Fail("manager test dispatched an unexpected plugin panel");
+}
+GakuStatus QueryWebPanelService(const char* id, GakuWebPanelServiceV1* output) {
+    if (!includeWebPlugins || !id || !output) return GAKU_E_UNAVAILABLE;
+    if (std::strcmp(id, "test.web") == 0) {
+        *output = GakuWebPanelServiceV1{
+            GAKU_WEB_PANEL_VERSION, sizeof(GakuWebPanelServiceV1), nullptr,
+            [](void*, GakuWebPanelAssetsV1* assets) -> GakuStatus {
+                if (!assets) return GAKU_E_INVALID_ARGUMENT;
+                *assets = GakuWebPanelAssetsV1{
+                    GAKU_WEB_PANEL_VERSION, sizeof(GakuWebPanelAssetsV1),
+                    webAssetsDir.c_str(), L"index.html", L"testweb.invalid"
+                };
+                return GAKU_OK;
+            },
+            [](void*) { ++webOnShowCount; },
+            [](void*) { ++webOnHideCount; },
+            [](void*) { ++webOnTickCount; },
+            [](void*, GakuWebPanelEventSink, void*) {},
+            [](void*, const char*, uint32_t, char*, uint32_t*) -> GakuStatus { return GAKU_E_UNAVAILABLE; },
+            [](void*) { ++webOnShutdownCount; }
+        };
+        return GAKU_OK;
+    }
+    if (std::strcmp(id, "test.webfail") == 0) {
+        *output = GakuWebPanelServiceV1{
+            GAKU_WEB_PANEL_VERSION, sizeof(GakuWebPanelServiceV1), nullptr,
+            [](void*, GakuWebPanelAssetsV1*) -> GakuStatus { return GAKU_E_UNAVAILABLE; },
+            nullptr, nullptr, nullptr, nullptr,
+            [](void*, const char*, uint32_t, char*, uint32_t*) -> GakuStatus { return GAKU_E_UNAVAILABLE; },
+            nullptr
+        };
+        return GAKU_OK;
+    }
+    return GAKU_E_UNAVAILABLE;
+}
 }
 
 int main(int argc, char** argv) {
@@ -186,8 +265,18 @@ int main(int argc, char** argv) {
         Hotkeys::LoadOverrides(configPath);
         const GakuHotkeyBinding hotkey{GAKU_SERVICE_VERSION, sizeof(GakuHotkeyBinding), "toggle", "Toggle fixture", 'M', GAKU_HOTKEY_MOD_CTRL, [](void*) {}, nullptr};
         Check(Hotkeys::Register(&hotkeyOwner, "test.ready", &hotkey) == GAKU_OK, "register manager fixture hotkey");
+        const auto webDir = evidenceRoot / "web-assets";
+        std::filesystem::create_directories(webDir);
+        { std::ofstream html(webDir / "index.html"); html << "<!doctype html><html></html>"; }
+        webAssetsDir = webDir.wstring();
+        WebView2Ui::TestHooks webHooks{};
+        webHooks.initialize = [&](const WebView2Ui::Config&) { ++webInitCount; };
+        webHooks.shutdown = [&] { ++webShutdownHookCount; };
+        WebView2Ui::ConfigureTest(webHooks);
         DesktopUi::TestHooks hooks{true, InspectFrame, BeginFrame, [] { ++presentedFrames; }};
         hooks.inspectUiItem = InspectItem;
+        hooks.inspectWebPanel = InspectWebPanel;
+        hooks.enableWebPanel = true;
         DesktopUi::ConfigureTest(hooks);
         Check(DesktopUi::Initialize(), "manager UI worker creation");
         Wait([] { return presentedFrames >= 3 && HasFresh("tab.PluginList", "selected"); }, "Plugin List is not the default manager tab");
@@ -278,10 +367,49 @@ int main(int argc, char** argv) {
             Config(L"hotkeys", L"v2:746573742e7265616479:746f67676c65", L"missing") == L"<default>"; }, "hotkey reset did not persist the plugin-default marker");
         Screenshot("hotkeys-light-150.bmp");
         SelectTab("PluginList"); Screenshot("plugin-list-light-150.bmp");
+
+        // Multi-plugin switching regression: keep WebView2 warm across legacy
+        // ImGui plugin and Manager switches; never call onShutdown or fall back
+        // to the web plugin's legacy ImGui callback.
+        includeWebPlugins = true;
+        Wait([] { return HasFresh("nav.test.web") && HasFresh("nav.test.imgui") && HasFresh("nav.test.webfail"); },
+            "web-panel switch fixture plugins did not appear in sidebar");
+        Click("nav.test.web");
+        Wait([] { return CheckWebState("test.web", true, true) && webInitCount == 1 && webOnShowCount == 1 && webOnTickCount >= 1; },
+            "initial selection of web plugin did not activate WebView2");
+        const auto shutdownAfterBind = webShutdownHookCount.load();
+        Click("nav.test.imgui");
+        Wait([] { return imguiPanelDispatchCount >= 3 && CheckWebState("test.imgui", false, false) && webOnHideCount >= 1; },
+            "legacy ImGui plugin did not render while hiding WebView2");
+        Check(webInitCount == 1 && webShutdownHookCount == shutdownAfterBind && webOnShutdownCount == 0,
+            "switching to legacy ImGui plugin unexpectedly destroyed or shut down WebView2");
+        Click("nav.test.web");
+        Wait([] { return CheckWebState("test.web", true, true) && webOnShowCount == 2; },
+            "returning from legacy ImGui plugin did not restore WebView2");
+        Check(webInitCount == 1 && webShutdownHookCount == shutdownAfterBind && webOnShutdownCount == 0 && webPanelLegacyImGuiCount == 0,
+            "returning from legacy ImGui plugin re-initialized WebView2 or exposed legacy ImGui");
+        Click("nav.Manager");
+        Wait([] { return HasFresh("tab.PluginList", "selected") && CheckWebState("gakuloader.manager", false, false) && webOnHideCount >= 2; },
+            "switching to Manager did not hide WebView2");
+        Click("nav.test.web");
+        Wait([] { return CheckWebState("test.web", true, true) && webOnShowCount == 3; },
+            "returning from Manager did not restore WebView2");
+        Check(webInitCount == 1 && webShutdownHookCount == shutdownAfterBind && webOnShutdownCount == 0 && webPanelLegacyImGuiCount == 0,
+            "Manager round-trip broke WebView2 warmth or exposed legacy ImGui");
+        Click("nav.test.webfail");
+        Wait([] { return failedWebPanelDispatchCount >= 2 && CheckWebState("test.webfail", false, false); },
+            "failed web panel did not fall back to ImGui plugin panel");
+        Check(webOnShutdownCount == 0, "switching to another web panel must not call onShutdown");
+        Click("nav.test.web");
+        Wait([] { return CheckWebState("test.web", true, true) && webInitCount == 2 && webOnShowCount == 4; },
+            "re-binding web panel after another web panel failed");
+        Check(webPanelLegacyImGuiCount == 0, "web panel unexpectedly invoked legacy ImGui callback");
+
         DesktopUi::Shutdown();
+        Check(webOnShutdownCount == 1, "host shutdown did not invoke web panel onShutdown");
         Hotkeys::RetireOwner(&hotkeyOwner);
         CheckWorker();
-        std::printf("Manager UI WARP PASS: tabs, light/dark screenshots, 150%% raster, four languages, Console/trace/plugin persistence and hotkey edit/cancel/unbind/reset.\nEvidence: %ls\n", evidenceRoot.c_str());
+        std::printf("Manager UI WARP PASS: tabs, light/dark screenshots, 150%% raster, four languages, Console/trace/plugin persistence, hotkey edit/cancel/unbind/reset, and WebView2 <-> ImGui switching.\nEvidence: %ls\n", evidenceRoot.c_str());
         return 0;
     } catch (const std::exception& problem) {
         std::fprintf(stderr, "Manager UI WARP FAIL: %s\n", problem.what());

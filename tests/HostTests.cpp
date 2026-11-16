@@ -67,6 +67,21 @@ void FirstEnabled(uint32_t count) {
         assert(BatchTargetB(4) == 7);   // second target is not enabled yet
     }
 }
+GakuStatus TestWebPanelGetAssets(void*, GakuWebPanelAssetsV1* output) {
+    if (!output) return GAKU_E_INVALID_ARGUMENT;
+    *output = {};
+    output->abiVersion = GAKU_WEB_PANEL_VERSION;
+    output->structSize = sizeof(GakuWebPanelAssetsV1);
+    return GAKU_E_UNAVAILABLE;
+}
+GakuStatus TestWebPanelHandleMessage(void*, const char*, uint32_t capacity, char* output, uint32_t* required) {
+    static const char response[] = "{\"v\":1,\"id\":1,\"type\":\"response\",\"ok\":true}";
+    const uint32_t need = static_cast<uint32_t>(sizeof(response));
+    if (required) *required = need;
+    if (capacity < need || !output) return GAKU_E_SIZE;
+    std::memcpy(output, response, need);
+    return GAKU_OK;
+}
 
 std::mutex g_keyMutex;
 std::vector<uint32_t> g_keysHeld;
@@ -658,6 +673,27 @@ int wmain(int argc, wchar_t** argv) {
     assert(ReadFixture(moduleA).desktopCount == 1);
     assert(GakuLoader::SnapshotDesktopHost(desktopSnapshot) && desktopSnapshot.plugins[0].activated);
 
+    // --- Optional loader-internal web-panel discovery ----------------------
+    GakuWebPanelServiceV1 webPanel{};
+    webPanel.abiVersion = GAKU_WEB_PANEL_VERSION;
+    webPanel.structSize = sizeof(webPanel);
+    webPanel.context = plugins[0].host.hostContext;
+    webPanel.getAssets = TestWebPanelGetAssets;
+    webPanel.handleMessage = TestWebPanelHandleMessage;
+    assert(plugins[0].host.registerService(plugins[0].host.hostContext,
+        "fixture.a.web-panel/v1", sizeof(webPanel), &webPanel) == GAKU_OK);
+    GakuWebPanelServiceV1 queriedWebPanel{};
+    assert(GakuLoader::QueryWebPanelService("fixture.a", &queriedWebPanel) == GAKU_OK);
+    assert(queriedWebPanel.context == plugins[0].host.hostContext &&
+        queriedWebPanel.getAssets == TestWebPanelGetAssets &&
+        queriedWebPanel.handleMessage == TestWebPanelHandleMessage);
+    assert(GakuLoader::QueryWebPanelService("fixture.b", &queriedWebPanel) == GAKU_E_UNAVAILABLE);
+    assert(GakuLoader::QueryWebPanelService("fixture.a", nullptr) == GAKU_E_INVALID_ARGUMENT);
+    GakuWebPanelServiceV1 crossOwnerPanel = webPanel;
+    assert(plugins[0].host.registerService(plugins[0].host.hostContext,
+        "fixture.b.web-panel/v1", sizeof(crossOwnerPanel), &crossOwnerPanel) == GAKU_OK);
+    assert(GakuLoader::QueryWebPanelService("fixture.b", &queriedWebPanel) == GAKU_E_CONFLICT);
+
     // --- Gate contention ---------------------------------------------------
     // A plugin callback on the main thread must reject the whole desktop frame.
     blockTick(0);
@@ -1001,6 +1037,7 @@ int wmain(int argc, wchar_t** argv) {
     assert(PersistentTarget(4) == 5);
     GakuLoader::Shutdown(); // idempotent
     assert(ReadFixture(moduleA).shutdownCount == 1 && ReadFixture(moduleA).contractFailures == 0);
+    assert(GakuLoader::QueryWebPanelService("fixture.a", &queriedWebPanel) == GAKU_E_SHUTTING_DOWN);
 
     // ABI size failures must never touch caller storage or its canary.
     struct { unsigned char data[sizeof(GakuLogService)]; uint64_t canary; } output{};
