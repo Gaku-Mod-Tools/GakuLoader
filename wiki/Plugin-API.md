@@ -110,6 +110,7 @@ mainThread.enqueue(mainThread.context, [](void* data) {
 - **命名规范**：服务名最长 127 字节，**严禁以 `gakuloader.` 前缀命名**（该前缀为宿主官方保留）。
 - **容量约束**：函数表大小上限为 64 KiB，全进程最多支持注册 64 个自定义服务。
 - **生命周期**：宿主负责服务注册与查表，不接管内部业务数据生命周期。发布服务的插件卸载或退出时，宿主会自动注销其发布的服务表。
+- **可选 Web 面板契约 (`include/GakuWebPanel.h`)**：插件可通过 `registerService` 发布 `<pluginId>.web-panel/v1`（`GakuWebPanelServiceV1`），由插件自身提供离线前端资产目录（`GakuWebPanelAssetsV1`）与消息处理回调，宿主仅负责在插件内容区托管 WebView2 与消息转发，详见 [WebView2 构建与打包](../docs/webview2-build.md)。
 
 ---
 

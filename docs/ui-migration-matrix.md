@@ -1,5 +1,7 @@
 # GakuLoader UI Migration Matrix — ImGui → WebView2/React
 
+> **Scope note (superseded)**: The production GakuLoader Manager remains native ImGui (`src/DesktopUi.cpp`). WebView2 is used solely inside the `##PluginContent` rectangle for plugins implementing `<pluginId>.web-panel/v1` ([include/GakuWebPanel.h](../include/GakuWebPanel.h)). `frontend/` in this repository keeps only the isolated Manager prototype (`src/prototype/LoaderPrototypeApp.tsx`); GakuMotion's React frontend and `GakuMotion.UI/` packaging live in the `GakuMotion` repository. See [webview2-build.md](webview2-build.md) and [webview2-migration-notes.md](webview2-migration-notes.md).
+
 Audit provenance (read-only inventory; no source behavior changed):
 
 - Worktree: `git-work/GakuLoader/worktrees/webview2-ui`, branch `feat/webview2-manager-ui`, base `dev@0d18501` ("release: v1.0.1 - log severity column, buffered sink, console binding"). Working tree clean at audit time (2026-11-15).

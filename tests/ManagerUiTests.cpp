@@ -42,7 +42,7 @@ int hotkeyOwner = 0;
 std::wstring webAssetsDir;
 std::atomic_uint webInitCount{0}, webShutdownHookCount{0};
 std::atomic_uint webOnShowCount{0}, webOnHideCount{0}, webOnTickCount{0}, webOnShutdownCount{0};
-std::atomic_uint webPanelLegacyImGuiCount{0}, imguiPanelDispatchCount{0}, failedWebPanelDispatchCount{0};
+std::atomic_uint webPanelLegacyImGuiCount{0}, imguiPanelDispatchCount{0}, failedWebPanelDispatchCount{0}, invalidWebPanelDispatchCount{0};
 std::mutex webInspectMutex;
 std::string observedWebPlugin;
 bool observedWebActive = false, observedWebVisible = false;
@@ -190,6 +190,8 @@ bool SnapshotDesktopHost(DesktopHostSnapshot& output) {
         output.plugins.push_back({"test.web", "Web plugin", "1.0", true, true, false, true});
         output.plugins.push_back({"test.imgui", "Legacy plugin", "1.0", true, true, false, true});
         output.plugins.push_back({"test.webfail", "Failed web plugin", "1.0", true, true, false, true});
+        output.plugins.push_back({"test.webrelative", "Relative web plugin", "1.0", true, true, false, true});
+        output.plugins.push_back({"test.webbadhost", "Bad host web plugin", "1.0", true, true, false, true});
     }
     output.pluginFiles = {L"test-ready.dll"};
     output.runtimeReady = false; output.shuttingDown = false; output.activated = true;
@@ -213,6 +215,10 @@ void DispatchDesktopPanel(const char* id) {
         ++failedWebPanelDispatchCount;
         return;
     }
+    if (std::strcmp(id, "test.webrelative") == 0 || std::strcmp(id, "test.webbadhost") == 0) {
+        ++invalidWebPanelDispatchCount;
+        return;
+    }
     Fail("manager test dispatched an unexpected plugin panel");
 }
 GakuStatus QueryWebPanelService(const char* id, GakuWebPanelServiceV1* output) {
@@ -234,6 +240,40 @@ GakuStatus QueryWebPanelService(const char* id, GakuWebPanelServiceV1* output) {
             [](void*, GakuWebPanelEventSink, void*) {},
             [](void*, const char*, uint32_t, char*, uint32_t*) -> GakuStatus { return GAKU_E_UNAVAILABLE; },
             [](void*) { ++webOnShutdownCount; }
+        };
+        return GAKU_OK;
+    }
+    if (std::strcmp(id, "test.webrelative") == 0) {
+        *output = GakuWebPanelServiceV1{
+            GAKU_WEB_PANEL_VERSION, sizeof(GakuWebPanelServiceV1), nullptr,
+            [](void*, GakuWebPanelAssetsV1* assets) -> GakuStatus {
+                if (!assets) return GAKU_E_INVALID_ARGUMENT;
+                *assets = GakuWebPanelAssetsV1{
+                    GAKU_WEB_PANEL_VERSION, sizeof(GakuWebPanelAssetsV1),
+                    L"relative-web-assets", L"index.html", L"relative.invalid"
+                };
+                return GAKU_OK;
+            },
+            nullptr, nullptr, nullptr, nullptr,
+            [](void*, const char*, uint32_t, char*, uint32_t*) -> GakuStatus { return GAKU_E_UNAVAILABLE; },
+            nullptr
+        };
+        return GAKU_OK;
+    }
+    if (std::strcmp(id, "test.webbadhost") == 0) {
+        *output = GakuWebPanelServiceV1{
+            GAKU_WEB_PANEL_VERSION, sizeof(GakuWebPanelServiceV1), nullptr,
+            [](void*, GakuWebPanelAssetsV1* assets) -> GakuStatus {
+                if (!assets) return GAKU_E_INVALID_ARGUMENT;
+                *assets = GakuWebPanelAssetsV1{
+                    GAKU_WEB_PANEL_VERSION, sizeof(GakuWebPanelAssetsV1),
+                    webAssetsDir.c_str(), L"index.html", L"bad..host.invalid"
+                };
+                return GAKU_OK;
+            },
+            nullptr, nullptr, nullptr, nullptr,
+            [](void*, const char*, uint32_t, char*, uint32_t*) -> GakuStatus { return GAKU_E_UNAVAILABLE; },
+            nullptr
         };
         return GAKU_OK;
     }
@@ -372,7 +412,7 @@ int main(int argc, char** argv) {
         // ImGui plugin and Manager switches; never call onShutdown or fall back
         // to the web plugin's legacy ImGui callback.
         includeWebPlugins = true;
-        Wait([] { return HasFresh("nav.test.web") && HasFresh("nav.test.imgui") && HasFresh("nav.test.webfail"); },
+        Wait([] { return HasFresh("nav.test.web") && HasFresh("nav.test.imgui") && HasFresh("nav.test.webfail") && HasFresh("nav.test.webrelative") && HasFresh("nav.test.webbadhost"); },
             "web-panel switch fixture plugins did not appear in sidebar");
         Click("nav.test.web");
         Wait([] { return CheckWebState("test.web", true, true) && webInitCount == 1 && webOnShowCount == 1 && webOnTickCount >= 1; },
@@ -400,6 +440,15 @@ int main(int argc, char** argv) {
         Wait([] { return failedWebPanelDispatchCount >= 2 && CheckWebState("test.webfail", false, false); },
             "failed web panel did not fall back to ImGui plugin panel");
         Check(webOnShutdownCount == 0, "switching to another web panel must not call onShutdown");
+        const auto invalidBeforeRel = invalidWebPanelDispatchCount.load();
+        Click("nav.test.webrelative");
+        Wait([&] { return invalidWebPanelDispatchCount >= invalidBeforeRel + 2 && CheckWebState("test.webrelative", false, false); },
+            "BindWebPanel did not reject relative assetsDir and fall back to ImGui");
+        const auto invalidBeforeHost = invalidWebPanelDispatchCount.load();
+        Click("nav.test.webbadhost");
+        Wait([&] { return invalidWebPanelDispatchCount >= invalidBeforeHost + 2 && CheckWebState("test.webbadhost", false, false); },
+            "BindWebPanel did not reject .. in virtualHost and fall back to ImGui");
+        Check(webInitCount == 1, "invalid web panel configs must not call InitializePanel");
         Click("nav.test.web");
         Wait([] { return CheckWebState("test.web", true, true) && webInitCount == 1 && webOnShowCount == 4; },
             "restoring resident web panel after another web panel failed");

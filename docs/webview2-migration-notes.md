@@ -3,8 +3,11 @@
 The earlier Manager-wide WebView2/React migration notes are superseded by
 [webview2-scope-correction-audit-20261115.md](webview2-scope-correction-audit-20261115.md).
 The corrected Loader host keeps the Manager, sidebar, settings and status bar in
-ImGui, and embeds WebView2 only inside the selected plugin's `##PluginContent`
-rectangle when that plugin provides `<id>.web-panel/v1`.
+ImGui, embeds WebView2 only inside the selected plugin's `##PluginContent`
+rectangle when that plugin provides `<id>.web-panel/v1`, and consumes the plugin-supplied
+assets entry (`GakuWebPanelAssetsV1`) directly without owning or packaging plugin UI assets.
+GakuMotion's React frontend and `GakuMotion.UI/` packaging live in the `GakuMotion` repository;
+`frontend/` here retains only the isolated Manager prototype. See [webview2-build.md](webview2-build.md).
 
 ## Where the referenced material lives
 

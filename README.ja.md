@@ -13,18 +13,20 @@
 ## インストール方法
 
 1. ゲームを完全に終了します。
-2. ビルドした `build/version.dll` をゲームルートディレクトリ（`gakumas.exe` と同じ場所）に配置します。
-3. プラグインDLLを `GakuLoader/plugins/` フォルダに配置します。Motion のインポーターと GakuBurstBridge は補助ライブラリで、Loader のプラグイン検出対象には含まれず、必要に応じて Motion が読み込みます。
+2. ビルドした `build/version.dll`（`<pluginId>.web-panel/v1` Webパネルを提供するプラグインを使用する場合は同梱の `WebView2Loader.dll` も配置、詳細は [WebView2 ビルドとパッケージング](docs/webview2-build.md)）をゲームルートディレクトリ（`gakumas.exe` と同じ場所）に配置します。
+3. プラグインDLLおよびプラグイン付属のアセットフォルダを `GakuLoader/plugins/` フォルダに配置します。Motion のインポーターと GakuBurstBridge は補助ライブラリで、Loader のプラグイン検出対象には含まれず、必要に応じて Motion が読み込みます。Webパネル対応プラグイン（`GakuMotion` 等）は自身のプラグインフォルダから `GakuMotion.UI/` 等を読み込みます。
 
 ```text
 <ゲームルートディレクトリ>/
 ├── gakumas.exe
 ├── version.dll                    GakuLoader 本体
+├── WebView2Loader.dll             任意：プラグインWebパネル用 WebView2 SDK loader
 └── GakuLoader/
     ├── Configs/gakuloader.ini     # ホスト設定（任意）
     ├── Logs/gakuloader.log        # ホストログ
     └── plugins/                   プラグインフォルダ
         ├── GakuMotion.dll
+        ├── GakuMotion.UI/         # プラグイン付属のオフラインWeb UI（GakuMotion提供）
         └── GakuLocalify.dll
 ```
 

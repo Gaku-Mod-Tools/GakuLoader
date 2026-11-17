@@ -10,8 +10,8 @@
 
 1. 确认游戏根目录（包含 `gakumas.exe` 的文件夹）。
 2. 如果游戏根目录下已有其他工具的 `version.dll`，请先备份并移走该文件。
-3. 将配套的 `version.dll` 放置在与 `gakumas.exe` 同级的根目录下。
-4. 在游戏根目录下创建 `GakuLoader/plugins/` 目录，将所需插件的 DLL 文件放置在该目录中。
+3. 将配套的 `version.dll`（若使用的插件提供 `<pluginId>.web-panel/v1` Web 面板，请一并放置伴生 `WebView2Loader.dll`，参见 [WebView2 构建与打包](../docs/webview2-build.md)）放置在与 `gakumas.exe` 同级的根目录下。
+4. 在游戏根目录下创建 `GakuLoader/plugins/` 目录，将所需插件的 DLL 文件及其随包 Web UI 资产目录（如 GakuMotion 自带的 `GakuMotion.UI/`）放置在该目录中。
 
 安装后的标准文件布局如下：
 
@@ -19,11 +19,14 @@
 <游戏根目录>/
 ├── gakumas.exe
 ├── version.dll                    GakuLoader 核心代理文件
-└── GakuLoader/                 Mod 与插件工作目录
+├── WebView2Loader.dll             可选：WebView2 SDK loader（供提供 Web 面板的插件使用）
+└── GakuLoader/                    Mod 与插件工作目录
     ├── Configs/gakuloader.ini     # 宿主配置（可选）
     ├── Logs/gakuloader.log        # 宿主日志
+    ├── WebView2/                  # 运行时创建的浏览器用户数据目录
     └── plugins/                   插件存放目录
         ├── GakuMotion.dll         示例插件：动作播放
+        ├── GakuMotion.UI/         插件自带的 Web UI 资产（由插件仓库打包提供）
         └── GakuLocalify.dll       示例插件：界面汉化
 ```
 

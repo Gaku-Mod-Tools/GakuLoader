@@ -6,9 +6,6 @@ param(
     [ValidateSet('auto', 'v143', 'v145')]
     [string]$PlatformToolset = 'auto',
     [switch]$BuildNative,
-    [switch]$BuildFrontend,
-    [ValidateSet('Ci', 'Install', 'Skip')]
-    [string]$FrontendDependencies = 'Ci',
     [string]$OutputDir = ''
 )
 
@@ -72,86 +69,6 @@ function Assert-RequiredFile {
     }
 }
 
-function Assert-NoReparseEntries {
-    param([string]$Directory)
-    $rootItem = Get-Item -LiteralPath $Directory -Force
-    if (($rootItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
-        throw "Refusing to package through a reparse point: $Directory"
-    }
-    foreach ($entry in @(Get-ChildItem -LiteralPath $Directory -Recurse -Force)) {
-        if (($entry.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
-            throw "Package input contains a reparse point: $($entry.FullName)"
-        }
-    }
-}
-
-function Assert-FrontendAssets {
-    param([string]$Directory)
-    Assert-NoReparseEntries -Directory $Directory
-    $index = Join-Path $Directory 'index.html'
-    Assert-RequiredFile -Path $index -Label 'frontend entry'
-
-    $entries = @(Get-ChildItem -LiteralPath $Directory -Recurse -File -Force)
-    foreach ($entry in $entries) {
-        if ($entry.Extension -ieq '.map' -or $entry.Extension -ieq '.tsbuildinfo') {
-            throw "Frontend package must not contain source maps or build info: $($entry.FullName)"
-        }
-        if ($entry.FullName -match '[\\/]node_modules[\\/]') {
-            throw "Frontend package must not contain node_modules: $($entry.FullName)"
-        }
-    }
-    if (-not @($entries | Where-Object { $_.Extension -ieq '.js' }).Count) {
-        throw 'Frontend package contains no JavaScript asset.'
-    }
-    if (-not @($entries | Where-Object { $_.Extension -ieq '.css' }).Count) {
-        throw 'Frontend package contains no CSS asset.'
-    }
-
-    $indexText = Get-Content -LiteralPath $index -Raw -Encoding UTF8
-    foreach ($match in [regex]::Matches($indexText, '(?i)\b(?:src|href)\s*=\s*(?:"([^"]*)"|''([^'']*)'')')) {
-        $value = if ($match.Groups[1].Success) { $match.Groups[1].Value } else { $match.Groups[2].Value }
-        if ([string]::IsNullOrWhiteSpace($value) -or $value.StartsWith('#') -or $value.StartsWith('data:')) {
-            continue
-        }
-        if ($value.StartsWith('/') -or $value.StartsWith('\') -or $value -match '^[a-zA-Z][a-zA-Z0-9+.-]*:') {
-            throw "Frontend entry must use relative local assets, found: $value"
-        }
-        $localPath = ($value -split '[?#]', 2)[0]
-        $target = [System.IO.Path]::GetFullPath((Join-Path $Directory ([Uri]::UnescapeDataString($localPath))))
-        $target = Assert-PathUnder -Path $target -Root $Directory -Label 'Frontend asset reference'
-        Assert-RequiredFile -Path $target -Label "frontend asset referenced by index.html ($value)"
-    }
-
-    foreach ($cssFile in @($entries | Where-Object { $_.Extension -ieq '.css' })) {
-        $cssText = Get-Content -LiteralPath $cssFile.FullName -Raw -Encoding UTF8
-        $patterns = @(
-            '(?i)url\(\s*(?:"([^"]*)"|''([^'']*)''|([^)''"\s]+))\s*\)',
-            '(?i)@import\s+(?:"([^"]*)"|''([^'']*)'')'
-        )
-        foreach ($pattern in $patterns) {
-            foreach ($match in [regex]::Matches($cssText, $pattern)) {
-                $value = $null
-                foreach ($groupIndex in 1..3) {
-                    if ($match.Groups.Count -gt $groupIndex -and $match.Groups[$groupIndex].Success) {
-                        $value = $match.Groups[$groupIndex].Value
-                        break
-                    }
-                }
-                if ([string]::IsNullOrWhiteSpace($value) -or $value.StartsWith('#') -or $value.StartsWith('data:')) {
-                    continue
-                }
-                if ($value.StartsWith('/') -or $value.StartsWith('\') -or $value -match '^[a-zA-Z][a-zA-Z0-9+.-]*:') {
-                    throw "Frontend CSS must use relative local assets, found: $value"
-                }
-                $localPath = ($value -split '[?#]', 2)[0]
-                $target = [System.IO.Path]::GetFullPath((Join-Path $cssFile.DirectoryName ([Uri]::UnescapeDataString($localPath))))
-                $target = Assert-PathUnder -Path $target -Root $Directory -Label 'Frontend CSS asset reference'
-                Assert-RequiredFile -Path $target -Label "frontend asset referenced by $($cssFile.Name) ($value)"
-            }
-        }
-    }
-}
-
 function Assert-X64Dll {
     param([string]$Path)
     $bytes = [System.IO.File]::ReadAllBytes($Path)
@@ -209,21 +126,11 @@ Assert-SafeOutputChain -Root $repoRoot -Target $outputPath
 $loaderSource = Join-Path $repoRoot 'deps\webview2\x64\WebView2Loader.dll'
 $nativeRelative = if ($Configuration -eq 'Release') { 'build\version.dll' } else { 'build\debug\version.dll' }
 $nativeDll = Join-Path $repoRoot $nativeRelative
-$frontendRoot = Join-Path $repoRoot 'frontend'
-$frontendDist = Join-Path $frontendRoot 'dist'
-$frontendBuildScript = Join-Path $frontendRoot 'build.ps1'
 $nativeBuildScript = Join-Path $repoRoot 'build.ps1'
-$packageLock = Join-Path $frontendRoot 'package-lock.json'
-$viteConfig = Join-Path $frontendRoot 'vite.config.ts'
 
 Assert-RequiredFile -Path $loaderSource -Label 'vendored WebView2Loader.dll'
-Assert-RequiredFile -Path $packageLock -Label 'frontend package-lock.json'
-Assert-RequiredFile -Path $viteConfig -Label 'frontend vite.config.ts'
 if ($BuildNative) {
     Assert-RequiredFile -Path $nativeBuildScript -Label 'native build script'
-}
-if ($BuildFrontend) {
-    Assert-RequiredFile -Path $frontendBuildScript -Label 'frontend build script'
 }
 
 $legalPayload = [ordered]@{
@@ -250,17 +157,10 @@ if ($BuildNative) {
         throw "Native build failed with exit code $LASTEXITCODE"
     }
 }
-if ($BuildFrontend) {
-    & $frontendBuildScript -Dependencies $FrontendDependencies
-    if ($LASTEXITCODE -ne 0) {
-        throw "Frontend build failed with exit code $LASTEXITCODE"
-    }
-}
 
 Assert-RequiredFile -Path $nativeDll -Label "$Configuration version.dll"
 Assert-X64Dll -Path $nativeDll
 Assert-X64Dll -Path $loaderSource
-Assert-FrontendAssets -Directory $frontendDist
 
 . (Join-Path $repoRoot 'tools\msbuild-env.ps1')
 Clear-GakuPathDuplicate
@@ -304,45 +204,37 @@ foreach ($relative in $legalPayload.Keys) {
     Copy-PayloadFile -Source $legalPayload[$relative] -Destination $destination
 }
 
-$assetRoot = Join-Path $outputPath 'GakuMotion.UI'
-$distPrefix = [System.IO.Path]::GetFullPath($frontendDist).TrimEnd('\')
-foreach ($asset in @(Get-ChildItem -LiteralPath $frontendDist -Recurse -File -Force)) {
-    $relative = $asset.FullName.Substring($distPrefix.Length + 1)
-    Copy-PayloadFile -Source $asset.FullName -Destination (Join-Path $assetRoot $relative)
-}
-Assert-FrontendAssets -Directory $assetRoot
-
 $installText = @'
-GakuLoader + GakuMotion WebView2 local staging package
+GakuLoader WebView2 host local staging package
 
-This package contains the host proxy, the app-local WebView2 SDK loader, and complete offline
-GakuMotion.UI assets. It contains no game assets, plugins, personal configuration, node_modules,
-source maps, or PDB files. It is unsigned local staging output, not a published release.
+This package contains the GakuLoader host proxy (version.dll), the app-local WebView2 SDK loader
+(WebView2Loader.dll), and third-party notices. It contains no plugins, plugin web UI assets
+(such as GakuMotion.UI), game assets, personal configuration, or PDB files. It is unsigned local
+staging output, not a published release.
 
-The GakuLoader Manager remains ImGui. GakuMotion.UI is rendered only inside the GakuMotion plugin
-content area of the independent Manager window. Legacy ImGui plugins are not routed to the game
-window by this package.
+The GakuLoader Manager remains ImGui. When a loaded plugin exposes the optional
+<pluginId>.web-panel/v1 service (GakuWebPanelAssetsV1), GakuLoader embeds WebView2 only inside that
+plugin's Manager content area using the assets directory, entry path, and virtual host returned by
+the plugin itself (for example, GakuMotion ships GakuMotion.UI/ inside GakuLoader/plugins/).
 
 Manual install layout (the packaging script never deploys):
   <game root>/version.dll
   <game root>/WebView2Loader.dll
-  <game root>/GakuMotion.UI/index.html
-  <game root>/GakuMotion.UI/assets/...
-  <game root>/GakuLoader/Configs/gakuloader.ini   optional host settings
-  <game root>/GakuLoader/WebView2/                browser user data, created at runtime
+  <game root>/GakuLoader/plugins/               plugin DLLs and plugin-owned web UI directories
+  <game root>/GakuLoader/Configs/gakuloader.ini optional host settings
+  <game root>/GakuLoader/WebView2/              browser user data, created at runtime
 
-Close the game and independently back up any existing version.dll, WebView2Loader.dll, and
-GakuMotion.UI directory before replacing them. Keep the two DLLs and GakuMotion.UI together beside
-gakumas.exe. Existing plugins and user data are not included or migrated by this package.
+Close the game and independently back up any existing version.dll and WebView2Loader.dll before
+replacing them. Existing plugins, plugin web assets, and user data are not included or migrated by
+this host package.
 
 The target machine needs the Microsoft Edge WebView2 Evergreen Runtime installed. The bundled
 WebView2Loader.dll is only the SDK loader. [host] ui=imgui disables plugin web panels and keeps the
-legacy ImGui plugin panels. Missing runtime, loader, or UI assets produce a warning and an ImGui
-fallback inside the Manager content area. The Motion UI is served offline from the local virtual
-host https://gakumotion.invalid/index.html; no CDN or game-network access is required by these assets.
+legacy ImGui plugin panels. Missing runtime, loader, or plugin UI assets produce a warning and an
+ImGui fallback inside the Manager content area.
 
 package-manifest.json records the payload SHA256 hashes, source HEAD, dirty-worktree state, and
-whether this invocation rebuilt the native/frontend inputs. Verify hashes before manual installation.
+whether this invocation rebuilt the native DLL. Verify hashes before manual installation.
 '@
 [System.IO.File]::WriteAllText((Join-Path $outputPath 'INSTALL.txt'), $installText, [System.Text.Encoding]::ASCII)
 
@@ -356,7 +248,7 @@ $fileRecords = foreach ($file in $payloadFiles) {
 }
 
 $manifest = [ordered]@{
-    schema = 'gakuloader.webview2-release/1'
+    schema = 'gakuloader.webview2-host-release/1'
     package = Split-Path -Leaf $outputPath
     created_utc = [DateTime]::UtcNow.ToString('o')
     source_commit = $revision
@@ -364,8 +256,6 @@ $manifest = [ordered]@{
     configuration = $Configuration
     build = [ordered]@{
         native_invoked = [bool]$BuildNative
-        frontend_invoked = [bool]$BuildFrontend
-        frontend_dependencies = if ($BuildFrontend) { $FrontendDependencies } else { 'not invoked' }
         platform_toolset_requested = $PlatformToolset
         platform_toolset_resolved = $buildTools.PlatformToolset
         msvc_version = $buildTools.Version
@@ -373,13 +263,9 @@ $manifest = [ordered]@{
     inputs = [ordered]@{
         native_dll = [ordered]@{ path = Get-RepoRelativePath -Path $nativeDll; sha256 = (Get-FileHash -LiteralPath $nativeDll -Algorithm SHA256).Hash.ToLowerInvariant() }
         webview2_loader = [ordered]@{ path = Get-RepoRelativePath -Path $loaderSource; sha256 = (Get-FileHash -LiteralPath $loaderSource -Algorithm SHA256).Hash.ToLowerInvariant() }
-        frontend_index = [ordered]@{ path = Get-RepoRelativePath -Path (Join-Path $frontendDist 'index.html'); sha256 = (Get-FileHash -LiteralPath (Join-Path $frontendDist 'index.html') -Algorithm SHA256).Hash.ToLowerInvariant() }
-        frontend_package_lock = [ordered]@{ path = Get-RepoRelativePath -Path $packageLock; sha256 = (Get-FileHash -LiteralPath $packageLock -Algorithm SHA256).Hash.ToLowerInvariant() }
-        vite_config = [ordered]@{ path = Get-RepoRelativePath -Path $viteConfig; sha256 = (Get-FileHash -LiteralPath $viteConfig -Algorithm SHA256).Hash.ToLowerInvariant() }
     }
     runtime = [ordered]@{
-        module_directory_assets = 'GakuMotion.UI'
-        entry_url = 'https://gakumotion.invalid/index.html'
+        panel_contract = '<pluginId>.web-panel/v1 (GakuWebPanelAssetsV1)'
         loader = 'WebView2Loader.dll'
         prerequisite = 'Microsoft Edge WebView2 Evergreen Runtime installed on the target machine'
         fallback = '[host] ui=imgui disables plugin web panels; Manager remains ImGui'
@@ -388,17 +274,16 @@ $manifest = [ordered]@{
     checks = @(
         'version.dll: x64 PE32+ DLL, version proxy exports, and no dynamic CRT dependency via tools/test-package.ps1',
         'WebView2Loader.dll: x64 PE32+ DLL and required dynamic-load exports',
-        'GakuMotion.UI: index.html, JavaScript/CSS assets, relative local HTML references, no node_modules/source maps/build info',
         'Every copied payload file matched its source SHA256'
     )
-    excluded = @('node_modules', 'source maps', 'tsbuildinfo', 'PDB', 'game assets', 'plugins', 'personal configurations', 'WebView2 Evergreen Runtime')
-    limits = 'Unsigned local staging package. Hashes and structural checks are not game loading, rendered UI, listening, publication, or bitwise reproducibility attestation. When native_invoked/frontend_invoked is false, the corresponding input is a supplied local build artifact, not rebuilt by this invocation.'
+    excluded = @('plugins', 'plugin web UI assets (e.g. GakuMotion.UI)', 'node_modules', 'source maps', 'tsbuildinfo', 'PDB', 'game assets', 'personal configurations', 'WebView2 Evergreen Runtime')
+    limits = 'Unsigned local staging package. Hashes and structural checks are not game loading, rendered UI, listening, publication, or bitwise reproducibility attestation. When native_invoked is false, the native DLL is a supplied local build artifact, not rebuilt by this invocation.'
     files = @($fileRecords)
 }
 $manifestPath = Join-Path $outputPath 'package-manifest.json'
 $manifest | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
 
-Write-Host "Packaged GakuLoader + GakuMotion UI release: $outputPath" -ForegroundColor Green
+Write-Host "Packaged GakuLoader WebView2 host release: $outputPath" -ForegroundColor Green
 Write-Host ("Payload files: $($payloadFiles.Count); manifest: $manifestPath") -ForegroundColor Green
 Write-Host ('Manifest SHA256: ' + (Get-FileHash -LiteralPath $manifestPath -Algorithm SHA256).Hash.ToLowerInvariant())
 Write-Host 'Local staging only; no deployment, game launch, or runtime UI acceptance was performed.' -ForegroundColor Yellow

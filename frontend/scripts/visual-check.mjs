@@ -40,9 +40,8 @@ const selectTheme = async (name) => {
   await page.waitForTimeout(120)
 }
 
-// The production entry is now the Motion panel; this script visually checks the
-// isolated Loader Manager prototype instead.
-await page.goto('http://localhost:4173/?prototype=1')
+// Visually checks the isolated Loader Manager prototype using local mock data.
+await page.goto('http://localhost:4173/')
 await page.getByText('Plugin List').first().waitFor()
 await page.waitForTimeout(200)
 await shot('01-plugin-list-dark')

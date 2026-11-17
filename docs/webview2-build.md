@@ -1,54 +1,29 @@
-# GakuMotion WebView2 build and local packaging
+# GakuLoader WebView2 host build and local packaging
 
-This guide covers the GakuMotion React/WebView2 plugin panel, the app-local WebView2 SDK loader, and
-offline release staging. It does not deploy, start, or control a game. The GakuLoader Manager remains
-ImGui. The native host still builds as `version.dll`; the GakuMotion web panel looks for
-`WebView2Loader.dll` and `GakuMotion.UI` beside that module.
+This guide covers building the native GakuLoader host (`version.dll`), redistributing the app-local
+WebView2 SDK loader (`WebView2Loader.dll`), consuming plugin-owned web panels via `include/GakuWebPanel.h`,
+and staging an offline host release. It does not deploy, start, or control a game.
+
+The GakuLoader Manager remains ImGui. GakuLoader no longer owns, builds, or bundles GakuMotion's React
+frontend or `GakuMotion.UI/`. Each plugin that chooses to render a WebView2 panel owns its own frontend
+repository and ships its compiled UI assets inside its plugin package (for example,
+`GakuLoader/plugins/GakuMotion.UI/`). `frontend/` in this repository retains only the isolated GakuLoader
+Manager Web prototype for standalone UI reference and CI validation; it is not bundled into `version.dll`
+release packages.
 
 ## Prerequisites
 
 - Visual Studio 2022 MSVC v143 or Visual Studio 2026 MSVC v145 with the C++ desktop workload and a
   Windows SDK. The observed local environment has only v145, so local commands below pass
   `-PlatformToolset v145` explicitly.
-- Node.js and npm on `PATH`. The frontend lockfile is `frontend/package-lock.json`.
 - Vendored inputs: `deps/webview2/include`, `deps/webview2/x64/WebView2Loader.dll`, and
   `deps/nlohmann/json.hpp`. Their upstream versions, URLs, licenses, and SHA256 values are recorded in
   [WebView2 provenance](../deps/webview2/PROVENANCE.md) and
   [nlohmann/json provenance](../deps/nlohmann/PROVENANCE.md).
 - Target machines need the Microsoft Edge WebView2 Evergreen Runtime installed separately. The
   vendored/packaged `WebView2Loader.dll` is the SDK loader, not the browser runtime.
-
-`npm ci` needs access to the npm registry or a populated npm cache. Once dependencies and the frontend
-are built, the packaged Motion assets load offline. Packaging itself does not download the WebView2
-Evergreen Runtime.
-
-## Frontend development with the mock bridge
-
-From the repository root:
-
-```powershell
-.\frontend\build.ps1 -Dependencies Ci
-Push-Location .\frontend
-npm run dev
-Pop-Location
-```
-
-Vite serves `http://localhost:5173/`. In a plain browser there is no `window.chrome.webview`, so the
-frontend bridge selects the stateful Motion mock bridge. This is useful for UI development and tests;
-it is not the native host bridge and does not exercise real plugin lifecycle or game behavior.
-
-## Production frontend build
-
-```powershell
-.\frontend\build.ps1 -Dependencies Ci
-```
-
-The script runs locked `npm ci --ignore-scripts --no-audit --no-fund`, then `npm run build`
-(`tsc -b && vite build`). It writes `frontend/dist`, keeps Vite `base: './'`, and rejects source maps,
-`node_modules`, build-info files, and absolute/external HTML asset references. `-Dependencies Skip`
-reuses an existing `frontend/node_modules` for a fast local rebuild. `-Dependencies Install` is an
-explicit dependency-maintenance escape hatch and may update the lockfile; do not use it for a
-reproducible release build.
+- Node.js and npm on `PATH` only if you want to run or validate the isolated Manager Web prototype under
+  `frontend/`. Packaging the native host does not require Node.js.
 
 ## Native build
 
@@ -62,15 +37,15 @@ Release writes `build/version.dll`; Debug writes `build/debug/version.dll`. Both
 also copies `WebView2Loader.dll` beside that candidate. The script does not locate a game directory or
 deploy automatically.
 
-## Local release package
+## Local host release package
 
-Build both inputs and package them:
+Build the native host and package it:
 
 ```powershell
-.\tools\package-release.ps1 -Configuration Release -PlatformToolset v145 -BuildNative -BuildFrontend
+.\tools\package-release.ps1 -Configuration Release -PlatformToolset v145 -BuildNative
 ```
 
-Or package already-built local outputs:
+Or package an already-built `version.dll`:
 
 ```powershell
 .\tools\package-release.ps1 -Configuration Release -PlatformToolset v145
@@ -78,18 +53,14 @@ Or package already-built local outputs:
 
 The default output is a fresh directory under `build/release/`. `-OutputDir` may name another new
 child directory under `build/release`, but existing directories are never overwritten and output
-paths/reparse points that escape the repository staging root are rejected. `-BuildFrontend` forwards
-`-FrontendDependencies Ci|Install|Skip` to the frontend script; `Ci` is the default.
+paths/reparse points that escape the repository staging root are rejected.
 
-The package contains:
+The package contains only host artifacts:
 
 ```text
 <package>/
 |-- version.dll
 |-- WebView2Loader.dll
-|-- GakuMotion.UI/
-|   |-- index.html
-|   `-- assets/...
 |-- INSTALL.txt
 |-- package-manifest.json
 |-- THIRD_PARTY_NOTICES.md
@@ -99,39 +70,46 @@ The package contains:
 ```
 
 Before writing the manifest, the script checks the native DLL with `tools/test-package.ps1` (x64,
-version proxy exports, no dynamic CRT), checks the loader's required dynamic-load exports, verifies
-the frontend asset closure, and compares every copied payload file's SHA256 with its source. The
-manifest records payload hashes, source HEAD, dirty-worktree state, build invocation flags, resolved
-toolset, and input hashes. It excludes PDBs, `node_modules`, source maps, build info, game assets,
-plugins, personal configuration, and the Evergreen Runtime. Packaging still requires MSVC/dumpbin for
-the native contract checks even when reusing prebuilt DLLs.
+version proxy exports, no dynamic CRT), checks `WebView2Loader.dll`'s required dynamic-load exports,
+and compares every copied payload file's SHA256 with its source. The manifest records payload hashes,
+source HEAD, dirty-worktree state, build invocation flags, resolved toolset, and input hashes. It
+excludes plugins, plugin web UI assets (such as `GakuMotion.UI/`), PDBs, `node_modules`, source maps,
+game assets, personal configuration, and the Evergreen Runtime. Packaging still requires MSVC/dumpbin for
+the native contract checks even when reusing a prebuilt DLL.
 
 `package-manifest.json` is the completion marker. A failed run can leave an incomplete fresh staging
 directory; do not install from a directory without a verified manifest. The package is unsigned local
 staging output, not a publication or bitwise-reproducibility attestation.
 
-## Manual install layout and fallback
+## Plugin web panel contract and manual install layout
 
-Close the game and independently back up existing host files before any manual replacement. Keep the
-two DLLs and the UI directory together beside `gakumas.exe`:
+GakuLoader discovers plugin web UIs strictly through the additive service contract in `include/GakuWebPanel.h`:
+
+1. A plugin registers `<pluginId>.web-panel/v1` (`GakuWebPanelServiceV1`).
+2. When the user selects that plugin in the ImGui Manager, `DesktopUi` calls `getAssets` (`GakuWebPanelAssetsV1`)
+   to read the plugin-supplied `assetsDir`, relative `entryPath`, and `virtualHost`.
+3. `WebView2Ui` creates a per-panel WebView2 controller scoped to `https://<virtualHost>/` mapped to
+   `assetsDir`, and forwards JSON bridge requests/events between `window.chrome.webview` and the plugin's
+   `handleMessage` / `setEventSink`.
+
+Close the game and independently back up existing host files before any manual replacement. Keep
+`version.dll` and `WebView2Loader.dll` beside `gakumas.exe`; plugins and their web UI directories live
+under `GakuLoader/plugins/`:
 
 ```text
 <game root>/
 |-- gakumas.exe
 |-- version.dll
 |-- WebView2Loader.dll
-|-- GakuMotion.UI/
-|   |-- index.html
-|   `-- assets/...
 `-- GakuLoader/
     |-- Configs/gakuloader.ini
     |-- Logs/gakuloader.log
     |-- WebView2/              browser user data, created at runtime
-    `-- plugins/               existing plugins, not supplied by this package
+    `-- plugins/               plugin DLLs and plugin-owned UI folders (e.g. GakuMotion.dll + GakuMotion.UI/)
 ```
 
 The Manager remains ImGui. Plugin web panels are enabled by default when a plugin provides a
-web-panel service and the runtime/assets are available. The optional host setting is:
+`<pluginId>.web-panel/v1` service and the runtime/assets are available. The optional host setting is:
 
 ```ini
 [host]
@@ -139,35 +117,37 @@ ui=webview2
 ```
 
 Use `ui=imgui` to disable plugin web panels and keep legacy ImGui plugin panels. If the Evergreen
-Runtime, app-local loader, or `GakuMotion.UI/index.html` is unavailable, the host logs a warning and
-falls back to the plugin's ImGui panel inside the Manager content area. It never falls back to the
-game window. Changing the host UI mode requires a host restart; it is not a hot switch.
+Runtime, app-local `WebView2Loader.dll`, or the plugin-supplied entry document is unavailable, the host
+logs a warning and falls back to the plugin's ImGui panel inside the Manager content area. It never falls
+back to the game window. Changing the host UI mode requires a host restart; it is not a hot switch.
 
-The native host maps `GakuMotion.UI` to the local virtual host
-`https://gakumotion.invalid/index.html`. Relative Vite assets and the HTML CSP keep Motion asset
-loading local; no CDN is required. Browser user data stays under `GakuLoader/WebView2`. DevTools are
-off unless `GAKULOADER_WEBVIEW_DEVTOOLS=1` is set for the host process.
+Browser user data stays under `GakuLoader/WebView2`. DevTools are off unless `GAKULOADER_WEBVIEW_DEVTOOLS=1`
+is set for the host process.
+
+## Isolated Manager prototype frontend
+
+`frontend/` keeps only the isolated Loader Manager Web prototype (`src/prototype/LoaderPrototypeApp.tsx`)
+with its own mock bridge and unit tests (`npm run typecheck`, `npm test`, `npm run build`). GakuMotion's
+production React panel lives in the `GakuMotion` repository.
 
 ## Validation boundaries
 
 The Windows CI workflow has two jobs. `source-validation` runs
 `tools/validate-source.ps1 -PlatformToolset v143` on `windows-2022`; its headless suite list includes
-`manager-bridge` and `web-panel-host`. `frontend-validation`
-uses Node.js 24 with npm caching keyed by `frontend/package-lock.json`, then runs `npm ci`,
-`npm run typecheck`, `npm test`, and `npm run build` in `frontend/`.
+`manager-bridge` and `web-panel-host`. `prototype-frontend-validation` uses Node.js 24 with npm caching
+keyed by `frontend/package-lock.json`, then runs `npm ci`, `npm run typecheck`, `npm test`, and
+`npm run build` in `frontend/` to keep the isolated prototype healthy.
 
 Useful local checks are:
 
 ```powershell
-.\frontend\build.ps1 -Dependencies Ci
 .\build.ps1 -Configuration Release -PlatformToolset v145
 .\tests\build-tests.ps1 -SkipFixtures -PlatformToolset v145
-.\tests\run-all.ps1 -Configuration Release -SkipBuild -SkipFixtures -Only manager-bridge
+.\tests\run-all.ps1 -Configuration Release -SkipBuild -SkipFixtures -Only manager-bridge,web-panel-host
 .\tools\test-package.ps1
 .\tools\package-release.ps1 -Configuration Release -PlatformToolset v145
 .\tools\test-docs.ps1 -StaticOnly
 ```
 
-Frontend unit/type checks and mock-browser visual checks are separate from native host acceptance.
-Hashes, PE/export checks, package closure, and offline asset checks do not prove game loading,
-rendered WebView2 behavior, plugin runtime behavior, or user visual acceptance.
+Host contract checks, PE/export checks, and isolated prototype tests do not replace joint runtime
+acceptance with a real plugin DLL and the Edge WebView2 Evergreen Runtime, nor real in-game verification.

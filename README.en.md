@@ -13,18 +13,20 @@ The host stays minimal to arbitrate shared resources across plugins; mod-specifi
 ## Installation
 
 1. Exit the game completely.
-2. Place the built `build/version.dll` into the game root directory (alongside `gakumas.exe`).
-3. Place plugin DLLs into the `GakuLoader/plugins/` directory. Motion’s importer and GakuBurstBridge are companion libraries; the Loader skips them during plugin discovery and Motion loads them as needed.
+2. Place the built `build/version.dll` (and `WebView2Loader.dll` if a plugin exposes a `<pluginId>.web-panel/v1` web panel; see [WebView2 build and packaging](docs/webview2-build.md)) into the game root directory (alongside `gakumas.exe`).
+3. Place plugin DLLs and any plugin-owned asset directories into the `GakuLoader/plugins/` directory. Motion’s importer and GakuBurstBridge are companion libraries; the Loader skips them during plugin discovery and Motion loads them as needed. Plugins with web panels (such as `GakuMotion`) package and load their own UI folder (e.g., `GakuMotion.UI/`) from their plugin directory.
 
 ```text
 <Game Root Directory>/
 ├── gakumas.exe
 ├── version.dll                    GakuLoader binary
+├── WebView2Loader.dll             Optional: WebView2 SDK loader for plugin web panels
 └── GakuLoader/
     ├── Configs/gakuloader.ini     # Optional host settings
     ├── Logs/gakuloader.log        # Host log
     └── plugins/                   Plugin directory
         ├── GakuMotion.dll
+        ├── GakuMotion.UI/         # Plugin-owned offline Web UI (from GakuMotion)
         └── GakuLocalify.dll
 ```
 

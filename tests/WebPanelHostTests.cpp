@@ -68,13 +68,13 @@ int main() {
     envConfig.userDataDir = L"synthetic-shared-user-data";
 
     WebView2Ui::PanelConfig configA;
-    configA.assetsDir = L"synthetic-assets-a";
+    configA.assetsDir = L"C:\\synthetic-assets-a";
     configA.virtualHost = L"panel-a.invalid";
     configA.entryPath = L"index.html";
     configA.dpiScale = 1.0f;
 
     WebView2Ui::PanelConfig configB;
-    configB.assetsDir = L"synthetic-assets-b";
+    configB.assetsDir = L"C:\\synthetic-assets-b";
     configB.virtualHost = L"panel-b.invalid";
     configB.entryPath = L"index.html";
     configB.dpiScale = 1.0f;
@@ -124,6 +124,96 @@ int main() {
     WebView2Ui::Shutdown();
 
     hooks.failDocument = false;
+    WebView2Ui::ConfigureTest(hooks);
+
+    WebView2Ui::PanelConfig badConfig = configA;
+    badConfig.assetsDir.clear();
+    Check(!WebView2Ui::InitializePanel("plugin.bad.dir", parent, envConfig, badConfig, callbacksA),
+        "reject empty assetsDir");
+    Check(!WebView2Ui::LastDiagnostic("plugin.bad.dir").empty(), "empty assetsDir diagnostic");
+
+    badConfig = configA;
+    badConfig.virtualHost = L"bad/host";
+    Check(!WebView2Ui::InitializePanel("plugin.bad.host.slash", parent, envConfig, badConfig, callbacksA),
+        "reject virtualHost with slash");
+
+    badConfig = configA;
+    badConfig.virtualHost = L"bad:host";
+    Check(!WebView2Ui::InitializePanel("plugin.bad.host.port", parent, envConfig, badConfig, callbacksA),
+        "reject virtualHost with colon");
+
+    badConfig = configA;
+    badConfig.entryPath = L"C:\\index.html";
+    Check(!WebView2Ui::InitializePanel("plugin.bad.entry.abs", parent, envConfig, badConfig, callbacksA),
+        "reject absolute entryPath");
+
+    badConfig = configA;
+    badConfig.entryPath = L"..\\escape.html";
+    Check(!WebView2Ui::InitializePanel("plugin.bad.entry.rel", parent, envConfig, badConfig, callbacksA),
+        "reject parent traversal entryPath");
+
+    badConfig = configA;
+    badConfig.entryPath = L"C:index.html";
+    Check(!WebView2Ui::InitializePanel("plugin.bad.entry.drive", parent, envConfig, badConfig, callbacksA),
+        "reject drive-relative entryPath");
+
+    badConfig = configA;
+    badConfig.entryPath = L"index.html?preview=1";
+    Check(!WebView2Ui::InitializePanel("plugin.bad.entry.query", parent, envConfig, badConfig, callbacksA),
+        "reject query string in entryPath");
+
+    badConfig = configA;
+    badConfig.virtualHost = L".bad.invalid";
+    Check(!WebView2Ui::InitializePanel("plugin.bad.host.dot", parent, envConfig, badConfig, callbacksA),
+        "reject leading dot virtualHost");
+
+    badConfig = configA;
+    badConfig.virtualHost = L"bad.invalid.";
+    Check(!WebView2Ui::InitializePanel("plugin.bad.host.trail", parent, envConfig, badConfig, callbacksA),
+        "reject trailing dot virtualHost");
+
+    badConfig = configA;
+    badConfig.virtualHost = L"bad..host.invalid";
+    Check(!WebView2Ui::InitializePanel("plugin.bad.host.dotdot", parent, envConfig, badConfig, callbacksA),
+        "reject consecutive dots in virtualHost");
+
+    badConfig = configA;
+    badConfig.virtualHost = L"bad%host.invalid";
+    Check(!WebView2Ui::InitializePanel("plugin.bad.host.percent", parent, envConfig, badConfig, callbacksA),
+        "reject percent in virtualHost");
+
+    badConfig = configA;
+    badConfig.entryPath = L".";
+    Check(!WebView2Ui::InitializePanel("plugin.bad.entry.dot", parent, envConfig, badConfig, callbacksA),
+        "reject current-dir entryPath");
+
+    badConfig = configA;
+    badConfig.entryPath = L"sub\\.";
+    Check(!WebView2Ui::InitializePanel("plugin.bad.entry.subdot", parent, envConfig, badConfig, callbacksA),
+        "reject trailing dot segment in entryPath");
+
+    badConfig = configA;
+    badConfig.assetsDir = L"relative-assets";
+    Check(!WebView2Ui::InitializePanel("plugin.bad.dir.rel", parent, envConfig, badConfig, callbacksA),
+        "reject relative assetsDir");
+    Check(!WebView2Ui::LastDiagnostic("plugin.bad.dir.rel").empty(), "relative assetsDir diagnostic");
+
+    badConfig = configA;
+    badConfig.assetsDir = L"C:drive-relative";
+    Check(!WebView2Ui::InitializePanel("plugin.bad.dir.drive", parent, envConfig, badConfig, callbacksA),
+        "reject drive-relative assetsDir");
+
+    badConfig = configA;
+    badConfig.assetsDir = L"\\root-relative";
+    Check(!WebView2Ui::InitializePanel("plugin.bad.dir.root", parent, envConfig, badConfig, callbacksA),
+        "reject root-relative assetsDir");
+
+    badConfig = configA;
+    badConfig.assetsDir = L"C:\\synthetic\\..\\escape";
+    Check(!WebView2Ui::InitializePanel("plugin.bad.dir.dotdot", parent, envConfig, badConfig, callbacksA),
+        "reject parent traversal segment in assetsDir");
+    WebView2Ui::Shutdown();
+
     hooks.failInitialize = true;
     WebView2Ui::ConfigureTest(hooks);
     Check(!WebView2Ui::InitializePanel("plugin.a", parent, envConfig, configA, callbacksA), "initialize failure");

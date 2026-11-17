@@ -18,18 +18,20 @@ GakuLoader 是《学园偶像大师》（PC DMM 版）的原生 DLL 插件加载
 
 ### 安装步骤
 1. 完全退出游戏。
-2. 将编译产物或发布包中的 `version.dll` 放置在游戏根目录（即 `gakumas.exe` 所在文件夹）。
-3. 将插件 DLL 放置在 `GakuLoader/plugins/` 目录中。Motion 导入器和 GakuBurstBridge 是伴生库，由 Motion 按需加载，不作为独立插件显示。
+2. 将编译产物或发布包中的 `version.dll`（若插件需要 WebView2 内容面板，请一并放置配套 `WebView2Loader.dll`，参见 [WebView2 构建与打包](docs/webview2-build.md)）放置在游戏根目录（即 `gakumas.exe` 所在文件夹）。
+3. 将插件 DLL 及其自带资源目录放置在 `GakuLoader/plugins/` 目录中。Motion 导入器和 GakuBurstBridge 是伴生库，由 Motion 按需加载，不作为独立插件显示；支持 `<pluginId>.web-panel/v1` 的插件（如 `GakuMotion`）会从自身插件目录自带 Web UI 资产（如 `GakuMotion.UI/`）。
 
 ```text
 <游戏根目录>/
 ├── gakumas.exe
 ├── version.dll                    # GakuLoader 核心
+├── WebView2Loader.dll             # 可选：WebView2 SDK loader（供插件 Web 面板使用）
 └── GakuLoader/
     ├── Configs/gakuloader.ini     # 宿主配置（可选）
     ├── Logs/gakuloader.log        # 宿主日志
     └── plugins/                   # 插件目录
         ├── GakuMotion.dll         # 动作播放插件
+        ├── GakuMotion.UI/         # 插件自带离线 Web UI（由 GakuMotion 仓库提供）
         └── GakuLocalify.dll       # 本地化汉化插件
 ```
 

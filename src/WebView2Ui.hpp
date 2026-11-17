@@ -58,6 +58,8 @@ struct Callbacks {
 // if not already started. Safe to call repeatedly.
 bool EnsureEnvironment(const EnvironmentConfig& config);
 
+bool IsValidPanelConfig(const PanelConfig& panelConfig);
+
 // Create and initialize a per-plugin WebView2 panel on the UI thread, sharing
 // the single CoreWebView2Environment. Replaces any prior panel with the same
 // panelId. Returns false (with LastDiagnostic(panelId)) on immediate failure;

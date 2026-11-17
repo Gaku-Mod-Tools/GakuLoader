@@ -45,7 +45,7 @@ interface WireEvent {
 // Generic request/response + event transport over window.chrome.webview.
 // Correlates by id, rejects pending work on shutdown/session reset, and drops
 // stale-session events so a React refresh never resolves against a previous
-// native session. Shared by the Loader Manager prototype and the Motion panel.
+// native session.
 export class WebView2BridgeCore<
   Methods extends Record<keyof Methods, { params: unknown; result: unknown }>,
   Events extends Record<keyof Events, unknown>,

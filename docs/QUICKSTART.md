@@ -4,20 +4,20 @@ GakuLoader 是《Gakumas》的原生插件宿主：游戏根目录的 `version.d
 
 ## 安装
 
-先退出游戏并备份已有宿主文件。把构建产物 `build/version.dll`、同层复制的 `WebView2Loader.dll` 和完整的 `GakuMotion.UI/` 目录放到与 `gakumas.exe` 同层的游戏根目录，插件放进 `GakuLoader/plugins/`。GakuLoader Manager 仍使用 ImGui；`GakuMotion.UI/` 只在 GakuMotion 插件内容区通过 WebView2 渲染。离线打包入口见 [WebView2 构建与打包](webview2-build.md)。
+先退出游戏并备份已有宿主文件。把宿主构建产物 `build/version.dll` 和同层复制的 `WebView2Loader.dll` 放到与 `gakumas.exe` 同层的游戏根目录；插件及其自带的 Web UI 资产（如 GakuMotion 自带的 `GakuMotion.UI/`）放进 `GakuLoader/plugins/`。GakuLoader Manager 仍使用 ImGui，只通过 `<pluginId>.web-panel/v1` 服务读取插件提供的资产入口并在插件内容区渲染 WebView2。离线宿主打包入口见 [WebView2 构建与打包](webview2-build.md)。
 
 ```text
 <游戏根目录>/
 ├── gakumas.exe
 ├── version.dll                    GakuLoader
 ├── WebView2Loader.dll             WebView2 SDK loader（不是 Evergreen Runtime）
-├── GakuMotion.UI/                 离线 GakuMotion React 资产（插件内容区）
 └── GakuLoader\
     ├── Configs/gakuloader.ini     # 宿主配置（可选）
     ├── Logs/gakuloader.log        # 宿主日志
     ├── WebView2\                  # 浏览器用户数据，运行时创建
     └── plugins\
         ├── GakuMotion.dll
+        ├── GakuMotion.UI\         # GakuMotion 仓库随插件打包的离线 React 资产
         └── GakuLocalify.dll
 ```
 
@@ -129,7 +129,7 @@ DLL 被发现、插件被激活、插件真正开始处理帧/actor 是三个不
 `build.ps1` 通过 `vswhere` 定位 MSBuild 并构建 `GakuLoader.vcxproj`，自动选择已安装的 v143/v145 工具集。
 Release 输出 `build/version.dll`，Debug 输出 `build/debug/version.dll`，并把 vendored `WebView2Loader.dll` 复制到同层。两者都只做本地构建；
 可选 `-OutputDll` 复制候选 DLL 和 loader，不会自动定位游戏目录或部署。完整解决方案入口为 `GakuLoader.slnx`。
-前端生产构建使用 `.\frontend\build.ps1`，离线宿主包使用 `.\tools\package-release.ps1`；详见 [WebView2 构建与打包](webview2-build.md)。
+离线宿主包使用 `.\tools\package-release.ps1`（仅含 `version.dll` 与 `WebView2Loader.dll`）；GakuMotion 前端构建与打包在 GakuMotion 仓库完成，Loader 仓库中的 `frontend/` 仅保留隔离的 Manager 原型，详见 [WebView2 构建与打包](webview2-build.md)。
 
 最小插件的验证使用合成宿主，不依赖游戏、Loader 构建或 MinGW。完整宿主测试需要额外的跨编译器夹具，
 见 [构建与测试](../wiki/Building.md)。夹具、WARP 与合成宿主检查均不能替代实际游戏行为验收。

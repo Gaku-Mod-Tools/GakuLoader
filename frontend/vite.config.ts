@@ -2,8 +2,8 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'node:path'
 
-// Relative base so the built assets resolve under the WebView2 virtual-host
-// folder mapping (https://gakuloader.invalid/) fully offline.
+// Relative base so the isolated Manager prototype assets resolve under the
+// WebView2 virtual-host folder mapping (https://gakuloader.invalid/) offline.
 export default defineConfig({
   base: './',
   plugins: [react()],

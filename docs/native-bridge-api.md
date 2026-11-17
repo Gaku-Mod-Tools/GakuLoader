@@ -1,5 +1,7 @@
 # GakuLoader Manager bridge API reference (protocol v1)
 
+> **Scope note (superseded for production Manager)**: Following the repository boundary correction, the production GakuLoader Manager stays native ImGui and WebView2 hosts only plugin-owned panels via `<pluginId>.web-panel/v1` ([include/GakuWebPanel.h](../include/GakuWebPanel.h)). `frontend/` now holds only the isolated Manager prototype (`src/prototype/LoaderPrototypeApp.tsx`). See [webview2-build.md](webview2-build.md) and [webview2-migration-notes.md](webview2-migration-notes.md). The framing/forwarding specification (`ManagerBridge::ForwardRequest`) remains shared with plugin web panels.
+
 Scope: the typed request/response + event bridge between the WebView2/React Manager
 frontend and the native loader host. This document describes the **implemented**
 surface in this worktree (`feat/webview2-manager-ui`, base `0d18501`), verified by

@@ -88,4 +88,10 @@ void OnDesktopUi(void* pluginState) {
 
 ---
 
+## 插件 WebView2 内容面板 (`<pluginId>.web-panel/v1`)
+
+GakuLoader Manager 本身保持原生 ImGui 实现；对于在 `include/GakuWebPanel.h` 中注册 `<pluginId>.web-panel/v1` 服务的插件，宿主会在右侧内容区 (`##PluginContent`) 挂载独立的 WebView2 子视图，并直接消费插件通过 `getAssets` 返回的本地资产目录、入口文件与虚拟主机名（如插件自备的 `GakuMotion.UI/`）。宿主不内置或打包任何插件前端代码；若 Runtime、`WebView2Loader.dll` 或插件入口文档缺失（或配置 `[host] ui=imgui`），内容区自动回退到插件的 `onDesktopUi` ImGui 路径。详见 [WebView2 构建与打包](../docs/webview2-build.md)。
+
+---
+
 [Wiki 首页](Home.md) · [全部章节](_Sidebar.md) · [项目首页](../README.md)

@@ -30,7 +30,7 @@ if (-not $npmCommand) {
 
 $viteText = Get-Content -LiteralPath $viteConfig -Raw
 if ($viteText -notmatch "base\s*:\s*['""]\.\/['""]") {
-    throw "vite.config.ts must keep base './' for offline GakuMotion.UI virtual-host assets."
+    throw "vite.config.ts must keep base './' for offline virtual-host assets."
 }
 
 function Assert-ProductionAssets {

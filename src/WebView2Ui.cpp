@@ -342,7 +342,7 @@ HRESULT OnControllerCreated(const std::string& panelId, uint64_t generation,
                     args->get_WebErrorStatus(&status);
                     FailPanel(*p, "WebView2 navigation failed (web error status " +
                         std::to_string(static_cast<int>(status)) +
-                        "). Check the frontend assets, or set [host] ui=imgui.");
+                        "). Check the plugin web panel assets, or set [host] ui=imgui.");
                 }
                 return S_OK;
             }).Get(), nullptr);
@@ -504,6 +504,40 @@ bool EnsureEnvironment(const EnvironmentConfig& config) {
 #endif
 }
 
+bool IsValidPanelConfig(const PanelConfig& panelConfig) {
+    if (panelConfig.assetsDir.empty() ||
+        !panelConfig.assetsDir.is_absolute() ||
+        panelConfig.virtualHost.empty() ||
+        panelConfig.virtualHost.front() == L'.' ||
+        panelConfig.virtualHost.back() == L'.' ||
+        panelConfig.virtualHost.find(L"..") != std::wstring::npos ||
+        panelConfig.virtualHost.find_first_of(L"/\\:?#@% \t\r\n") != std::wstring::npos ||
+        panelConfig.entryPath.empty() ||
+        panelConfig.entryPath.front() == L'/' || panelConfig.entryPath.front() == L'\\' ||
+        panelConfig.entryPath.back() == L'/' || panelConfig.entryPath.back() == L'\\' ||
+        panelConfig.entryPath.find_first_of(L":?#") != std::wstring::npos ||
+        panelConfig.entryPath.find(L"..") != std::wstring::npos) {
+        return false;
+    }
+    for (const wchar_t ch : panelConfig.virtualHost) {
+        if (ch <= 0x20 || ch == 0x7f) return false;
+    }
+    for (const wchar_t ch : panelConfig.entryPath) {
+        if (ch < 0x20 || ch == 0x7f) return false;
+    }
+    for (const auto& segment : panelConfig.assetsDir) {
+        if (segment == L"..") return false;
+    }
+    const std::filesystem::path entryRel(panelConfig.entryPath);
+    if (entryRel.is_absolute() || entryRel.has_root_name() || entryRel.has_root_directory()) {
+        return false;
+    }
+    for (const auto& segment : entryRel) {
+        if (segment == L"." || segment == L"..") return false;
+    }
+    return true;
+}
+
 bool InitializePanel(const std::string& panelId, HWND parent,
     const EnvironmentConfig& envConfig, const PanelConfig& panelConfig, Callbacks callbacks) {
     if (panelId.empty()) return false;
@@ -525,9 +559,7 @@ bool InitializePanel(const std::string& panelId, HWND parent,
         FailPanel(panel, "WebView2 has no parent window.");
         return false;
     }
-    if (panelConfig.virtualHost.empty() || panelConfig.entryPath.empty() ||
-        panelConfig.entryPath.front() == L'/' || panelConfig.entryPath.front() == L'\\' ||
-        panelConfig.entryPath.find(L"..") != std::wstring::npos) {
+    if (!IsValidPanelConfig(panelConfig)) {
         FailPanel(panel, "WebView2 panel assets configuration is invalid.");
         return false;
     }
@@ -550,9 +582,9 @@ bool InitializePanel(const std::string& panelId, HWND parent,
 #else
     const std::filesystem::path entry = panelConfig.assetsDir / panelConfig.entryPath;
     std::error_code ec;
-    if (!std::filesystem::exists(entry, ec) || ec) {
+    if (!std::filesystem::is_regular_file(entry, ec) || ec) {
         FailPanel(panel, "Web panel assets are missing at " + Narrow(entry.wstring()) +
-            ". Build the plugin frontend or set [host] ui=imgui.");
+            ". Build or package the plugin web UI, or set [host] ui=imgui.");
         return false;
     }
     if (!EnsureEnvironment(envConfig)) {

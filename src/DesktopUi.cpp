@@ -1379,6 +1379,17 @@ void HideWebPanel() {
     g_fileDrop.Clear();
 }
 
+std::string WebPanelTextUtf8(const std::wstring& value) {
+    if (value.empty()) return {};
+    const int needed = WideCharToMultiByte(
+        CP_UTF8, 0, value.data(), static_cast<int>(value.size()), nullptr, 0, nullptr, nullptr);
+    if (needed <= 0) return {};
+    std::string result(static_cast<size_t>(needed), '\0');
+    WideCharToMultiByte(
+        CP_UTF8, 0, value.data(), static_cast<int>(value.size()), result.data(), needed, nullptr, nullptr);
+    return result;
+}
+
 bool BindWebPanel(const std::string& pluginId) {
     if (g_uiMode != UiMode::WebView2 || pluginId.empty() || pluginId == kManagerPanel) return false;
     if (WebPanelState* existing = FindWebPanel(pluginId)) {
@@ -1402,7 +1413,10 @@ bool BindWebPanel(const std::string& pluginId) {
     GakuWebPanelAssetsV1 assets{};
     const GakuStatus assetStatus = service.getAssets ? service.getAssets(service.context, &assets) : GAKU_E_UNAVAILABLE;
     if (assetStatus != GAKU_OK || assets.abiVersion != GAKU_WEB_PANEL_VERSION ||
-        assets.structSize != sizeof(assets) || !assets.assetsDir || !assets.entryPath || !assets.virtualHost) {
+        assets.structSize != sizeof(assets) ||
+        !assets.assetsDir || !*assets.assetsDir ||
+        !assets.entryPath || !*assets.entryPath ||
+        !assets.virtualHost || !*assets.virtualHost) {
         return failBind("Web panel assets are unavailable (status " + std::to_string(assetStatus) + ").");
     }
     const auto envConfig = BuildWebEnvironmentConfig();
@@ -1411,8 +1425,14 @@ bool BindWebPanel(const std::string& pluginId) {
     panelConfig.entryPath = assets.entryPath;
     panelConfig.virtualHost = assets.virtualHost;
     panelConfig.dpiScale = g_windowDpiScale;
+    if (!panelConfig.assetsDir.is_absolute() || !WebView2Ui::IsValidPanelConfig(panelConfig)) {
+        return failBind("WebView2 panel assets configuration is invalid.");
+    }
     std::error_code ec;
-    if (!std::filesystem::exists(panelConfig.assetsDir / panelConfig.entryPath, ec) || ec) {
+    if (!std::filesystem::is_directory(panelConfig.assetsDir, ec) || ec) {
+        return failBind("Web panel assets directory is missing.");
+    }
+    if (!std::filesystem::is_regular_file(panelConfig.assetsDir / panelConfig.entryPath, ec) || ec) {
         return failBind("Web panel entry document is missing.");
     }
     const uint64_t generation = g_webPanelGeneration.fetch_add(1, std::memory_order_acq_rel) + 1;
@@ -1435,10 +1455,12 @@ bool BindWebPanel(const std::string& pluginId) {
         } else {
             g_webviewDiag = diagnostic;
             p->failed = true;
+            p->shown = false;
             p->diagnostic = diagnostic;
             if (g_activeWebPanelId == pluginId) {
                 g_webViewActive.store(false);
                 g_webWantsTextInput.store(false);
+                g_fileDrop.Clear();
             }
             WebView2Ui::SetVisible(pluginId, false);
             LogWarn("[DesktopUI] WebView2 plugin panel unavailable for %s; using ImGui content panel. %s",
@@ -1473,6 +1495,11 @@ bool BindWebPanel(const std::string& pluginId) {
     if (!WebView2Ui::InitializePanel(pluginId, g_window.load(), envConfig, panelConfig, std::move(callbacks))) {
         return failBind(WebView2Ui::LastDiagnostic(pluginId));
     }
+    LogInfo("[DesktopUI] Bound WebView2 plugin panel %s (origin=https://%s/, entry=%s, dir=%s)",
+        pluginId.c_str(),
+        WebPanelTextUtf8(panelConfig.virtualHost).c_str(),
+        WebPanelTextUtf8(panelConfig.entryPath).c_str(),
+        WebPanelTextUtf8(panelConfig.assetsDir).c_str());
     entry->service = service;
     entry->bound = true;
     entry->failed = false;
