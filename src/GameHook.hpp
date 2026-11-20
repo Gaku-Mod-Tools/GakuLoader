@@ -11,6 +11,11 @@
 
 namespace GakuLoader {
 
+// Arm the pre-Vuplex native startup boundary before plugin activation begins so
+// Unity cannot load VuplexWebViewWindows.dll and advance to the UI while
+// plugins are still activating or running onRuntimeReady. Safe and idempotent.
+void ArmStartupBoundary(bool installHooks = true);
+
 // installHooks=false keeps IL2CPP method resolution available to UnityQuit but
 // leaves runtime detours to an already active external plugin host (Localify).
 void StartHookThread(bool installHooks = true);

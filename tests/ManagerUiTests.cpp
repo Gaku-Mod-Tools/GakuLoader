@@ -40,17 +40,31 @@ std::atomic<double> spinnerTime{0};
 unsigned nextInput = 0;
 int hotkeyOwner = 0;
 std::wstring webAssetsDir;
-std::atomic_uint webInitCount{0}, webShutdownHookCount{0};
+std::atomic_uint webInitCount{0}, webShutdownHookCount{0}, webDocScriptCount{0};
 std::atomic_uint webOnShowCount{0}, webOnHideCount{0}, webOnTickCount{0}, webOnShutdownCount{0};
 std::atomic_uint webPanelLegacyImGuiCount{0}, imguiPanelDispatchCount{0}, failedWebPanelDispatchCount{0}, invalidWebPanelDispatchCount{0};
 std::mutex webInspectMutex;
-std::string observedWebPlugin;
+std::string observedWebPlugin, observedDocScript;
 bool observedWebActive = false, observedWebVisible = false;
-void InspectWebPanel(const char* pluginId, bool active, bool visible, const RECT&, bool) {
+RECT observedWebBounds{};
+bool observedEdgeToEdge = false;
+void InspectWebPanel(const char* pluginId, bool active, bool visible, const RECT& bounds, bool) {
     std::lock_guard lock(webInspectMutex);
     observedWebPlugin = pluginId ? pluginId : "";
     observedWebActive = active;
     observedWebVisible = visible;
+    observedWebBounds = bounds;
+    if (active) {
+        const ImVec2 winPos = ImGui::GetWindowPos();
+        const ImVec2 winSize = ImGui::GetWindowSize();
+        observedEdgeToEdge =
+            std::fabs(winPos.x - static_cast<float>(bounds.left)) <= 1.0f &&
+            std::fabs((winPos.x + winSize.x) - static_cast<float>(bounds.right)) <= 1.0f &&
+            std::fabs(winPos.y - static_cast<float>(bounds.top)) <= 1.0f &&
+            std::fabs((winPos.y + winSize.y) - static_cast<float>(bounds.bottom)) <= 1.0f;
+    } else {
+        observedEdgeToEdge = false;
+    }
 }
 bool CheckWebState(const char* pluginId, bool active, bool visible) {
     std::lock_guard lock(webInspectMutex);
@@ -311,6 +325,11 @@ int main(int argc, char** argv) {
         webAssetsDir = webDir.wstring();
         WebView2Ui::TestHooks webHooks{};
         webHooks.initializePanel = [&](const std::string&, const WebView2Ui::PanelConfig&) { ++webInitCount; };
+        webHooks.documentScript = [&](const std::string&, const std::string& script) {
+            std::lock_guard lock(webInspectMutex);
+            observedDocScript = script;
+            ++webDocScriptCount;
+        };
         webHooks.shutdown = [&] { ++webShutdownHookCount; };
         WebView2Ui::ConfigureTest(webHooks);
         DesktopUi::TestHooks hooks{true, InspectFrame, BeginFrame, [] { ++presentedFrames; }};
@@ -417,6 +436,15 @@ int main(int argc, char** argv) {
         Click("nav.test.web");
         Wait([] { return CheckWebState("test.web", true, true) && webInitCount == 1 && webOnShowCount == 1 && webOnTickCount >= 1; },
             "initial selection of web plugin did not activate WebView2");
+        {
+            std::lock_guard lock(webInspectMutex);
+            Check(observedEdgeToEdge && observedWebBounds.right > observedWebBounds.left && observedWebBounds.bottom > observedWebBounds.top,
+                "active web panel bounds did not fill ##PluginContent edge-to-edge");
+            Check(webDocScriptCount >= 1 &&
+                observedDocScript.find("'--gaku-ui-scale':'1.5'") != std::string::npos &&
+                observedDocScript.find("window.__GAKU_UI_GUIDANCE__") != std::string::npos,
+                "web panel did not receive unified typography guidance matching host scale");
+        }
         const auto shutdownAfterBind = webShutdownHookCount.load();
         Click("nav.test.imgui");
         Wait([] { return imguiPanelDispatchCount >= 3 && CheckWebState("test.imgui", false, false) && webOnHideCount >= 1; },

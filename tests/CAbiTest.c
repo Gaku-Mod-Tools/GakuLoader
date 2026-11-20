@@ -50,4 +50,7 @@ _Static_assert(sizeof(GakuDesktopWindowService) == 40, "desktop window layout");
 _Static_assert(sizeof(GakuFileDialogRequest) == 32, "file request layout");
 _Static_assert(sizeof(GakuFileDialogResult) == 20, "file result layout");
 _Static_assert(sizeof(GakuFileDialogService) == 40, "file service layout");
+_Static_assert(sizeof(GakuRenderFrameBinding) == 40, "render frame binding layout");
+_Static_assert(sizeof(GakuRenderFrameService) == 32, "render frame service layout");
+_Static_assert(sizeof(GakuRenderFrameStatusService) == 16, "render frame status service layout");
 int main(void) { return GAKU_ABI_VERSION == 1u ? 0 : 1; }

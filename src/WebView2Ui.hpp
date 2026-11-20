@@ -38,6 +38,15 @@ struct PanelConfig {
     std::wstring entryPath = L"index.html";
     std::wstring virtualHost;
     float dpiScale = 1.0f;
+    float uiScale = 1.0f;
+    uint32_t theme = 0;
+};
+
+struct UiGuidance {
+    uint32_t version = 1;
+    float uiScale = 1.0f;
+    float dpiScale = 1.0f;
+    uint32_t theme = 0;
 };
 
 struct Callbacks {
@@ -70,6 +79,9 @@ bool InitializePanel(const std::string& panelId, HWND parent,
 void SetVisible(const std::string& panelId, bool visible);
 void SetBounds(const std::string& panelId, const RECT& clientBounds);
 void SetDpiScale(float scale);
+std::string BuildTypographyGuidanceScript(const UiGuidance& guidance);
+void SetUiGuidance(const UiGuidance& guidance);
+UiGuidance GetUiGuidance();
 void NotifyParentMoved();
 void Focus(const std::string& panelId);
 void PostMessageJson(const std::string& panelId, const std::string& json);
@@ -104,6 +116,8 @@ struct TestHooks {
     std::function<void(float)> dpi;
     std::function<void(const std::string&)> focus;
     std::function<void(const std::string&, const std::string&)> postMessage;
+    std::function<void(const std::string&, const std::string&)> documentScript;
+    std::function<void(const std::string&, const std::string&)> executeScript;
     std::function<void(const std::string&)> destroyPanel;
     std::function<void()> shutdown;
 };

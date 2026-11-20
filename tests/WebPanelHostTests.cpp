@@ -19,9 +19,10 @@ int main() {
     WebView2Ui::TestHooks hooks;
     int envCalls = 0, initializeCalls = 0, visibleCalls = 0, boundsCalls = 0, dpiCalls = 0;
     int focusCalls = 0, postCalls = 0, destroyPanelCalls = 0, shutdownCalls = 0;
+    int docScriptCalls = 0, execScriptCalls = 0;
     RECT lastBounds{};
     float lastDpi = 0.0f;
-    std::string lastPanel;
+    std::string lastPanel, lastDocScript, lastExecScript;
     bool lastVisible = false;
     hooks.ensureEnvironment = [&](const WebView2Ui::EnvironmentConfig&) { ++envCalls; };
     hooks.initializePanel = [&](const std::string& panelId, const WebView2Ui::PanelConfig& config) {
@@ -45,6 +46,16 @@ int main() {
         ++postCalls;
         lastPanel = panelId;
         Check(json == "{}", "post message payload");
+    };
+    hooks.documentScript = [&](const std::string& panelId, const std::string& script) {
+        ++docScriptCalls;
+        lastPanel = panelId;
+        lastDocScript = script;
+    };
+    hooks.executeScript = [&](const std::string& panelId, const std::string& script) {
+        ++execScriptCalls;
+        lastPanel = panelId;
+        lastExecScript = script;
     };
     hooks.destroyPanel = [&](const std::string& panelId) { ++destroyPanelCalls; lastPanel = panelId; };
     hooks.shutdown = [&] { ++shutdownCalls; };
@@ -84,6 +95,7 @@ int main() {
     Check(WebView2Ui::InitializePanel("plugin.b", parent, envConfig, configB, callbacksB), "synthetic initialize B");
     Check(envCalls == 1, "shared environment created once for two panels");
     Check(initializeCalls == 2, "both panels initialized");
+    Check(docScriptCalls == 2, "typography guidance injected on document created for both panels");
     Check(readyA && documentA && WebView2Ui::IsReady("plugin.a") && WebView2Ui::IsDocumentReady("plugin.a"), "panel A ready");
     Check(readyB && documentB && WebView2Ui::IsReady("plugin.b") && WebView2Ui::IsDocumentReady("plugin.b"), "panel B ready");
 
@@ -101,6 +113,37 @@ int main() {
     Check(tabLeftA && !focusedA && !textInputA, "tab leave callback");
     WebView2Ui::PostMessageJson("plugin.b", "{}");
     Check(postCalls == 1 && lastPanel == "plugin.b", "post message hook isolated to B");
+
+    const std::string guidanceScript = WebView2Ui::BuildTypographyGuidanceScript({1, 1.25f, 1.5f, 3});
+    for (const char* token : {
+        "--gaku-font-sans", "Microsoft YaHei UI",
+        "--gaku-font-mono", "Cascadia Mono",
+        "--gaku-ui-scale", "'--gaku-ui-scale':'1.25'",
+        "--gaku-text-micro", "11px",
+        "--gaku-text-xs", "12px",
+        "--gaku-text-sm", "13px",
+        "--gaku-text-base", "14px",
+        "--gaku-text-md", "15px",
+        "--gaku-text-lg", "18px",
+        "--gaku-text-title", "22px",
+        "--gaku-leading-tight", "1.35",
+        "--gaku-leading-base", "1.5",
+        "--gaku-control-height", "34px",
+        "--gaku-control-height-sm", "28px",
+        "--gaku-row-height", "56px",
+        "--gaku-radius-panel", "0px",
+        "window.__GAKU_UI_GUIDANCE__", "version:1", "uiScale:1.25", "dpiScale:1.5", "theme:3", "apple-light",
+        "typography:", "metrics:", "getGakuUiGuidance", "gaku:ui-guidance-changed"
+    }) {
+        Check(guidanceScript.find(token) != std::string::npos, token);
+    }
+    const int docBeforeGuidance = docScriptCalls;
+    const int execBeforeGuidance = execScriptCalls;
+    WebView2Ui::SetUiGuidance({1, 1.25f, 1.5f, 3});
+    Check(docScriptCalls == docBeforeGuidance + 2, "SetUiGuidance updates document-created scripts for both panels");
+    Check(execScriptCalls == execBeforeGuidance + 2, "SetUiGuidance executes live update on both ready panels");
+    Check(lastExecScript.find("'--gaku-ui-scale':'1.25'") != std::string::npos, "live guidance carries uiScale");
+    Check(WebView2Ui::GetUiGuidance().theme == 3 && WebView2Ui::GetUiGuidance().uiScale == 1.25f, "GetUiGuidance reflects latest guidance");
 
     // Single-panel renderer failure must not break sibling panels or the shared environment.
     WebView2Ui::SimulateProcessFailedForTest("plugin.a", "renderer gone", false);
@@ -121,6 +164,9 @@ int main() {
     Check(WebView2Ui::IsReady("plugin.a") && !WebView2Ui::IsDocumentReady("plugin.a"), "document failure state");
     WebView2Ui::SetVisible("plugin.a", true);
     Check(!WebView2Ui::IsVisible("plugin.a"), "hidden until document ready");
+    const int execBeforeUndoc = execScriptCalls;
+    WebView2Ui::SetUiGuidance({1, 1.1f, 1.0f, 4});
+    Check(execScriptCalls == execBeforeUndoc, "SetUiGuidance skips ExecuteScript before document ready");
     WebView2Ui::Shutdown();
 
     hooks.failDocument = false;

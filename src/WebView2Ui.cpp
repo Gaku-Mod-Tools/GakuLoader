@@ -11,6 +11,8 @@
 #include <WebView2EnvironmentOptions.h>
 #include <wrl.h>
 #include <atomic>
+#include <cmath>
+#include <cstdio>
 #include <cwctype>
 #include <memory>
 #include <unordered_map>
@@ -59,11 +61,14 @@ struct PanelState {
     bool hasFocus = false;
     bool wantsTextInput = false;
     RECT lastBounds{};
+    std::wstring guidanceScriptId;
+    uint64_t guidanceGeneration = 0;
 };
 
 EnvironmentState g_env;
 std::unordered_map<std::string, std::unique_ptr<PanelState>> g_panels;
 float g_dpiScale = 1.0f;
+UiGuidance g_uiGuidance;
 HMODULE g_loader = nullptr;
 FnCreateEnvironment g_createEnvironment = nullptr;
 #if defined(GAKULOADER_WEBVIEW2_TEST)
@@ -80,6 +85,55 @@ std::string Narrow(const std::wstring& wide) {
     return out;
 }
 
+std::wstring WidenUtf8(const std::string& utf8) {
+    if (utf8.empty()) return {};
+    const int wide = MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), static_cast<int>(utf8.size()), nullptr, 0);
+    if (wide <= 0) return {};
+    std::wstring out(static_cast<size_t>(wide), L'\0');
+    MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), static_cast<int>(utf8.size()), out.data(), wide);
+    return out;
+}
+
+UiGuidance NormalizeGuidance(const UiGuidance& input) {
+    UiGuidance out;
+    out.version = input.version ? input.version : 1u;
+    out.uiScale = (std::isfinite(input.uiScale) && input.uiScale > 0.0f) ? input.uiScale : 1.0f;
+    out.dpiScale = (std::isfinite(input.dpiScale) && input.dpiScale > 0.0f) ? input.dpiScale : 1.0f;
+    out.theme = input.theme <= 4u ? input.theme : 0u;
+    return out;
+}
+
+bool GuidanceEqual(const UiGuidance& a, const UiGuidance& b) {
+    return a.version == b.version &&
+        a.theme == b.theme &&
+        std::fabs(a.uiScale - b.uiScale) < 0.0005f &&
+        std::fabs(a.dpiScale - b.dpiScale) < 0.0005f;
+}
+
+const char* ThemeTokenName(uint32_t theme) {
+    switch (theme) {
+    case 1: return "sapphire";
+    case 2: return "paper";
+    case 3: return "apple-light";
+    case 4: return "apple-dark";
+    case 0:
+    default: return "dark";
+    }
+}
+
+std::string FormatScaleNumber(float value) {
+    if (!std::isfinite(value) || value <= 0.0f) value = 1.0f;
+    const long long milli = std::llround(static_cast<double>(value) * 1000.0);
+    const long long whole = milli / 1000;
+    const long long frac = milli % 1000;
+    if (frac == 0) return std::to_string(whole);
+    char buf[24]{};
+    std::snprintf(buf, sizeof(buf), "%lld.%03lld", whole, frac);
+    std::string out(buf);
+    while (!out.empty() && out.back() == '0') out.pop_back();
+    return out;
+}
+
 PanelState* FindPanel(const std::string& panelId) {
     const auto it = g_panels.find(panelId);
     return it == g_panels.end() ? nullptr : it->second.get();
@@ -89,6 +143,39 @@ PanelState* FindPanelByGeneration(const std::string& panelId, uint64_t generatio
     PanelState* panel = FindPanel(panelId);
     if (!panel || panel->generation.load() != generation) return nullptr;
     return panel;
+}
+
+void RegisterGuidanceOnDocumentCreated(PanelState& panel, const std::string& script) {
+    if (!panel.webview) return;
+    if (!panel.guidanceScriptId.empty()) {
+        panel.webview->RemoveScriptToExecuteOnDocumentCreated(panel.guidanceScriptId.c_str());
+        panel.guidanceScriptId.clear();
+    }
+    const std::wstring wide = WidenUtf8(script);
+    if (wide.empty()) return;
+    const std::string panelId = panel.id;
+    const uint64_t generation = panel.generation.load();
+    const uint64_t guidanceGen = ++panel.guidanceGeneration;
+    panel.webview->AddScriptToExecuteOnDocumentCreated(wide.c_str(),
+        Callback<ICoreWebView2AddScriptToExecuteOnDocumentCreatedCompletedHandler>(
+            [panelId, generation, guidanceGen](HRESULT errorCode, LPCWSTR id) -> HRESULT {
+                PanelState* p = FindPanelByGeneration(panelId, generation);
+                if (!p || !p->webview || FAILED(errorCode) || !id || !*id) return S_OK;
+                if (p->guidanceGeneration != guidanceGen) {
+                    p->webview->RemoveScriptToExecuteOnDocumentCreated(id);
+                } else {
+                    p->guidanceScriptId = id;
+                }
+                return S_OK;
+            }).Get());
+}
+
+void PushGuidanceLive(PanelState& panel, const std::string& script) {
+    if (!panel.webview || !panel.documentReady.load()) return;
+    const std::wstring wide = WidenUtf8(script);
+    if (!wide.empty()) {
+        panel.webview->ExecuteScript(wide.c_str(), nullptr);
+    }
 }
 
 bool LoadLoader() {
@@ -336,6 +423,7 @@ HRESULT OnControllerCreated(const std::string& panelId, uint64_t generation,
                 args->get_IsSuccess(&success);
                 if (success) {
                     p->documentReady.store(true);
+                    PushGuidanceLive(*p, BuildTypographyGuidanceScript(g_uiGuidance));
                     if (p->callbacks.onDocumentReady) p->callbacks.onDocumentReady();
                 } else {
                     COREWEBVIEW2_WEB_ERROR_STATUS status{};
@@ -393,6 +481,7 @@ HRESULT OnControllerCreated(const std::string& panelId, uint64_t generation,
     panel->initializing = false;
     panel->failed = false;
     if (panel->callbacks.onReady) panel->callbacks.onReady(true, "");
+    RegisterGuidanceOnDocumentCreated(*panel, BuildTypographyGuidanceScript(g_uiGuidance));
     const HRESULT navigated = panel->webview->Navigate(panel->entryUrl.c_str());
     if (FAILED(navigated)) {
         FailPanel(*panel, "WebView2 navigation request failed (HRESULT " +
@@ -553,6 +642,7 @@ bool InitializePanel(const std::string& panelId, HWND parent,
     panel.trustedPrefix = L"https://" + panelConfig.virtualHost + L"/";
     panel.entryUrl = panel.trustedPrefix + panelConfig.entryPath;
     g_dpiScale = panelConfig.dpiScale > 0.0f ? panelConfig.dpiScale : g_dpiScale;
+    g_uiGuidance.dpiScale = g_dpiScale;
     g_panels[panelId] = std::move(owned);
 
     if (!parent) {
@@ -576,6 +666,9 @@ bool InitializePanel(const std::string& panelId, HWND parent,
     }
     panel.ready.store(true);
     panel.documentReady.store(!g_testHooks.failDocument);
+    if (g_testHooks.documentScript) {
+        g_testHooks.documentScript(panelId, BuildTypographyGuidanceScript(g_uiGuidance));
+    }
     if (panel.callbacks.onReady) panel.callbacks.onReady(true, "");
     if (panel.documentReady.load() && panel.callbacks.onDocumentReady) panel.callbacks.onDocumentReady();
     return true;
@@ -641,14 +734,14 @@ void SetBounds(const std::string& panelId, const RECT& clientBounds) {
     panel->hasBounds = true;
     return;
 #else
-    if (!panel->controller) return;
-    if (panel->hasBounds && panel->lastBounds.left == clientBounds.left &&
+    const bool same = panel->hasBounds && panel->lastBounds.left == clientBounds.left &&
         panel->lastBounds.top == clientBounds.top &&
         panel->lastBounds.right == clientBounds.right &&
-        panel->lastBounds.bottom == clientBounds.bottom) return;
-    panel->controller->put_Bounds(clientBounds);
+        panel->lastBounds.bottom == clientBounds.bottom;
     panel->lastBounds = clientBounds;
     panel->hasBounds = true;
+    if (!panel->controller || same) return;
+    panel->controller->put_Bounds(clientBounds);
 #endif
 }
 
@@ -663,6 +756,92 @@ void SetDpiScale(float scale) {
         panel->config.dpiScale = g_dpiScale;
         ApplyControllerScale(*panel);
     }
+    UiGuidance next = g_uiGuidance;
+    next.dpiScale = g_dpiScale;
+    SetUiGuidance(next);
+}
+
+std::string BuildTypographyGuidanceScript(const UiGuidance& guidance) {
+    const UiGuidance spec = NormalizeGuidance(guidance);
+    const std::string uiScaleStr = FormatScaleNumber(spec.uiScale);
+    const std::string dpiScaleStr = FormatScaleNumber(spec.dpiScale);
+    const char* themeName = ThemeTokenName(spec.theme);
+    std::string script;
+    script.reserve(2048);
+    script += "(function(){";
+    script += "var spec={";
+    script += "version:" + std::to_string(spec.version) + ",";
+    script += "uiScale:" + uiScaleStr + ",";
+    script += "dpiScale:" + dpiScaleStr + ",";
+    script += "theme:" + std::to_string(spec.theme) + ",";
+    script += "themeName:'" + std::string(themeName) + "',";
+    script += "typography:{";
+    script += "fontSans:\"'Microsoft YaHei UI', 'PingFang SC', 'Segoe UI', system-ui, -apple-system, sans-serif\",";
+    script += "fontMono:\"'Cascadia Mono', 'Consolas', 'JetBrains Mono', monospace\",";
+    script += "textMicro:'11px',textXs:'12px',textSm:'13px',textBase:'14px',textMd:'15px',textLg:'18px',textTitle:'22px',";
+    script += "leadingTight:'1.35',leadingBase:'1.5'";
+    script += "},";
+    script += "metrics:{";
+    script += "controlHeight:'34px',controlHeightSm:'28px',rowHeight:'56px',radiusPanel:'0px'";
+    script += "}";
+    script += "};";
+    script += "var vars={";
+    script += "'--gaku-font-sans':spec.typography.fontSans,";
+    script += "'--gaku-font-mono':spec.typography.fontMono,";
+    script += "'--gaku-ui-scale':'" + uiScaleStr + "',";
+    script += "'--gaku-text-micro':spec.typography.textMicro,";
+    script += "'--gaku-text-xs':spec.typography.textXs,";
+    script += "'--gaku-text-sm':spec.typography.textSm,";
+    script += "'--gaku-text-base':spec.typography.textBase,";
+    script += "'--gaku-text-md':spec.typography.textMd,";
+    script += "'--gaku-text-lg':spec.typography.textLg,";
+    script += "'--gaku-text-title':spec.typography.textTitle,";
+    script += "'--gaku-leading-tight':spec.typography.leadingTight,";
+    script += "'--gaku-leading-base':spec.typography.leadingBase,";
+    script += "'--gaku-control-height':spec.metrics.controlHeight,";
+    script += "'--gaku-control-height-sm':spec.metrics.controlHeightSm,";
+    script += "'--gaku-row-height':spec.metrics.rowHeight,";
+    script += "'--gaku-radius-panel':spec.metrics.radiusPanel";
+    script += "};";
+    script += "function applyToRoot(){";
+    script += "var root=document.documentElement;";
+    script += "if(!root||!root.style)return false;";
+    script += "for(var k in vars){if(Object.prototype.hasOwnProperty.call(vars,k))root.style.setProperty(k,vars[k]);}";
+    script += "root.dataset.gakuUiScale='" + uiScaleStr + "';";
+    script += "root.dataset.gakuTheme='" + std::string(themeName) + "';";
+    script += "return true;";
+    script += "}";
+    script += "window.__GAKU_UI_GUIDANCE__=spec;";
+    script += "window.getGakuUiGuidance=function(){return window.__GAKU_UI_GUIDANCE__;};";
+    script += "if(!applyToRoot()){document.addEventListener('DOMContentLoaded',applyToRoot,{once:true});}";
+    script += "try{window.dispatchEvent(new CustomEvent('gaku:ui-guidance-changed',{detail:spec}));}catch(e){}";
+    script += "})();";
+    return script;
+}
+
+void SetUiGuidance(const UiGuidance& guidance) {
+    const UiGuidance normalized = NormalizeGuidance(guidance);
+    if (GuidanceEqual(g_uiGuidance, normalized)) return;
+    g_uiGuidance = normalized;
+    const std::string script = BuildTypographyGuidanceScript(g_uiGuidance);
+    for (auto& [id, panel] : g_panels) {
+        if (!panel) continue;
+        panel->config.uiScale = g_uiGuidance.uiScale;
+        panel->config.dpiScale = g_uiGuidance.dpiScale;
+        panel->config.theme = g_uiGuidance.theme;
+#if defined(GAKULOADER_WEBVIEW2_TEST)
+        if (g_testHooks.documentScript) g_testHooks.documentScript(id, script);
+        if (panel->documentReady.load() && g_testHooks.executeScript) g_testHooks.executeScript(id, script);
+#else
+        (void)id;
+        RegisterGuidanceOnDocumentCreated(*panel, script);
+        PushGuidanceLive(*panel, script);
+#endif
+    }
+}
+
+UiGuidance GetUiGuidance() {
+    return g_uiGuidance;
 }
 
 void NotifyParentMoved() {
@@ -744,6 +923,8 @@ void Shutdown() {
 #endif
     g_env.environment.Reset();
     g_env.config = {};
+    g_dpiScale = 1.0f;
+    g_uiGuidance = {};
 }
 
 bool IsEnvironmentReady() { return g_env.ready.load(); }

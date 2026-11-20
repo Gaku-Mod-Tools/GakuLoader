@@ -216,3 +216,136 @@ size_t Count() {
 }
 
 }
+
+namespace GakuLoader::RenderFrame {
+
+namespace {
+
+constexpr size_t kMaxRenderObservers = 16;
+
+struct RenderObserver {
+    void* owner{nullptr};
+    std::string name;
+    GakuRenderFrameFn onBeforeRender{nullptr};
+    GakuRenderFrameFn onAfterRender{nullptr};
+    void* userData{nullptr};
+    std::atomic_bool failureReported{false};
+};
+
+std::mutex g_renderMutex;
+std::vector<std::shared_ptr<RenderObserver>> g_renderObservers;
+std::atomic<uint32_t> g_renderHookState{static_cast<uint32_t>(HookState::Pending)};
+
+struct RenderBatch {
+    const std::shared_ptr<RenderObserver>* observers;
+    size_t count;
+    bool afterRender;
+    int isNormalOuterFrame;
+};
+
+void RunRenderBatch(void* raw) {
+    const auto& batch = *static_cast<const RenderBatch*>(raw);
+    for (size_t index = 0; index < batch.count; ++index) {
+        const auto& observer = batch.observers[index];
+        const GakuRenderFrameFn fn = batch.afterRender ? observer->onAfterRender : observer->onBeforeRender;
+        if (!fn) continue;
+        try {
+            fn(observer->userData, batch.isNormalOuterFrame);
+        } catch (...) {
+            if (!observer->failureReported.exchange(true)) {
+                LogError("[RenderFrame] observer %s threw across the shared render entry",
+                    observer->name.empty() ? "(unnamed)" : observer->name.c_str());
+            }
+        }
+    }
+}
+
+} // namespace
+
+GakuStatus Register(void* owner, const GakuRenderFrameBinding* binding) {
+    if (!owner || !binding || (!binding->onBeforeRender && !binding->onAfterRender))
+        return GAKU_E_INVALID_ARGUMENT;
+    if (binding->structSize != sizeof(GakuRenderFrameBinding)) return GAKU_E_SIZE;
+    if (binding->abiVersion != GAKU_SERVICE_VERSION) return GAKU_E_VERSION;
+    std::string name;
+    if (binding->name) {
+        size_t length = 0;
+        while (length < 64 && binding->name[length]) ++length;
+        name.assign(binding->name, length);
+    }
+    std::lock_guard<std::mutex> lock(g_renderMutex);
+    for (auto& existing : g_renderObservers) {
+        if (existing->owner != owner) continue;
+        auto replacement = std::make_shared<RenderObserver>();
+        replacement->owner = owner;
+        replacement->name = std::move(name);
+        replacement->onBeforeRender = binding->onBeforeRender;
+        replacement->onAfterRender = binding->onAfterRender;
+        replacement->userData = binding->userData;
+        existing = std::move(replacement);
+        return GAKU_OK;
+    }
+    if (g_renderObservers.size() >= kMaxRenderObservers) return GAKU_E_LIMIT;
+    auto entry = std::make_shared<RenderObserver>();
+    entry->owner = owner;
+    entry->name = std::move(name);
+    entry->onBeforeRender = binding->onBeforeRender;
+    entry->onAfterRender = binding->onAfterRender;
+    entry->userData = binding->userData;
+    g_renderObservers.push_back(std::move(entry));
+    LogInfo("[RenderFrame] registered %s (observers=%zu)",
+        g_renderObservers.back()->name.empty() ? "(unnamed)" : g_renderObservers.back()->name.c_str(),
+        g_renderObservers.size());
+    return GAKU_OK;
+}
+
+GakuStatus Unregister(void* owner) {
+    if (!owner) return GAKU_E_INVALID_ARGUMENT;
+    std::lock_guard<std::mutex> lock(g_renderMutex);
+    for (auto it = g_renderObservers.begin(); it != g_renderObservers.end(); ++it) {
+        if ((*it)->owner == owner) {
+            LogInfo("[RenderFrame] unregistered %s (observers=%zu)",
+                (*it)->name.empty() ? "(unnamed)" : (*it)->name.c_str(),
+                g_renderObservers.size() - 1);
+            g_renderObservers.erase(it);
+            return GAKU_OK;
+        }
+    }
+    return GAKU_E_UNAVAILABLE;
+}
+
+void RetireOwner(void* owner) {
+    if (!owner) return;
+    std::lock_guard<std::mutex> lock(g_renderMutex);
+    const auto removed = std::erase_if(g_renderObservers, [owner](const auto& entry) { return entry->owner == owner; });
+    if (removed) LogInfo("[RenderFrame] retired %zu observer(s) for owner %p", removed, owner);
+}
+
+void InvokePhase(bool afterRender, int isNormalOuterFrame) {
+    std::array<std::shared_ptr<RenderObserver>, kMaxRenderObservers> snapshot{};
+    size_t count = 0;
+    {
+        std::lock_guard<std::mutex> lock(g_renderMutex);
+        for (const auto& entry : g_renderObservers) {
+            if (count < kMaxRenderObservers) snapshot[count++] = entry;
+        }
+    }
+    if (!count) return;
+    RenderBatch batch{snapshot.data(), count, afterRender, isNormalOuterFrame};
+    RunInCallbackGate(&RunRenderBatch, &batch);
+}
+
+size_t Count() {
+    std::lock_guard<std::mutex> lock(g_renderMutex);
+    return g_renderObservers.size();
+}
+
+void SetHookState(HookState state) noexcept {
+    g_renderHookState.store(static_cast<uint32_t>(state), std::memory_order_release);
+}
+
+HookState GetHookState() noexcept {
+    return static_cast<HookState>(g_renderHookState.load(std::memory_order_acquire));
+}
+
+}

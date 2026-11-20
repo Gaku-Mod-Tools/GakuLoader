@@ -425,6 +425,7 @@ void RetireOwner(PluginOwner* owner) {
     DesktopDialogs::CancelOwner(owner);
     Hotkeys::RetireOwner(owner);
     ActorEntry::RetireOwner(owner);
+    RenderFrame::RetireOwner(owner);
     size_t hooksLeft = 0;
     {
         std::lock_guard<std::mutex> lock(g_servicesMutex);
@@ -505,6 +506,19 @@ GakuStatus RegisterActorEntry(void* context, const GakuActorEntryBinding* bindin
 GakuStatus UnregisterActorEntry(void* context, uint32_t phase) {
     if (!context) return GAKU_E_INVALID_ARGUMENT;
     return ActorEntry::Unregister(context, phase);
+}
+GakuStatus RegisterRenderFrameObserver(void* context, const GakuRenderFrameBinding* binding) {
+    if (!context || !binding) return GAKU_E_INVALID_ARGUMENT;
+    std::lock_guard<std::mutex> lock(g_servicesMutex);
+    if (!static_cast<PluginOwner*>(context)->accepting) return GAKU_E_SHUTTING_DOWN;
+    return RenderFrame::Register(context, binding);
+}
+GakuStatus UnregisterRenderFrameObserver(void* context) {
+    if (!context) return GAKU_E_INVALID_ARGUMENT;
+    return RenderFrame::Unregister(context);
+}
+uint32_t GetRenderFrameHookStatus() {
+    return static_cast<uint32_t>(RenderFrame::GetHookState());
 }
 GakuStatus RequestPluginPanel(void* context) {
     if (!context) return GAKU_E_INVALID_ARGUMENT;
@@ -656,6 +670,16 @@ GakuStatus QueryService(void* context, const char* name, uint32_t version, uint3
     if (strcmp(name, GAKU_SERVICE_ACTOR_ENTRY) == 0) {
         const GakuActorEntryService table{GAKU_SERVICE_VERSION, sizeof(GakuActorEntryService), context,
             RegisterActorEntry, UnregisterActorEntry};
+        return CopyServiceTable(&table, sizeof(table), version, size, output);
+    }
+    if (strcmp(name, GAKU_SERVICE_RENDER_FRAME) == 0) {
+        const GakuRenderFrameService table{GAKU_SERVICE_VERSION, sizeof(GakuRenderFrameService), context,
+            RegisterRenderFrameObserver, UnregisterRenderFrameObserver};
+        return CopyServiceTable(&table, sizeof(table), version, size, output);
+    }
+    if (strcmp(name, GAKU_SERVICE_RENDER_FRAME_STATUS) == 0) {
+        const GakuRenderFrameStatusService table{GAKU_SERVICE_VERSION, sizeof(GakuRenderFrameStatusService),
+            GetRenderFrameHookStatus};
         return CopyServiceTable(&table, sizeof(table), version, size, output);
     }
     std::lock_guard<std::mutex> lock(g_servicesMutex);
@@ -929,10 +953,28 @@ void ActivatePlugins() {
     const std::filesystem::path pluginsPath(g_pluginsRootW);
     std::error_code ec;
     HostLogInfo("Scanning %ls (GakuLoader ABI v%u)", g_pluginsRootW.c_str(), GAKU_ABI_VERSION);
+    std::wstring selfModuleFilename;
+    {
+        HMODULE selfMod = nullptr;
+        if (GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                reinterpret_cast<LPCWSTR>(&ActivatePlugins), &selfMod) && selfMod) {
+            wchar_t selfPath[MAX_PATH]{};
+            const DWORD n = GetModuleFileNameW(selfMod, selfPath, MAX_PATH);
+            if (n > 0 && n < MAX_PATH) {
+                selfModuleFilename = std::filesystem::path(selfPath).filename().wstring();
+            }
+        }
+    }
     std::vector<std::filesystem::path> paths;
     for (const auto& entry : std::filesystem::directory_iterator(pluginsPath, ec)) {
         if (!entry.is_regular_file() || entry.path().extension() != ".dll" || entry.path().filename().wstring()[0] == L'.') continue;
         const auto filename = entry.path().filename().wstring();
+        // Never self-load the loader proxy binary if accidentally placed in plugins/.
+        if (_wcsicmp(filename.c_str(), L"version.dll") == 0 ||
+            (!selfModuleFilename.empty() && _wcsicmp(filename.c_str(), selfModuleFilename.c_str()) == 0)) {
+            HostLogWarn("Ignored loader binary in plugins folder: %ls", filename.c_str());
+            continue;
+        }
         // These are Motion's explicitly named auxiliary libraries, not plugin
         // entry points. Do not execute their DllMain during discovery.
         if (_wcsicmp(filename.c_str(), L"GakuBurstBridge.dll") == 0 ||

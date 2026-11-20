@@ -34,3 +34,22 @@ size_t Count();
 uint64_t InvocationCount();
 
 }
+
+namespace GakuLoader::RenderFrame {
+
+enum class HookState : uint32_t {
+    Pending = GAKU_RENDER_FRAME_HOOK_PENDING,
+    Active = GAKU_RENDER_FRAME_HOOK_ACTIVE,
+    Unavailable = GAKU_RENDER_FRAME_HOOK_UNAVAILABLE,
+};
+
+// Shared RenderPipelineManager::DoRenderLoop_Internal (or fallback) observer registry.
+GakuStatus Register(void* owner, const GakuRenderFrameBinding* binding);
+GakuStatus Unregister(void* owner);
+void RetireOwner(void* owner);
+void InvokePhase(bool afterRender, int isNormalOuterFrame);
+size_t Count();
+void SetHookState(HookState state) noexcept;
+HookState GetHookState() noexcept;
+
+}

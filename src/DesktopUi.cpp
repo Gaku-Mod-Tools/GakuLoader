@@ -705,6 +705,7 @@ bool CreatePresentation(HWND window) {
     DesktopAppearance::ApplyAppearance(g_currentTheme, g_currentUiScale, g_currentDpiScale);
     g_appliedUiScale = g_currentUiScale; g_appliedDpiScale = g_currentDpiScale;
     g_publishedTheme = g_currentTheme; g_publishedScale = g_currentUiScale;
+    WebView2Ui::SetUiGuidance({1, g_currentUiScale, g_windowDpiScale, static_cast<uint32_t>(g_currentTheme)});
     g_win32Ready = ImGui_ImplWin32_Init(window);
     g_dx11Ready = g_win32Ready && ImGui_ImplDX11_Init(g_device, g_deviceContext);
     return g_dx11Ready;
@@ -1057,7 +1058,7 @@ void DrawHostShell(bool pluginGateHeld) {
         ImGui::EndMenuBar();
     }
     const float footer = ImGui::GetFrameHeightWithSpacing();
-    const float navWidth = (std::max)(160.0f, 190.0f * (g_currentUiScale * g_currentDpiScale));
+    const float navWidth = (std::max)(170.0f, 200.0f * (g_currentUiScale * g_currentDpiScale));
     ImGui::BeginChild("##PluginNavigation", ImVec2(navWidth, -footer), true);
     if (ImGui::Selectable(Label(Key::Manager, "ManagerNav").c_str(), g_selectedPlugin == kManagerPanel)) g_selectedPlugin = kManagerPanel;
     InspectUiItem("nav.Manager", g_selectedPlugin == kManagerPanel ? "selected" : "");
@@ -1075,17 +1076,28 @@ void DrawHostShell(bool pluginGateHeld) {
     if (g_selectedPlugin != kManagerPanel && g_editorOpen) {
         g_editorOpen = g_captureKeys = false; Hotkeys::SetCaptureActive(false);
     }
-    ImGui::BeginChild("##PluginContent", ImVec2(0, -footer), true);
-    const ImVec2 contentCursor = ImGui::GetCursorScreenPos();
-    const ImVec2 contentAvail = ImGui::GetContentRegionAvail();
-    RECT clientBounds{};
-    if (HWND window = g_window.load()) GetClientRect(window, &clientBounds);
-    const RECT webBounds = ComputeWebPanelBounds(contentCursor, contentAvail, io.DisplayFramebufferScale, clientBounds);
     const auto selected = std::find_if(g_hostSnapshot.plugins.begin(), g_hostSnapshot.plugins.end(),
         [](const auto& plugin) { return plugin.id == g_selectedPlugin; });
     WebPanelState* activePanel = selected != g_hostSnapshot.plugins.end() ? FindWebPanel(selected->id) : nullptr;
     const bool webOwned = activePanel && activePanel->bound && !activePanel->failed;
     const bool webFailed = activePanel && activePanel->failed;
+    if (webOwned) {
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+        ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 0.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 0.0f);
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImGui::GetStyle().Colors[ImGuiCol_WindowBg]);
+    }
+    ImGui::BeginChild("##PluginContent", ImVec2(0, -footer), !webOwned,
+        webOwned ? (ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse) : ImGuiWindowFlags_None);
+    if (webOwned) {
+        ImGui::PopStyleColor();
+        ImGui::PopStyleVar(3);
+    }
+    const ImVec2 contentPos = webOwned ? ImGui::GetWindowPos() : ImGui::GetCursorScreenPos();
+    const ImVec2 contentSize = webOwned ? ImGui::GetWindowSize() : ImGui::GetContentRegionAvail();
+    RECT clientBounds{};
+    if (HWND window = g_window.load()) GetClientRect(window, &clientBounds);
+    const RECT webBounds = ComputeWebPanelBounds(contentPos, contentSize, io.DisplayFramebufferScale, clientBounds);
     const bool popupOpen = ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopup);
     const bool webActive = webOwned && activePanel->shown &&
         WebView2Ui::IsReady(selected->id) && WebView2Ui::IsDocumentReady(selected->id) && !popupOpen;
@@ -1114,9 +1126,13 @@ void DrawHostShell(bool pluginGateHeld) {
     } else if (webOwned) {
         // WebView2 is still loading its document or temporarily hidden behind an
         // ImGui popup menu. Never fall through to the legacy ImGui plugin UI.
+        const ImVec2 loadingPad = ImGui::GetStyle().WindowPadding;
+        ImGui::SetCursorPos(loadingPad);
+        ImGui::Indent(loadingPad.x);
         ImGui::Text("%s  %s", selected->name.c_str(), ManagerStrings::FormatVersion(selected->version).c_str()); ImGui::Separator();
         DrawSpinner(); ImGui::SameLine();
         ImGui::TextUnformatted(T(Key::Waiting));
+        ImGui::Unindent(loadingPad.x);
         ImGui::PushID(selected->id.c_str());
         g_inCallback = true;
         if (pluginGateHeld) DispatchWebPanelTick(selected->id.c_str());
@@ -1193,6 +1209,7 @@ bool ServiceAppearance() {
         DesktopAppearance::ApplyAppearance(g_currentTheme, g_currentUiScale, g_currentDpiScale);
         g_appliedUiScale = g_currentUiScale; g_appliedDpiScale = g_currentDpiScale;
         g_publishedTheme = g_currentTheme; g_publishedScale = g_currentUiScale;
+        WebView2Ui::SetUiGuidance({1, g_currentUiScale, g_windowDpiScale, static_cast<uint32_t>(g_currentTheme)});
         g_appearanceDirty = false;
     }
     if (g_saveAppearance) {
@@ -1425,6 +1442,8 @@ bool BindWebPanel(const std::string& pluginId) {
     panelConfig.entryPath = assets.entryPath;
     panelConfig.virtualHost = assets.virtualHost;
     panelConfig.dpiScale = g_windowDpiScale;
+    panelConfig.uiScale = g_currentUiScale;
+    panelConfig.theme = static_cast<uint32_t>(g_currentTheme);
     if (!panelConfig.assetsDir.is_absolute() || !WebView2Ui::IsValidPanelConfig(panelConfig)) {
         return failBind("WebView2 panel assets configuration is invalid.");
     }
@@ -1696,9 +1715,30 @@ DWORD WorkerBody() {
         g_stop = true; DesktopDialogs::Shutdown(); return 0;
     }
     RECT area{}; SystemParametersInfoW(SPI_GETWORKAREA, 0, &area, 0);
-    const int width = std::min(1120L, area.right - area.left), height = std::min(820L, area.bottom - area.top);
+    GakuUiTheme initialTheme = GAKU_UI_THEME_DARK;
+    float initialUiScale = 1.0f;
+    DesktopAppearance::LoadAppearanceSettings(ConfigPath(), initialTheme, initialUiScale);
+    const int baseWidth = 1220, baseHeight = 820;
+    const int availWidth = static_cast<int>((std::max)(1L, area.right - area.left));
+    const int availHeight = static_cast<int>((std::max)(1L, area.bottom - area.top));
     HWND window = CreateWindowExW(WS_EX_APPWINDOW, kWindowClass, L"GakuLoader", WS_OVERLAPPEDWINDOW,
-        area.left + 30, area.top + 30, width, height, nullptr, nullptr, instance, nullptr);
+        area.left + 30, area.top + 30, (std::min)(baseWidth, availWidth), (std::min)(baseHeight, availHeight),
+        nullptr, nullptr, instance, nullptr);
+    if (window) {
+        const float initialDpiScale = DesktopAppearance::GetWindowDpiScale(window);
+        const float windowScale = (std::max)(1.0f, initialUiScale * initialDpiScale);
+        RECT work = area;
+        MONITORINFO mi{};
+        mi.cbSize = sizeof(mi);
+        if (GetMonitorInfoW(MonitorFromWindow(window, MONITOR_DEFAULTTONEAREST), &mi)) work = mi.rcWork;
+        const LONG workW = (std::max)(1L, work.right - work.left);
+        const LONG workH = (std::max)(1L, work.bottom - work.top);
+        const int width = static_cast<int>((std::min)(static_cast<LONG>(std::lround(baseWidth * windowScale)), workW));
+        const int height = static_cast<int>((std::min)(static_cast<LONG>(std::lround(baseHeight * windowScale)), workH));
+        const int x = static_cast<int>(work.left + (std::min)(30L, (std::max)(0L, workW - width)));
+        const int y = static_cast<int>(work.top + (std::min)(30L, (std::max)(0L, workH - height)));
+        SetWindowPos(window, nullptr, x, y, width, height, SWP_NOZORDER | SWP_NOACTIVATE);
+    }
     g_ownedWindow = window;
     if (!window || !CreatePresentation(window)) {
         LogWarn("[DesktopUI] independent presentation unavailable; game rendering is untouched");

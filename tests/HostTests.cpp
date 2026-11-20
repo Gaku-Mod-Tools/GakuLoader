@@ -999,6 +999,48 @@ int wmain(int argc, wchar_t** argv) {
     CloseHandle(g_desktopGateRelease);
     g_desktopGateHeld = g_desktopGateRelease = nullptr;
 
+    // --- Shared render-frame observer contract -------------------------------
+    GakuRenderFrameService rfA{};
+    assert(plugins[0].host.queryService(plugins[0].host.hostContext, GAKU_SERVICE_RENDER_FRAME,
+        GAKU_SERVICE_VERSION, sizeof(rfA), &rfA) == GAKU_OK);
+    assert(rfA.context == plugins[0].host.hostContext && rfA.registerObserver && rfA.unregisterObserver);
+    GakuRenderFrameBinding badRf{GAKU_SERVICE_VERSION, sizeof(GakuRenderFrameBinding) - 1, "bad", RecordBeforeA ? nullptr : nullptr, nullptr, nullptr};
+    assert(rfA.registerObserver(rfA.context, &badRf) == GAKU_E_INVALID_ARGUMENT);
+    static int rfBeforeCount = 0, rfAfterCount = 0, rfNormalFlag = 0;
+    rfBeforeCount = rfAfterCount = rfNormalFlag = 0;
+    GakuRenderFrameBinding validRf{
+        GAKU_SERVICE_VERSION, sizeof(GakuRenderFrameBinding), "test.rf",
+        [](void*, int normal) { ++rfBeforeCount; rfNormalFlag = normal; },
+        [](void*, int normal) { ++rfAfterCount; rfNormalFlag = normal; },
+        nullptr
+    };
+    badRf = validRf;
+    badRf.structSize -= 1;
+    assert(rfA.registerObserver(rfA.context, &badRf) == GAKU_E_SIZE);
+    badRf = validRf;
+    badRf.abiVersion += 1;
+    assert(rfA.registerObserver(rfA.context, &badRf) == GAKU_E_VERSION);
+    assert(rfA.registerObserver(rfA.context, &validRf) == GAKU_OK);
+    assert(GakuLoader::RenderFrame::Count() == 1);
+    GakuRenderFrameStatusService rfStatus{};
+    assert(plugins[0].host.queryService(plugins[0].host.hostContext, GAKU_SERVICE_RENDER_FRAME_STATUS,
+        GAKU_SERVICE_VERSION, sizeof(rfStatus), &rfStatus) == GAKU_OK);
+    assert(rfStatus.getStatus && rfStatus.getStatus() == GAKU_RENDER_FRAME_HOOK_PENDING);
+    GakuLoader::RenderFrame::SetHookState(GakuLoader::RenderFrame::HookState::Active);
+    assert(rfStatus.getStatus() == GAKU_RENDER_FRAME_HOOK_ACTIVE);
+    GakuLoader::RenderFrame::SetHookState(GakuLoader::RenderFrame::HookState::Unavailable);
+    assert(rfStatus.getStatus() == GAKU_RENDER_FRAME_HOOK_UNAVAILABLE);
+    GakuLoader::RenderFrame::SetHookState(GakuLoader::RenderFrame::HookState::Pending);
+    GakuLoader::RenderFrame::InvokePhase(false, 1);
+    GakuLoader::RenderFrame::InvokePhase(true, 1);
+    assert(rfBeforeCount == 1 && rfAfterCount == 1 && rfNormalFlag == 1);
+    assert(rfA.unregisterObserver(rfA.context) == GAKU_OK);
+    assert(rfA.unregisterObserver(rfA.context) == GAKU_E_UNAVAILABLE);
+    assert(GakuLoader::RenderFrame::Count() == 0);
+    // Keep one registered across Shutdown() to verify automatic owner retirement.
+    assert(rfA.registerObserver(rfA.context, &validRf) == GAKU_OK);
+    assert(GakuLoader::RenderFrame::Count() == 1);
+
     // --- Shutdown ----------------------------------------------------------
     assert(enqueue() == GAKU_OK);
     std::thread shutdown([] { GakuLoader::Shutdown(); });
@@ -1027,6 +1069,7 @@ int wmain(int argc, wchar_t** argv) {
     assert(b.shutdownCount == 1 && b.shutdownThread == mainThread);
     assert(GakuLoader::Hotkeys::Snapshot().empty()); // bindings retired with their owners
     assert(GakuLoader::ActorEntry::Count() == 0);    // participants retired with their owners
+    assert(GakuLoader::RenderFrame::Count() == 0);   // render observers retired with their owners
     assert(a.taskCount == 1); // queued work canceled at shutdown
     assert(enqueue() == GAKU_E_SHUTTING_DOWN);
     assert(hook(2) == 5); // owner retirement disabled its hook without a global operation

@@ -34,6 +34,13 @@ DWORD WINAPI LoaderStartupThread(LPVOID) {
     HMODULE self = nullptr;
     GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_PIN,
         reinterpret_cast<LPCWSTR>(&LoaderStartupThread), &self);
+    wchar_t hostGuardName[96]{};
+    std::swprintf(hostGuardName, std::size(hostGuardName),
+        L"Local\\GakuLoader.ActiveHost.%lu", static_cast<unsigned long>(GetCurrentProcessId()));
+    static HANDLE s_hostSingleton = CreateMutexW(nullptr, FALSE, hostGuardName);
+    if (!s_hostSingleton || GetLastError() == ERROR_ALREADY_EXISTS) {
+        return 0;
+    }
     wchar_t executable[MAX_PATH]{};
     const DWORD length = GetModuleFileNameW(nullptr, executable, MAX_PATH);
     if (length == 0 || length >= MAX_PATH) return 0;
@@ -59,6 +66,11 @@ DWORD WINAPI LoaderStartupThread(LPVOID) {
     }
     try {
         GakuLoader::Initialize(gameRoot, localRoot);
+        // Arm the pre-Vuplex startup boundary and exit guard before
+        // DesktopUi/ActivatePlugins spend seconds loading plugins, so Unity
+        // cannot race past VuplexWebViewWindows.dll into the UI.
+        GakuLoader::ArmStartupBoundary();
+        GakuLoader::StartQuitGuard();
         // Desktop services must exist before activation: a plugin may bind them
         // from its activate callback.
         GakuLoader::DesktopUi::Initialize();
@@ -67,13 +79,14 @@ DWORD WINAPI LoaderStartupThread(LPVOID) {
         GakuLoader::ActivatePlugins();
     } catch (const std::exception& exception) {
         GakuLoader::LogError("Exception during loader startup: %s", exception.what());
+    } catch (...) {
+        GakuLoader::LogError("Unknown exception during loader startup");
     }
 
-    // Runtime resolution and main-thread pumping stay independent of activation.
+    // Runtime resolution and main-thread pumping wait for activation to finish.
     GakuLoader::StartHookThread();
 
-    // Arm the exit guard on its own thread: it must work even when the game
-    // runtime never becomes resolvable.
+    // Ensure the exit guard stays armed even if Initialize() threw earlier.
     GakuLoader::StartQuitGuard();
     return 0;
 }

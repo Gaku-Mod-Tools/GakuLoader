@@ -8,6 +8,7 @@
 
 #include "GameHook.hpp"
 #include "Host.hpp"
+#include "HostConfig.hpp"
 #include "ActorEntry.hpp"
 #include "ExitDiagnosis.hpp"
 #include "DiagnosticBoundary.hpp"
@@ -20,6 +21,8 @@
 #include <cstdio>
 #include <cmath>
 #include <cwchar>
+#include <limits>
+#include <string>
 
 namespace GakuLoader {
 
@@ -33,14 +36,38 @@ std::atomic<bool> g_installHooks{true};
 std::atomic<bool> g_runtimeThreadDetached{false};
 HANDLE g_hookThreadHandle = nullptr;
 using LoadLibraryWFn = HMODULE (WINAPI*)(LPCWSTR);
+using LoadLibraryExWFn = HMODULE (WINAPI*)(LPCWSTR, HANDLE, DWORD);
 LoadLibraryWFn g_originalLoadLibraryW = nullptr;
+LoadLibraryExWFn g_originalLoadLibraryExW = nullptr;
 using InLoaderCalloutFn = BOOLEAN (NTAPI*)();
 InLoaderCalloutFn g_inLoaderCallout = nullptr;
 HANDLE g_startupBoundarySeen = nullptr;
 HANDLE g_startupWorkerFinished = nullptr;
+std::atomic<bool> g_startupBoundaryArmed{false};
 std::atomic<bool> g_startupBoundaryClaimed{false};
 std::atomic<bool> g_startupWorkerPrepared{false};
-DWORD g_startupBoundaryWaitMs = 30000;
+std::atomic<bool> g_startupNoWindowWarned{false};
+std::atomic<bool> g_startupCalloutWarned{false};
+// Hard-block by default until all plugins finish activate + onRuntimeReady
+// (or shutdown is requested). Configurable via [startup] boundary_wait_ms.
+DWORD g_startupBoundaryWaitMs = INFINITE;
+
+DWORD ReadStartupBoundaryWaitMs() {
+    const auto path = ConfigPath();
+    if (path.empty()) return INFINITE;
+    const std::wstring raw = ReadConfigValue(path, L"startup", L"boundary_wait_ms");
+    const auto first = raw.find_first_not_of(L" \t\r\n");
+    if (first == std::wstring::npos) return INFINITE;
+    const auto last = raw.find_last_not_of(L" \t\r\n");
+    const std::wstring trimmed = raw.substr(first, last - first + 1);
+    if (_wcsicmp(trimmed.c_str(), L"infinite") == 0) return INFINITE;
+    wchar_t* end = nullptr;
+    const unsigned long parsed = wcstoul(trimmed.c_str(), &end, 10);
+    if (end == trimmed.c_str() || *end != L'\0') return INFINITE;
+    return parsed >= (std::numeric_limits<DWORD>::max)()
+        ? INFINITE
+        : static_cast<DWORD>(parsed);
+}
 
 // IL2CPP APIs
 typedef void* (*Il2CppDomainGetFn)();
@@ -143,6 +170,8 @@ bool ConfirmPumpThread(HWND window) {
         BindMainThread(thread);
 }
 
+void EnsureRenderFrameHook();
+
 void PumpFrame(HWND window) {
     // Reject foreign callers before reading any Unity API or pump state.
     if (!ConfirmPumpThread(window) || g_inFramePump) return;
@@ -160,6 +189,7 @@ void PumpFrame(HWND window) {
     float delta = readDelta ? readDelta(nullptr) : 0.0333f;
     if (!std::isfinite(delta) || delta < 0.0f) delta = 0.0333f;
     g_lastDelta = delta;
+    EnsureRenderFrameHook();
     TickFrame(delta);
 }
 
@@ -180,37 +210,231 @@ void WakeFramePump(HWND window) {
     }
 }
 
-HMODULE WINAPI Detour_LoadLibraryW(LPCWSTR path) {
-    const wchar_t* name = path ? std::wcsrchr(path, L'\\') : nullptr;
-    name = name ? name + 1 : path;
-    if (name && _wcsicmp(name, L"VuplexWebViewWindows.dll") == 0 &&
-        g_startupBoundarySeen && g_startupWorkerFinished) {
-        // This is the same pre-load boundary used by standalone Localify. Only
-        // the game's independently identified Unity window thread may hold it.
-        const HWND window = FindPumpWindow();
-        if (ConfirmPumpThread(window) && (!g_inLoaderCallout || g_inLoaderCallout())) {
+bool IsVuplexLibraryPath(LPCWSTR path) {
+    if (!path || !path[0]) return false;
+    const wchar_t* name = path;
+    for (const wchar_t* p = path; *p; ++p) {
+        if (*p == L'\\' || *p == L'/') name = p + 1;
+    }
+    return _wcsicmp(name, L"VuplexWebViewWindows.dll") == 0;
+}
+
+void HoldPreVuplexStartupBoundary(LPCWSTR path) {
+    if (!IsVuplexLibraryPath(path) || !g_startupBoundarySeen || !g_startupWorkerFinished) return;
+    if (g_startupBoundaryClaimed.load(std::memory_order_acquire)) return;
+    if (g_stopThread.load(std::memory_order_acquire) || IsShuttingDown()) return;
+
+    // This is the same pre-load boundary used by standalone Localify. Only
+    // the game's independently identified Unity window thread may hold it.
+    const HWND window = FindPumpWindow();
+    if (!window) {
+        if (!g_startupNoWindowWarned.exchange(true, std::memory_order_acq_rel)) {
+            LogWarn("[StartupTiming] Vuplex load observed before UnityWndClass existed uptime_ms=%llu thread=%lu",
+                Trace::UptimeMs(), GetCurrentThreadId());
+        }
+        return;
+    }
+    if (!ConfirmPumpThread(window)) return;
+    if (!g_inLoaderCallout || g_inLoaderCallout()) {
+        if (!g_startupCalloutWarned.exchange(true, std::memory_order_acq_rel)) {
             LogWarn("Pre-Vuplex synchronization skipped inside an unknown/active loader callout; using loaded-module fallback");
-        } else if (ConfirmPumpThread(window) && !g_startupBoundaryClaimed.exchange(true)) {
-            g_pumpWindow.store(window, std::memory_order_release);
-            const auto started = Trace::UptimeMs();
-            LogInfo("[StartupTiming] pre-Vuplex boundary entered uptime_ms=%llu thread=%lu", started, GetCurrentThreadId());
-            SetEvent(g_startupBoundarySeen);
-            // Do not dispatch messages while the worker is resolving metadata
-            // and patching code. Its callback phase remains on that worker.
-            const DWORD waited = WaitForSingleObject(g_startupWorkerFinished, g_startupBoundaryWaitMs);
-            if (waited == WAIT_OBJECT_0 && g_startupWorkerPrepared.load(std::memory_order_acquire)) {
-                // Drain the existing main-thread queue at the original safe
-                // standalone point, before first UI construction can continue.
-                DispatchMainThreadTasks();
-                LogInfo("[StartupTiming] pre-Vuplex boundary released after main-thread dispatch uptime_ms=%llu thread=%lu elapsed_ms=%llu",
-                    Trace::UptimeMs(), GetCurrentThreadId(), Trace::UptimeMs() - started);
-            } else {
-                LogWarn("[StartupTiming] pre-Vuplex synchronization unavailable wait=%lu prepared=%u uptime_ms=%llu thread=%lu; first-UI ordering is not guaranteed",
-                    waited, g_startupWorkerPrepared.load() ? 1u : 0u, Trace::UptimeMs(), GetCurrentThreadId());
+        }
+        return;
+    }
+    if (g_startupBoundaryClaimed.exchange(true, std::memory_order_acq_rel)) return;
+
+    g_pumpWindow.store(window, std::memory_order_release);
+    const auto started = Trace::UptimeMs();
+    const DWORD waitBudget = g_startupBoundaryWaitMs;
+    if (waitBudget == INFINITE) {
+        LogInfo("[StartupTiming] pre-Vuplex boundary entered uptime_ms=%llu thread=%lu wait_budget=infinite",
+            started, GetCurrentThreadId());
+    } else {
+        LogInfo("[StartupTiming] pre-Vuplex boundary entered uptime_ms=%llu thread=%lu wait_budget_ms=%lu",
+            started, GetCurrentThreadId(), static_cast<unsigned long>(waitBudget));
+    }
+    SetEvent(g_startupBoundarySeen);
+
+    // Do not dispatch messages while the worker is resolving metadata
+    // and patching code. Its callback phase remains on that worker.
+    DWORD waited = WAIT_TIMEOUT;
+    if (waitBudget == 0) {
+        waited = WaitForSingleObject(g_startupWorkerFinished, 0);
+    } else {
+        const ULONGLONG waitStarted = GetTickCount64();
+        ULONGLONG lastProgressLog = waitStarted;
+        while (!g_stopThread.load(std::memory_order_acquire) && !IsShuttingDown()) {
+            DWORD sliceMs = 50;
+            if (waitBudget != INFINITE) {
+                const ULONGLONG elapsed = GetTickCount64() - waitStarted;
+                if (elapsed >= waitBudget) {
+                    waited = WAIT_TIMEOUT;
+                    break;
+                }
+                const ULONGLONG remaining = waitBudget - elapsed;
+                if (remaining < sliceMs) sliceMs = static_cast<DWORD>(remaining);
+            }
+            waited = WaitForSingleObject(g_startupWorkerFinished, sliceMs);
+            if (waited != WAIT_TIMEOUT) break;
+            const ULONGLONG now = GetTickCount64();
+            if (waitBudget == INFINITE && now - lastProgressLog >= 10000) {
+                lastProgressLog = now;
+                LogInfo("[StartupTiming] pre-Vuplex boundary waiting for plugin startup elapsed_ms=%llu uptime_ms=%llu",
+                    static_cast<unsigned long long>(now - waitStarted), Trace::UptimeMs());
             }
         }
     }
+
+    if (waited == WAIT_OBJECT_0 && g_startupWorkerPrepared.load(std::memory_order_acquire)) {
+        // Drain the existing main-thread queue at the original safe
+        // standalone point, before first UI construction can continue.
+        DispatchMainThreadTasks();
+        LogInfo("[StartupTiming] pre-Vuplex boundary released after main-thread dispatch uptime_ms=%llu thread=%lu elapsed_ms=%llu",
+            Trace::UptimeMs(), GetCurrentThreadId(), Trace::UptimeMs() - started);
+    } else {
+        LogWarn("[StartupTiming] pre-Vuplex synchronization unavailable wait=%lu prepared=%u shutdown=%u uptime_ms=%llu thread=%lu; first-UI ordering is not guaranteed",
+            waited, g_startupWorkerPrepared.load(std::memory_order_acquire) ? 1u : 0u,
+            (g_stopThread.load(std::memory_order_acquire) || IsShuttingDown()) ? 1u : 0u,
+            Trace::UptimeMs(), GetCurrentThreadId());
+    }
+}
+
+HMODULE WINAPI Detour_LoadLibraryW(LPCWSTR path) {
+    HoldPreVuplexStartupBoundary(path);
     return g_originalLoadLibraryW(path);
+}
+
+HMODULE WINAPI Detour_LoadLibraryExW(LPCWSTR path, HANDLE file, DWORD flags) {
+    constexpr DWORD kDataLoadFlags =
+        LOAD_LIBRARY_AS_DATAFILE | LOAD_LIBRARY_AS_DATAFILE_EXCLUSIVE | LOAD_LIBRARY_AS_IMAGE_RESOURCE;
+    if ((flags & kDataLoadFlags) == 0) {
+        HoldPreVuplexStartupBoundary(path);
+    }
+    return g_originalLoadLibraryExW(path, file, flags);
+}
+
+// Shared RenderPipelineManager::DoRenderLoop_Internal observer hook, with
+// non-conflicting fallback boundaries (Canvas::SendWillRenderCanvases,
+// Application::InvokeOnBeforeRender) when another plugin owns DoRenderLoop_Internal.
+// Installed lazily on the Unity main thread after plugin onRuntimeReady setup so
+// plugins that install private SRP detours during onRuntimeReady run first.
+using DoRenderLoopFn = void (*)(void*, intptr_t, void*, void*);
+using VoidStaticFn = void (*)(void*);
+DoRenderLoopFn s_origDoRenderLoop = nullptr;
+void* s_doRenderLoopTarget = nullptr;
+VoidStaticFn s_origSendWillRenderCanvases = nullptr;
+void* s_sendWillRenderCanvasesTarget = nullptr;
+VoidStaticFn s_origInvokeOnBeforeRender = nullptr;
+void* s_invokeOnBeforeRenderTarget = nullptr;
+std::atomic<bool> s_doRenderLoopAttempted{false};
+
+void Detour_DoRenderLoop_Internal(void* asset, intptr_t loop, void* request, void* methodInfo) {
+    static thread_local uint32_t t_renderDepth = 0;
+    const bool outerNormal = (!request && t_renderDepth == 0);
+    const HWND window = g_pumpWindow.load(std::memory_order_acquire);
+    const bool onMain = outerNormal && ConfirmPumpThread(window);
+    if (onMain) RenderFrame::InvokePhase(false, 1);
+    struct DepthGuard {
+        uint32_t& depth;
+        explicit DepthGuard(uint32_t& d) : depth(d) { ++depth; }
+        ~DepthGuard() { --depth; }
+    } depthGuard(t_renderDepth);
+    if (s_origDoRenderLoop) s_origDoRenderLoop(asset, loop, request, methodInfo);
+    if (onMain && t_renderDepth == 1) RenderFrame::InvokePhase(true, 1);
+}
+
+bool ShouldDispatchFallbackRenderBoundary(int32_t& lastFrame, bool& hasFrame) {
+    const HWND window = g_pumpWindow.load(std::memory_order_acquire);
+    if (!ConfirmPumpThread(window)) return false;
+    const auto readFrame = g_readFrameCount.load(std::memory_order_acquire);
+    if (!readFrame) return true;
+    const int32_t frame = readFrame(nullptr);
+    if (hasFrame && frame == lastFrame) return false;
+    hasFrame = true;
+    lastFrame = frame;
+    return true;
+}
+
+void RunFallbackRenderBoundary(VoidStaticFn orig, void* methodInfo,
+    uint32_t& depth, int32_t& lastFrame, bool& hasFrame) {
+    const bool dispatch = (depth == 0) && ShouldDispatchFallbackRenderBoundary(lastFrame, hasFrame);
+    if (dispatch) RenderFrame::InvokePhase(false, 1);
+    struct DepthGuard {
+        uint32_t& d;
+        explicit DepthGuard(uint32_t& v) : d(v) { ++d; }
+        ~DepthGuard() { --d; }
+    } guard(depth);
+    if (orig) orig(methodInfo);
+    if (dispatch) RenderFrame::InvokePhase(true, 1);
+}
+
+void Detour_SendWillRenderCanvases(void* methodInfo) {
+    static thread_local uint32_t t_depth = 0;
+    static int32_t s_lastFrame = 0;
+    static bool s_hasFrame = false;
+    RunFallbackRenderBoundary(s_origSendWillRenderCanvases, methodInfo, t_depth, s_lastFrame, s_hasFrame);
+}
+
+void Detour_InvokeOnBeforeRender(void* methodInfo) {
+    static thread_local uint32_t t_depth = 0;
+    static int32_t s_lastFrame = 0;
+    static bool s_hasFrame = false;
+    RunFallbackRenderBoundary(s_origInvokeOnBeforeRender, methodInfo, t_depth, s_lastFrame, s_hasFrame);
+}
+
+void* FindClassWithOptionalDll(const char* assemblyBase, const char* namespaze, const char* className) {
+    std::string withDll = std::string(assemblyBase) + ".dll";
+    if (void* klass = FindClass(withDll.c_str(), namespaze, className)) return klass;
+    return FindClass(assemblyBase, namespaze, className);
+}
+
+bool TryHookRenderBoundaryTarget(void* target, void* detour, void** original,
+    void*& targetSlot, const char* label) {
+    if (!target) {
+        GakuLoader::LogWarn("[RenderFrame] %s unavailable", label);
+        return false;
+    }
+    const auto status = AcquireHostHook(target, detour, original);
+    if (status == GAKU_OK) {
+        targetSlot = target;
+        RenderFrame::SetHookState(RenderFrame::HookState::Active);
+        GakuLoader::LogInfo("[RenderFrame] Hooked %s (%p)", label, target);
+        return true;
+    }
+    GakuLoader::LogWarn("[RenderFrame] Owned hook acquisition for %s failed: %d", label, status);
+    return false;
+}
+
+void EnsureRenderFrameHook() {
+    if (RenderFrame::Count() == 0) return;
+    if (s_doRenderLoopAttempted.exchange(true, std::memory_order_acq_rel)) return;
+
+    void* managerKlass = FindClassWithOptionalDll("UnityEngine.CoreModule", "UnityEngine.Rendering", "RenderPipelineManager");
+    void* doRenderTarget = managerKlass ? FindMethodPointer(managerKlass, "DoRenderLoop_Internal", 3) : nullptr;
+    if (TryHookRenderBoundaryTarget(doRenderTarget, reinterpret_cast<void*>(&Detour_DoRenderLoop_Internal),
+            reinterpret_cast<void**>(&s_origDoRenderLoop), s_doRenderLoopTarget,
+            "RenderPipelineManager::DoRenderLoop_Internal")) {
+        return;
+    }
+
+    void* canvasKlass = FindClassWithOptionalDll("UnityEngine.UIModule", "UnityEngine", "Canvas");
+    void* canvasTarget = canvasKlass ? FindMethodPointer(canvasKlass, "SendWillRenderCanvases", 0) : nullptr;
+    if (TryHookRenderBoundaryTarget(canvasTarget, reinterpret_cast<void*>(&Detour_SendWillRenderCanvases),
+            reinterpret_cast<void**>(&s_origSendWillRenderCanvases), s_sendWillRenderCanvasesTarget,
+            "UnityEngine.Canvas::SendWillRenderCanvases")) {
+        return;
+    }
+
+    void* appKlass = FindClassWithOptionalDll("UnityEngine.CoreModule", "UnityEngine", "Application");
+    void* appTarget = appKlass ? FindMethodPointer(appKlass, "InvokeOnBeforeRender", 0) : nullptr;
+    if (TryHookRenderBoundaryTarget(appTarget, reinterpret_cast<void*>(&Detour_InvokeOnBeforeRender),
+            reinterpret_cast<void**>(&s_origInvokeOnBeforeRender), s_invokeOnBeforeRenderTarget,
+            "UnityEngine.Application::InvokeOnBeforeRender")) {
+        return;
+    }
+
+    RenderFrame::SetHookState(RenderFrame::HookState::Unavailable);
+    GakuLoader::LogWarn("[RenderFrame] All render-frame hooks unavailable; post-render observers inactive");
 }
 
 // Per-actor driver for the same pump.
@@ -460,25 +684,51 @@ void* ResolveIl2cppMethod(void* klass, const char* methodName, int argsCount) {
     return FindMethodPointer(klass, methodName, argsCount);
 }
 
+void ArmStartupBoundary(bool installHooks) {
+    g_installHooks.store(installHooks, std::memory_order_release);
+    if (!installHooks || HooksDisabledForDiagnosis()) return;
+    if (g_startupBoundaryArmed.exchange(true, std::memory_order_acq_rel)) return;
+
+    // Pure native interception, installed outside DllMain and before plugin
+    // activation so Unity cannot reach VuplexWebViewWindows.dll first.
+    g_startupBoundaryWaitMs = ReadStartupBoundaryWaitMs();
+    g_startupBoundarySeen = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+    g_startupWorkerFinished = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+    g_inLoaderCallout = reinterpret_cast<InLoaderCalloutFn>(
+        GetProcAddress(GetModuleHandleW(L"ntdll.dll"), "RtlIsThreadWithinLoaderCallout"));
+
+    auto* targetW = reinterpret_cast<void*>(&LoadLibraryW);
+    const bool hookedW = g_startupBoundarySeen && g_startupWorkerFinished &&
+        AcquireHostHook(targetW, reinterpret_cast<void*>(&Detour_LoadLibraryW),
+            reinterpret_cast<void**>(&g_originalLoadLibraryW)) == GAKU_OK;
+    bool hookedExW = false;
+    auto* targetExW = reinterpret_cast<void*>(&LoadLibraryExW);
+    if (hookedW && targetExW != targetW) {
+        hookedExW = AcquireHostHook(targetExW, reinterpret_cast<void*>(&Detour_LoadLibraryExW),
+            reinterpret_cast<void**>(&g_originalLoadLibraryExW)) == GAKU_OK;
+    }
+
+    if (hookedW) {
+        if (g_startupBoundaryWaitMs == INFINITE) {
+            LogInfo("[StartupTiming] pre-Vuplex native boundary armed (LoadLibraryW=1 LoadLibraryExW=%d wait=infinite) uptime_ms=%llu thread=%lu",
+                hookedExW ? 1 : 0, Trace::UptimeMs(), GetCurrentThreadId());
+        } else {
+            LogInfo("[StartupTiming] pre-Vuplex native boundary armed (LoadLibraryW=1 LoadLibraryExW=%d wait_ms=%lu) uptime_ms=%llu thread=%lu",
+                hookedExW ? 1 : 0, static_cast<unsigned long>(g_startupBoundaryWaitMs),
+                Trace::UptimeMs(), GetCurrentThreadId());
+        }
+        if (GetModuleHandleW(L"VuplexWebViewWindows.dll")) {
+            LogWarn("[StartupTiming] VuplexWebViewWindows.dll was already loaded before pre-Vuplex boundary armed uptime_ms=%llu",
+                Trace::UptimeMs());
+        }
+    } else {
+        LogWarn("Pre-Vuplex native boundary unavailable; retaining Vuplex-loaded runtime fallback");
+    }
+}
+
 void StartHookThread(bool installHooks) {
     g_stopThread.store(false);
-    g_installHooks.store(installHooks, std::memory_order_release);
-    if (installHooks && !HooksDisabledForDiagnosis()) {
-        // Pure native interception, installed outside DllMain and before Unity
-        // reaches the same LoadLibraryW call used by standalone Localify.
-        g_startupBoundarySeen = CreateEventW(nullptr, TRUE, FALSE, nullptr);
-        g_startupWorkerFinished = CreateEventW(nullptr, TRUE, FALSE, nullptr);
-        g_inLoaderCallout = reinterpret_cast<InLoaderCalloutFn>(
-            GetProcAddress(GetModuleHandleW(L"ntdll.dll"), "RtlIsThreadWithinLoaderCallout"));
-        auto* target = reinterpret_cast<void*>(&LoadLibraryW);
-        if (g_startupBoundarySeen && g_startupWorkerFinished &&
-            AcquireHostHook(target, reinterpret_cast<void*>(&Detour_LoadLibraryW),
-                reinterpret_cast<void**>(&g_originalLoadLibraryW)) == GAKU_OK) {
-            LogInfo("[StartupTiming] pre-Vuplex native boundary armed uptime_ms=%llu thread=%lu", Trace::UptimeMs(), GetCurrentThreadId());
-        } else {
-            LogWarn("Pre-Vuplex native boundary unavailable; retaining Vuplex-loaded runtime fallback");
-        }
-    }
+    ArmStartupBoundary(installHooks);
     g_hookThreadHandle = CreateThread(nullptr, 0, WorkerLoop, nullptr, 0, nullptr);
     if (!g_hookThreadHandle && g_startupWorkerFinished) SetEvent(g_startupWorkerFinished);
 }
@@ -524,6 +774,9 @@ void ShutdownHooks() {
         }
     }
     if (s_lateUpdateTarget) ReleaseHostHook(s_lateUpdateTarget);
+    if (s_doRenderLoopTarget) ReleaseHostHook(s_doRenderLoopTarget);
+    if (s_sendWillRenderCanvasesTarget) ReleaseHostHook(s_sendWillRenderCanvasesTarget);
+    if (s_invokeOnBeforeRenderTarget) ReleaseHostHook(s_invokeOnBeforeRenderTarget);
     g_readFrameCount.store(nullptr, std::memory_order_release);
     g_readDeltaTime.store(nullptr, std::memory_order_release);
 }
