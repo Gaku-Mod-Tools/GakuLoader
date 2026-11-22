@@ -1219,7 +1219,7 @@ bool ServiceAppearance() {
     return true;
 }
 
-bool RenderFrame() {
+bool RenderFrame(bool resetFrameGap = false) {
     // The shell paints on its own thread. A gap here means the whole window
     // stopped painting — focus handover, a device reset or a blocked UI
     // thread — which is what a user experiences as "the settings froze".
@@ -1227,6 +1227,9 @@ bool RenderFrame() {
     static double previousFrame = 0.0;
     static double lastGapWarn = -1.0e9;
     static double lastGapNote = -1.0e9;
+    if (resetFrameGap) {
+        previousFrame = 0.0;
+    }
     // Two bands, because one WARN cannot mean both "an alt-tab cost us three
     // frames" and "the panel is wedged". 50-200 ms is the ordinary cost of a
     // focus handover and is only interesting with [log] level=debug; >=200 ms is
@@ -1819,20 +1822,30 @@ DWORD WorkerBody() {
     ShowWindow(window, SW_SHOW);
 #endif
     LogInfo("[DesktopUI] independent Win32/D3D11 control window ready hwnd=%p thread=%lu; no game presentation hooks", window, g_uiThread.load());
+    bool wasRendering = false;
     while (!g_stop) {
         MSG message{};
+        const double pumpStart = NowMs();
+        int pumped = 0;
+        bool pumpedHitBudget = false;
         while (PeekMessageW(&message, nullptr, 0, 0, PM_REMOVE)) {
             if (message.message == WM_QUIT) { g_stop = true; break; }
             TranslateMessage(&message); DispatchMessageW(&message);
+            if (++pumped >= 64 || (NowMs() - pumpStart) >= 8.0) {
+                pumpedHitBudget = true;
+                break;
+            }
         }
         if (g_stop) break;
         bool render = !g_minimized;
 #if !defined(GAKULOADER_DESKTOP_UI_TEST)
         render = render && IsWindowVisible(window);
 #endif
+        const bool resetFrameGap = render && !wasRendering;
+        wasRendering = render;
         if (!render) HideWebPanel();
         if (render) RefreshClipboard();
-        if (render && !RenderFrame()) {
+        if (render && !RenderFrame(resetFrameGap)) {
             LogWarn("[DesktopUI] control-window device lost; desktop stops, game rendering is untouched");
             break;
         }
@@ -1841,7 +1854,7 @@ DWORD WorkerBody() {
         // Modal dialogs run with every ImGui/callback scope unwound, including
         // when the controls were minimized after submitting the request.
         DesktopDialogs::Pump(window);
-        MsgWaitForMultipleObjectsEx(0, nullptr, render ? 16 : 100, QS_ALLINPUT, MWMO_INPUTAVAILABLE);
+        MsgWaitForMultipleObjectsEx(0, nullptr, pumpedHitBudget ? 0 : (render ? 16 : 100), QS_ALLINPUT, MWMO_INPUTAVAILABLE);
     }
     g_stop = true;
     DesktopDialogs::Shutdown();
