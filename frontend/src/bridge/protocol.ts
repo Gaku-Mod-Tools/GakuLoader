@@ -2,6 +2,18 @@
 // backend is authoritative; these types describe the fixed allow-list of
 // commands/queries and the change events it pushes. See docs/native-bridge-api.md.
 
+export interface PluginDependency {
+  kind: number
+  pluginId: string
+  displayName?: string
+  versionRange?: string
+  targetState: number
+  actualVersion?: string
+  satisfied: boolean
+  cycleDegraded?: boolean
+  diagnostic?: string
+}
+
 export interface PluginPanel {
   id: string
   name: string
@@ -10,6 +22,22 @@ export interface PluginPanel {
   runtimeReady: boolean
   failed: boolean
   hasPanel: boolean
+  loadState?: number
+  dllFilename?: string
+  statusReason?: string
+  hasMetadata?: boolean
+  originalAuthor?: string
+  maintainers?: string[]
+  subVersion?: string
+  releaseChannel?: string
+  summary?: string
+  localizedSummaries?: Record<string, string>
+  repositoryUrl?: string
+  releaseUrl?: string
+  issuesUrl?: string
+  license?: string
+  minLoaderVersion?: string
+  dependencies?: PluginDependency[]
 }
 
 export interface HostSnapshot {

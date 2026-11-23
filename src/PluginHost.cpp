@@ -19,12 +19,14 @@
 #include "GakuProcessLifetimeHooks.h"
 #include "GakuLifecycle.h"
 #include "PluginPaths.hpp"
+#include "PluginMetadata.hpp"
 #include "LanguageSettings.hpp"
 #include <minhook.h>
 #include <cstdio>
 #include <cstdarg>
 #include <atomic>
 #include <algorithm>
+#include <cwctype>
 #include <deque>
 #include <map>
 #include <memory>
@@ -34,6 +36,7 @@
 namespace GakuLoader {
 namespace {
 std::vector<std::wstring> g_pluginFiles;
+std::vector<std::wstring> g_auxiliaryFiles;
 struct PluginOwner {
     std::string id;
     std::atomic_bool accepting{true};
@@ -49,7 +52,8 @@ std::vector<std::unique_ptr<PluginOwner>> g_owners;
 PluginOwner g_hostOwner{"gakuloader", true};
 std::recursive_mutex g_callbacks;
 std::atomic_uint g_mainWaiters{0};
-std::mutex g_servicesMutex, g_logMutex;
+std::mutex g_servicesMutex, g_logMutex, g_pluginRegistryMutex;
+std::vector<GakuPluginSummaryV1> g_pluginRegistry;
 std::map<std::string, RegisteredService> g_services;
 std::map<void*, HookLease> g_hooks;
 std::deque<QueuedTask> g_tasks;
@@ -59,19 +63,83 @@ std::atomic_bool g_shutdownRequested{false};
 // Published only while holding g_callbacks. The desktop shell must be able to
 // copy status while a lifecycle callback holds that gate for several seconds.
 std::atomic<std::shared_ptr<const DesktopHostSnapshot>> g_desktopSnapshot;
+void RefreshDependencyTargetStates() {
+    for (auto& plugin : g_plugins) {
+        for (auto& dep : plugin.dependencies) {
+            for (const auto& candidate : g_plugins) {
+                if (candidate.id == dep.pluginId) {
+                    dep.targetState = candidate.loadState;
+                    if (!candidate.version.empty()) dep.actualVersion = candidate.version;
+                    break;
+                }
+            }
+        }
+    }
+}
+template <size_t N>
+void CopyFixedString(char (&dst)[N], const std::string& src) {
+    std::memset(dst, 0, N);
+    if (N == 0) return;
+    const size_t count = (std::min)(src.size(), N - 1);
+    if (count > 0) std::memcpy(dst, src.data(), count);
+    dst[count] = '\0';
+}
+void SyncPluginRegistry() {
+    std::vector<GakuPluginSummaryV1> entries;
+    entries.reserve(g_plugins.size());
+    for (const auto& plugin : g_plugins) {
+        GakuPluginSummaryV1 summary{};
+        summary.abiVersion = GAKU_PLUGINS_SERVICE_VERSION;
+        summary.structSize = sizeof(GakuPluginSummaryV1);
+        summary.state = static_cast<GakuPluginLoadState>(plugin.loadState);
+        summary.hasMetadata = plugin.hasMetadata ? 1u : 0u;
+        CopyFixedString(summary.id, plugin.id);
+        CopyFixedString(summary.name, plugin.name);
+        CopyFixedString(summary.version, plugin.version);
+        CopyFixedString(summary.subVersion, plugin.subVersion);
+        entries.push_back(summary);
+    }
+    std::lock_guard<std::mutex> lock(g_pluginRegistryMutex);
+    g_pluginRegistry = std::move(entries);
+}
 void PublishDesktopHostSnapshot() {
     auto result = std::make_shared<DesktopHostSnapshot>();
     result->runtimeReady = g_runtimeReady.load(std::memory_order_acquire);
     result->activated = g_activated;
     result->shuttingDown = g_shutdownRequested.load(std::memory_order_acquire);
     result->pluginFiles = g_pluginFiles;
+    result->auxiliaryFiles = g_auxiliaryFiles;
     result->plugins.reserve(g_plugins.size());
     for (const auto& plugin : g_plugins) {
         GakuWebPanelServiceV1 webPanel{};
-        const bool hasWebPanel = QueryWebPanelService(plugin.id.c_str(), &webPanel) == GAKU_OK;
-        result->plugins.push_back({plugin.id, plugin.name, plugin.version,
-            plugin.activated, plugin.runtimeReady, plugin.failed,
-            plugin.descriptor.onDesktopUi != nullptr || hasWebPanel});
+        const bool hasWebPanel = plugin.handle != nullptr && !plugin.failed &&
+            QueryWebPanelService(plugin.id.c_str(), &webPanel) == GAKU_OK;
+        DesktopPluginPanel panel;
+        panel.id = plugin.id;
+        panel.name = plugin.name;
+        panel.version = plugin.version;
+        panel.activated = plugin.activated;
+        panel.runtimeReady = plugin.runtimeReady;
+        panel.failed = plugin.failed;
+        panel.hasPanel = plugin.handle != nullptr && !plugin.failed &&
+            (plugin.descriptor.onDesktopUi != nullptr || hasWebPanel);
+        panel.loadState = plugin.loadState;
+        panel.dllFilename = plugin.dllFilename;
+        panel.statusReason = plugin.statusReason;
+        panel.hasMetadata = plugin.hasMetadata;
+        panel.originalAuthor = plugin.originalAuthor;
+        panel.maintainers = plugin.maintainers;
+        panel.subVersion = plugin.subVersion;
+        panel.releaseChannel = plugin.releaseChannel;
+        panel.summary = plugin.summary;
+        panel.localizedSummaries = plugin.localizedSummaries;
+        panel.repositoryUrl = plugin.repositoryUrl;
+        panel.releaseUrl = plugin.releaseUrl;
+        panel.issuesUrl = plugin.issuesUrl;
+        panel.license = plugin.license;
+        panel.minLoaderVersion = plugin.minLoaderVersion;
+        panel.dependencies = plugin.dependencies;
+        result->plugins.push_back(std::move(panel));
     }
     g_desktopSnapshot.store(std::move(result), std::memory_order_release);
 }
@@ -252,12 +320,18 @@ void HostLogDebug(const char* format, ...) {
     WriteToConsoleAndLog(LogLevel::Level::Debug, "GakuLoader", buffer);
 }
 void* GetGameAssembly() { return GetModuleHandleW(L"GameAssembly.dll"); }
-void ServiceLog(void*, GakuLogLevel level, const char* message) {
+void ServiceLog(void* context, GakuLogLevel level, const char* message) {
     // The wire enum keeps its three values. Debug is host-only and never
     // reaches this function, so an old plugin cannot send an unknown level.
     // The severity now travels in the record's level column, not in the tag.
     const auto mapped = level == GAKU_LOG_ERROR ? LogLevel::Level::Error :
         level == GAKU_LOG_WARNING ? LogLevel::Level::Warn : LogLevel::Level::Info;
+    const auto* owner = static_cast<const PluginOwner*>(context);
+    if (owner && !owner->id.empty()) {
+        const std::string tag = "Plugin:" + owner->id;
+        WriteToConsoleAndLog(mapped, tag.c_str(), message);
+        return;
+    }
     WriteToConsoleAndLog(mapped, "Plugin", message);
 }
 uint32_t IsMainThread(void*) {
@@ -418,6 +492,7 @@ GakuStatus RetainOwnedHooks(void* context, uint32_t count, void* const* targets)
     return GAKU_OK;
 }
 void RetireOwner(PluginOwner* owner) {
+    if (!owner) return;
     const auto started = GetTickCount64();
     // Mark closed before removing bindings; registration uses the same mutex.
     { std::lock_guard<std::mutex> lock(g_servicesMutex); owner->accepting = false; }
@@ -584,6 +659,52 @@ uint32_t OwnerIsStopping(void* context) {
     return !owner || g_shutdownRequested.load(std::memory_order_acquire) ||
         !owner->accepting.load(std::memory_order_acquire) ? 1u : 0u;
 }
+GakuStatus GetHostInfo(uint32_t outputSize, GakuHostInfoV1* output) {
+    if (!output) return GAKU_E_INVALID_ARGUMENT;
+    if (outputSize < sizeof(GakuHostInfoV1)) return GAKU_E_SIZE;
+    GakuHostInfoV1 info{};
+    info.abiVersion = GAKU_PLUGINS_SERVICE_VERSION;
+    info.structSize = sizeof(GakuHostInfoV1);
+    info.pluginAbiVersion = GAKU_ABI_VERSION;
+    {
+        std::lock_guard<std::mutex> lock(g_pluginRegistryMutex);
+        info.pluginCount = static_cast<uint32_t>(g_pluginRegistry.size());
+    }
+    CopyFixedString(info.loaderVersion, GAKU_LOADER_VERSION);
+    std::memcpy(output, &info, sizeof(info));
+    return GAKU_OK;
+}
+GakuStatus FindPlugin(const char* pluginId, uint32_t outputSize, GakuPluginSummaryV1* output) {
+    if (!pluginId || !pluginId[0] || !output) return GAKU_E_INVALID_ARGUMENT;
+    if (outputSize < sizeof(GakuPluginSummaryV1)) return GAKU_E_SIZE;
+    GakuPluginSummaryV1 summary{};
+    summary.abiVersion = GAKU_PLUGINS_SERVICE_VERSION;
+    summary.structSize = sizeof(GakuPluginSummaryV1);
+    summary.state = GAKU_PLUGIN_STATE_NOT_FOUND;
+    {
+        std::lock_guard<std::mutex> lock(g_pluginRegistryMutex);
+        for (const auto& entry : g_pluginRegistry) {
+            if (std::strcmp(entry.id, pluginId) == 0) {
+                summary = entry;
+                break;
+            }
+        }
+    }
+    std::memcpy(output, &summary, sizeof(summary));
+    return GAKU_OK;
+}
+GakuStatus GetPluginAt(uint32_t index, uint32_t outputSize, GakuPluginSummaryV1* output) {
+    if (!output) return GAKU_E_INVALID_ARGUMENT;
+    if (outputSize < sizeof(GakuPluginSummaryV1)) return GAKU_E_SIZE;
+    GakuPluginSummaryV1 summary{};
+    {
+        std::lock_guard<std::mutex> lock(g_pluginRegistryMutex);
+        if (index >= g_pluginRegistry.size()) return GAKU_E_INVALID_ARGUMENT;
+        summary = g_pluginRegistry[index];
+    }
+    std::memcpy(output, &summary, sizeof(summary));
+    return GAKU_OK;
+}
 GakuStatus QueryService(void* context, const char* name, uint32_t version, uint32_t size, void* output) {
     if (!context || !name || !name[0] || !output) return GAKU_E_INVALID_ARGUMENT;
     // Built-in tables contain no mutable plugin-domain state. Each owner gets
@@ -680,6 +801,11 @@ GakuStatus QueryService(void* context, const char* name, uint32_t version, uint3
     if (strcmp(name, GAKU_SERVICE_RENDER_FRAME_STATUS) == 0) {
         const GakuRenderFrameStatusService table{GAKU_SERVICE_VERSION, sizeof(GakuRenderFrameStatusService),
             GetRenderFrameHookStatus};
+        return CopyServiceTable(&table, sizeof(table), version, size, output);
+    }
+    if (strcmp(name, GAKU_SERVICE_PLUGINS) == 0) {
+        const GakuPluginsServiceV1 table{GAKU_PLUGINS_SERVICE_VERSION, sizeof(GakuPluginsServiceV1),
+            GetHostInfo, FindPlugin, GetPluginAt};
         return CopyServiceTable(&table, sizeof(table), version, size, output);
     }
     std::lock_guard<std::mutex> lock(g_servicesMutex);
@@ -790,7 +916,10 @@ void ShutdownOnMainThread() {
       for (const auto& owner : g_owners) owner->accepting = false;
       g_tasks.clear(); }
     for (auto it = g_plugins.rbegin(); it != g_plugins.rend(); ++it) {
-        if (!it->activated || it->failed) { RetireOwner(static_cast<PluginOwner*>(it->owner)); continue; }
+        if (!it->activated || it->failed) {
+            if (it->owner) RetireOwner(static_cast<PluginOwner*>(it->owner));
+            continue;
+        }
         const auto pluginStarted = GetTickCount64();
         g_shutdownPlugin.store(it->id.c_str(), std::memory_order_relaxed);
         g_shutdownPhaseTick.store(pluginStarted, std::memory_order_relaxed);
@@ -937,6 +1066,70 @@ void Initialize(const std::filesystem::path& gameRoot, const std::filesystem::pa
         g_gameRootW.c_str(), g_localRootW.c_str());
     StartHotkeyPoller();
 }
+std::string NarrowUtf8(const std::wstring& wide) {
+    if (wide.empty()) return {};
+    const int bytes = WideCharToMultiByte(CP_UTF8, 0, wide.c_str(), static_cast<int>(wide.size()),
+        nullptr, 0, nullptr, nullptr);
+    if (bytes <= 0) return {};
+    std::string out(static_cast<size_t>(bytes), '\0');
+    WideCharToMultiByte(CP_UTF8, 0, wide.c_str(), static_cast<int>(wide.size()), out.data(), bytes,
+        nullptr, nullptr);
+    return out;
+}
+
+std::wstring WidenUtf8(const std::string& utf8) {
+    if (utf8.empty()) return {};
+    const int chars = MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), static_cast<int>(utf8.size()),
+        nullptr, 0);
+    if (chars <= 0) return {};
+    std::wstring out(static_cast<size_t>(chars), L'\0');
+    MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), static_cast<int>(utf8.size()), out.data(), chars);
+    return out;
+}
+
+bool IsDefaultAuxiliaryDll(const std::wstring& filename) {
+    static constexpr const wchar_t* kDefaultAuxiliaryDlls[] = {
+        L"GakuBurstBridge.dll",
+        L"GakuMotion.VmdImporter.Native.dll",
+    };
+    for (const wchar_t* aux : kDefaultAuxiliaryDlls) {
+        if (_wcsicmp(filename.c_str(), aux) == 0) return true;
+    }
+    return false;
+}
+
+bool ContainsFilenameCaseInsensitive(const std::vector<std::wstring>& list, const std::wstring& filename) {
+    for (const auto& item : list) {
+        if (_wcsicmp(item.c_str(), filename.c_str()) == 0) return true;
+    }
+    return false;
+}
+
+void PrependPluginsLibsToPath(const std::filesystem::path& pluginsPath) {
+    std::error_code ec;
+    const auto libsPath = pluginsPath / L"libs";
+    if (!std::filesystem::exists(libsPath, ec) || !std::filesystem::is_directory(libsPath, ec)) return;
+    const std::wstring libsDir = libsPath.wstring();
+    const DWORD needed = GetEnvironmentVariableW(L"PATH", nullptr, 0);
+    std::wstring currentPath;
+    if (needed > 1) {
+        currentPath.resize(needed);
+        const DWORD copied = GetEnvironmentVariableW(L"PATH", currentPath.data(), needed);
+        currentPath.resize(copied);
+    }
+    if (currentPath.size() >= libsDir.size() &&
+        _wcsnicmp(currentPath.c_str(), libsDir.c_str(), libsDir.size()) == 0 &&
+        (currentPath.size() == libsDir.size() || currentPath[libsDir.size()] == L';')) {
+        return;
+    }
+    const std::wstring updated = currentPath.empty() ? libsDir : (libsDir + L";" + currentPath);
+    if (SetEnvironmentVariableW(L"PATH", updated.c_str())) {
+        HostLogInfo("Prepended auxiliary library directory to PATH: %ls", libsDir.c_str());
+    } else {
+        HostLogWarn("Failed to prepend %ls to PATH (Win32=%lu)", libsDir.c_str(), GetLastError());
+    }
+}
+
 void ActivatePlugins() {
     std::lock_guard<std::recursive_mutex> lock(g_callbacks);
     if (!g_initialized || g_activated || g_shutdownRequested) return;
@@ -965,6 +1158,7 @@ void ActivatePlugins() {
             }
         }
     }
+    g_auxiliaryFiles.clear();
     std::vector<std::filesystem::path> paths;
     for (const auto& entry : std::filesystem::directory_iterator(pluginsPath, ec)) {
         if (!entry.is_regular_file() || entry.path().extension() != ".dll" || entry.path().filename().wstring()[0] == L'.') continue;
@@ -975,11 +1169,12 @@ void ActivatePlugins() {
             HostLogWarn("Ignored loader binary in plugins folder: %ls", filename.c_str());
             continue;
         }
-        // These are Motion's explicitly named auxiliary libraries, not plugin
+        // Explicitly named or configured auxiliary libraries are not plugin
         // entry points. Do not execute their DllMain during discovery.
-        if (_wcsicmp(filename.c_str(), L"GakuBurstBridge.dll") == 0 ||
-            _wcsicmp(filename.c_str(), L"GakuMotion.VmdImporter.Native.dll") == 0) {
+        if (IsDefaultAuxiliaryDll(filename) ||
+            ReadConfigFlag(g_configPath, L"auxiliary", filename.c_str(), false)) {
             HostLogInfo("Auxiliary library (not a plugin): %ls", filename.c_str());
+            g_auxiliaryFiles.push_back(filename);
             continue;
         }
         paths.push_back(entry.path());
@@ -988,10 +1183,27 @@ void ActivatePlugins() {
     g_pluginFiles.clear();
     for (const auto& path : paths) g_pluginFiles.push_back(path.filename().wstring());
     PublishDesktopHostSnapshot();
+    PrependPluginsLibsToPath(pluginsPath);
+
+    // Phase A: Pre-scan, query descriptors and optional metadata
+    std::vector<Metadata::PluginCandidate> candidates;
+    std::vector<std::wstring> dynamicAuxDlls;
+    size_t disabledCount = 0;
     for (const auto& path : paths) {
         const auto filename = path.filename().wstring();
+        if (ContainsFilenameCaseInsensitive(dynamicAuxDlls, filename)) {
+            HostLogInfo("Auxiliary library (declared by plugin): %ls", filename.c_str());
+            if (!ContainsFilenameCaseInsensitive(g_auxiliaryFiles, filename)) {
+                g_auxiliaryFiles.push_back(filename);
+            }
+            g_pluginFiles.erase(std::remove_if(g_pluginFiles.begin(), g_pluginFiles.end(),
+                [&](const std::wstring& item) { return _wcsicmp(item.c_str(), filename.c_str()) == 0; }),
+                g_pluginFiles.end());
+            continue;
+        }
         if (!ReadConfigFlag(g_configPath, L"plugins", filename.c_str(), true)) {
             HostLogInfo("Plugin disabled by config before DLL load: %ls", filename.c_str());
+            ++disabledCount;
             continue;
         }
         HMODULE module = LoadLibraryExW(path.c_str(), nullptr, LOAD_WITH_ALTERED_SEARCH_PATH);
@@ -1006,6 +1218,7 @@ void ActivatePlugins() {
         }
         LoadedPlugin plugin;
         plugin.handle = module; plugin.dllPath = path.wstring();
+        plugin.dllFilename = NarrowUtf8(filename);
         const auto status = query(GAKU_ABI_VERSION, sizeof(plugin.descriptor), &plugin.descriptor);
         if (status != GAKU_OK || plugin.descriptor.abiVersion != GAKU_ABI_VERSION ||
             plugin.descriptor.structSize != sizeof(plugin.descriptor) || !plugin.descriptor.id ||
@@ -1016,28 +1229,138 @@ void ActivatePlugins() {
         plugin.id = plugin.descriptor.id;
         plugin.name = plugin.descriptor.name;
         plugin.version = plugin.descriptor.version ? plugin.descriptor.version : "";
-        if (std::any_of(g_owners.begin(), g_owners.end(), [&](const auto& owner) { return owner->id == plugin.id; })) {
+        const bool duplicateInCandidates = std::any_of(candidates.begin(), candidates.end(),
+            [&](const auto& c) { return c.plugin.id == plugin.id; });
+        const bool duplicateInOwners = std::any_of(g_owners.begin(), g_owners.end(),
+            [&](const auto& owner) { return owner->id == plugin.id; });
+        if (duplicateInCandidates || duplicateInOwners) {
             HostLogError("Duplicate plugin id %s; skipping %ls", plugin.id.c_str(), filename.c_str());
             FreeLibrary(module); continue;
         }
-        auto owner = std::make_unique<PluginOwner>(); owner->id = plugin.id;
+        const auto queryMeta = reinterpret_cast<FnGakuPlugin_QueryMetadata>(
+            GetProcAddress(module, "GakuPlugin_QueryMetadata"));
+        if (queryMeta) {
+            GakuPluginMetadataV1 rawMeta{};
+            const auto metaStatus = queryMeta(GAKU_METADATA_ABI_VERSION, sizeof(rawMeta), &rawMeta);
+            if (metaStatus == GAKU_OK) {
+                std::vector<std::string> metaWarnings;
+                if (Metadata::ExtractMetadata(rawMeta, plugin, metaWarnings)) {
+                    for (const auto& warning : metaWarnings) {
+                        HostLogWarn("[Metadata] %s: %s", plugin.id.c_str(), warning.c_str());
+                    }
+                    for (const auto& aux : plugin.auxiliaryDlls) {
+                        const std::wstring auxW = std::filesystem::path(WidenUtf8(aux)).filename().wstring();
+                        if (!auxW.empty() && !ContainsFilenameCaseInsensitive(dynamicAuxDlls, auxW)) {
+                            dynamicAuxDlls.push_back(auxW);
+                        }
+                    }
+                } else {
+                    HostLogWarn("[Metadata] %s: invalid GakuPluginMetadataV1 header (abi=%u size=%u)",
+                        plugin.id.c_str(), rawMeta.abiVersion, rawMeta.structSize);
+                }
+            } else {
+                HostLogWarn("[Metadata] %s: GakuPlugin_QueryMetadata failed (status=%d)",
+                    plugin.id.c_str(), metaStatus);
+            }
+        }
+        candidates.push_back({std::move(plugin), true});
+    }
+
+    // Phase B: Dependency validation & topological ordering
+    std::vector<std::string> resolveDiagnostics;
+    Metadata::ResolveAndSortPlugins(candidates, GAKU_LOADER_VERSION, resolveDiagnostics);
+    for (const auto& diag : resolveDiagnostics) {
+        HostLogWarn("[Dependencies] %s", diag.c_str());
+    }
+    g_plugins.clear();
+    g_plugins.reserve(candidates.size());
+    for (auto& cand : candidates) {
+        if (cand.plugin.failed && cand.plugin.handle) {
+            FreeLibrary(cand.plugin.handle);
+            cand.plugin.handle = nullptr;
+            HostLogError("Rejected plugin %s (%s): %s", cand.plugin.name.c_str(), cand.plugin.id.c_str(),
+                cand.plugin.statusReason.c_str());
+        }
+        g_plugins.push_back(std::move(cand.plugin));
+    }
+    SyncPluginRegistry();
+    PublishDesktopHostSnapshot();
+
+    // Phase C: Activate surviving plugins in topological order
+    std::vector<std::string> activationOrder;
+    for (auto& plugin : g_plugins) {
+        if (plugin.failed || plugin.loadState != GAKU_PLUGIN_STATE_QUERIED) continue;
+
+        bool requiredDepsActive = true;
+        for (auto& dep : plugin.dependencies) {
+            if (dep.kind != GAKU_DEPENDENCY_REQUIRED) continue;
+            const auto found = std::find_if(g_plugins.begin(), g_plugins.end(),
+                [&](const LoadedPlugin& candidate) { return candidate.id == dep.pluginId; });
+            if (found == g_plugins.end() || !found->activated || found->failed) {
+                requiredDepsActive = false;
+                dep.satisfied = false;
+                dep.targetState = found == g_plugins.end() ? GAKU_PLUGIN_STATE_NOT_FOUND : found->loadState;
+                dep.diagnostic = "Required dependency failed activation: " + dep.pluginId;
+                plugin.statusReason = dep.diagnostic;
+                break;
+            }
+        }
+        if (!requiredDepsActive) {
+            plugin.failed = true;
+            plugin.activated = false;
+            plugin.loadState = GAKU_PLUGIN_STATE_DEPENDENCY_ERROR;
+            if (plugin.handle) {
+                FreeLibrary(plugin.handle);
+                plugin.handle = nullptr;
+            }
+            HostLogError("Skipped %s (%s): %s", plugin.name.c_str(), plugin.id.c_str(), plugin.statusReason.c_str());
+            SyncPluginRegistry();
+            PublishDesktopHostSnapshot();
+            continue;
+        }
+
+        auto owner = std::make_unique<PluginOwner>();
+        owner->id = plugin.id;
         owner->paths.Configure(std::filesystem::path(g_localRootW), plugin.id);
         plugin.owner = owner.get();
         plugin.host = {GAKU_ABI_VERSION, sizeof(GakuHostApi), owner.get(), QueryService, RegisterService};
         { std::lock_guard registryLock(g_servicesMutex); g_owners.push_back(std::move(owner)); }
-        const auto activated = plugin.descriptor.activate(&plugin.host, &plugin.state);
+        GakuStatus activated = GAKU_E_INTERNAL;
+        try {
+            activated = plugin.descriptor.activate(&plugin.host, &plugin.state);
+        } catch (...) {
+            activated = GAKU_E_INTERNAL;
+        }
         if (activated != GAKU_OK) {
             plugin.failed = true;
+            plugin.activated = false;
+            plugin.loadState = GAKU_PLUGIN_STATE_FAILED;
+            plugin.statusReason = "activate() failed (status=" + std::to_string(activated) + ")";
             RetireOwner(static_cast<PluginOwner*>(plugin.owner));
             HostLogError("Plugin %s activation failed (status=%d); other plugins continue", plugin.name.c_str(), activated);
         } else {
             plugin.activated = true;
+            plugin.loadState = GAKU_PLUGIN_STATE_ACTIVATED;
+            activationOrder.push_back(plugin.id);
             HostLogInfo("Activated %s v%s (native; runtime callbacks deferred)", plugin.name.c_str(),
                 plugin.version.empty() ? "?" : plugin.version.c_str());
         }
-        g_plugins.push_back(std::move(plugin));
+        SyncPluginRegistry();
         PublishDesktopHostSnapshot();
     }
+
+    RefreshDependencyTargetStates();
+    SyncPluginRegistry();
+    PublishDesktopHostSnapshot();
+
+    std::string orderText;
+    for (size_t i = 0; i < activationOrder.size(); ++i) {
+        if (i > 0) orderText += " -> ";
+        orderText += activationOrder[i];
+    }
+    HostLogInfo("[ActivateSummary] discovered=%zu auxiliary_skipped=%zu disabled=%zu resident=%zu activated=%zu order=[%s]",
+        paths.size(), g_auxiliaryFiles.size(), disabledCount, g_plugins.size(), activationOrder.size(),
+        orderText.empty() ? "none" : orderText.c_str());
     HostLogInfo("Native activation complete; %zu plugin(s) resident", g_plugins.size());
     // Evidence from inside our own process; external module enumeration can be
     // denied by Windows. This is diagnostic only, never integration discovery.
@@ -1058,23 +1381,34 @@ void NotifyRuntimeReady() {
         if (g_shutdownRequested.load(std::memory_order_acquire)) break;
         if (!plugin.activated || plugin.failed) continue;
         if (!plugin.descriptor.onRuntimeReady) {
-            plugin.runtimeReady = true; PublishDesktopHostSnapshot(); continue;
+            plugin.runtimeReady = true;
+            plugin.loadState = GAKU_PLUGIN_STATE_RUNTIME_READY;
+            SyncPluginRegistry();
+            PublishDesktopHostSnapshot();
+            continue;
         }
         try {
             const auto started = Trace::UptimeMs();
             HostLogDebug("[StartupTiming] runtime callback begin plugin=%s uptime_ms=%llu thread=%lu", plugin.id.c_str(), started, GetCurrentThreadId());
             plugin.descriptor.onRuntimeReady(plugin.state);
             plugin.runtimeReady = true;
+            plugin.loadState = GAKU_PLUGIN_STATE_RUNTIME_READY;
+            SyncPluginRegistry();
             PublishDesktopHostSnapshot();
             HostLogInfo("[StartupTiming] runtime callback complete plugin=%s uptime_ms=%llu thread=%lu elapsed_ms=%llu",
                 plugin.id.c_str(), Trace::UptimeMs(), GetCurrentThreadId(), Trace::UptimeMs() - started);
         } catch (...) {
             plugin.failed = true;
+            plugin.loadState = GAKU_PLUGIN_STATE_FAILED;
+            plugin.statusReason = "onRuntimeReady threw across ABI";
+            SyncPluginRegistry();
             PublishDesktopHostSnapshot();
             RetireOwner(static_cast<PluginOwner*>(plugin.owner));
             HostLogError("Plugin runtime-ready callback threw across ABI: %s", plugin.name.c_str());
         }
     }
+    RefreshDependencyTargetStates();
+    PublishDesktopHostSnapshot();
 }
 bool IsRuntimeReady() { return g_runtimeReady; }
 bool IsShuttingDown() { return g_shutdownRequested.load(std::memory_order_acquire); }
@@ -1126,7 +1460,12 @@ void TickFrame(float deltaTime) {
         if (!plugin.activated || plugin.failed || !plugin.descriptor.onTick) continue;
         try { plugin.descriptor.onTick(plugin.state, deltaTime); }
         catch (...) {
-            plugin.failed = true; PublishDesktopHostSnapshot(); RetireOwner(static_cast<PluginOwner*>(plugin.owner));
+            plugin.failed = true;
+            plugin.loadState = GAKU_PLUGIN_STATE_FAILED;
+            plugin.statusReason = "onTick threw across ABI";
+            SyncPluginRegistry();
+            PublishDesktopHostSnapshot();
+            RetireOwner(static_cast<PluginOwner*>(plugin.owner));
             HostLogError("Plugin tick threw across ABI: %s", plugin.name.c_str());
         }
     }
@@ -1146,7 +1485,12 @@ void TickActor(void* activeActor, float deltaTime) {
         if (!plugin.activated || plugin.failed || !plugin.descriptor.onActorTick) continue;
         try { plugin.descriptor.onActorTick(plugin.state, activeActor, deltaTime); }
         catch (...) {
-            plugin.failed = true; PublishDesktopHostSnapshot(); RetireOwner(static_cast<PluginOwner*>(plugin.owner));
+            plugin.failed = true;
+            plugin.loadState = GAKU_PLUGIN_STATE_FAILED;
+            plugin.statusReason = "onActorTick threw across ABI";
+            SyncPluginRegistry();
+            PublishDesktopHostSnapshot();
+            RetireOwner(static_cast<PluginOwner*>(plugin.owner));
             HostLogError("Plugin actor tick threw across ABI: %s", plugin.name.c_str());
         }
     }
@@ -1187,7 +1531,12 @@ void DispatchDesktopPanel(const char* pluginId) {
             plugin.id != pluginId) continue;
         try { plugin.descriptor.onDesktopUi(plugin.state); }
         catch (...) {
-            plugin.failed = true; PublishDesktopHostSnapshot(); RetireOwner(static_cast<PluginOwner*>(plugin.owner));
+            plugin.failed = true;
+            plugin.loadState = GAKU_PLUGIN_STATE_FAILED;
+            plugin.statusReason = "onDesktopUi threw across ABI";
+            SyncPluginRegistry();
+            PublishDesktopHostSnapshot();
+            RetireOwner(static_cast<PluginOwner*>(plugin.owner));
             HostLogError("Plugin desktop callback threw across ABI: %s", plugin.name.c_str());
         }
         return;

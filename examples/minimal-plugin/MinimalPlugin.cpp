@@ -1,13 +1,23 @@
-// Minimal GakuLoader plugin. It negotiates ABI v1, writes to the loader log and
-// keeps a frame counter. It is compiled by tools/test-docs.ps1 so the example in
-// docs/PLUGIN_DEVELOPMENT.md cannot drift away from the header.
+// Minimal GakuLoader plugin. It negotiates ABI v1, exports optional metadata,
+// writes to the loader log and keeps a frame counter. It is compiled by
+// tools/test-docs.ps1 so the example in docs/PLUGIN_DEVELOPMENT.md cannot drift
+// away from the headers.
 #include "GakuPlugin.h"
+#include "GakuPluginMetadata.h"
 #include "GakuPaths.hpp"
 
 namespace {
 GakuLogService g_log{};
 GakuPathsV1 g_paths{};
 std::filesystem::path g_configRoot;
+
+const char* const kMaintainers[] = {"GakuLoader Contributors"};
+const GakuPluginLocalizedTextV1 kLocalizedSummaries[] = {
+    {"en", "Minimal ABI v1 sample plugin with metadata."},
+    {"zh-Hans", "包含可选元数据的最小 ABI v1 示例插件。"},
+    {"zh-Hant", "包含可選中繼資料的最小 ABI v1 範例插件。"},
+    {"ja", "オプションのメタデータを備えた最小 ABI v1 サンプルプラグイン。"},
+};
 
 void Log(GakuLogLevel level, const char* message) {
     if (g_log.write) g_log.write(g_log.context, level, message);
@@ -70,5 +80,32 @@ extern "C" GAKU_PLUGIN_EXPORT GakuStatus GakuPlugin_Query(
     descriptor.shutdown = Shutdown;
     // Nothing is written before every check above passed.
     *output = descriptor;
+    return GAKU_OK;
+}
+
+extern "C" GAKU_PLUGIN_EXPORT GakuStatus GakuPlugin_QueryMetadata(
+    uint32_t requestedAbi, uint32_t outputSize, GakuPluginMetadataV1* output) {
+    if (requestedAbi != GAKU_METADATA_ABI_VERSION) return GAKU_E_VERSION;
+    if (!output) return GAKU_E_INVALID_ARGUMENT;
+    if (outputSize < sizeof(GakuPluginMetadataV1)) return GAKU_E_SIZE;
+
+    GakuPluginMetadataV1 metadata{};
+    metadata.abiVersion = GAKU_METADATA_ABI_VERSION;
+    metadata.structSize = sizeof(GakuPluginMetadataV1);
+    metadata.originalAuthor = "GakuLoader Team";
+    metadata.maintainerCount = static_cast<uint32_t>(sizeof(kMaintainers) / sizeof(kMaintainers[0]));
+    metadata.maintainers = kMaintainers;
+    metadata.subVersion = "build.1";
+    metadata.releaseChannel = "stable";
+    metadata.summary = "Minimal ABI v1 sample plugin with metadata.";
+    metadata.localizedSummaryCount =
+        static_cast<uint32_t>(sizeof(kLocalizedSummaries) / sizeof(kLocalizedSummaries[0]));
+    metadata.localizedSummaries = kLocalizedSummaries;
+    metadata.repositoryUrl = "https://github.com/GakuLoader/GakuLoader";
+    metadata.releaseUrl = "https://github.com/GakuLoader/GakuLoader/releases";
+    metadata.license = "MIT";
+    metadata.minLoaderVersion = "1.1.0";
+    // Nothing is written before every check above passed.
+    *output = metadata;
     return GAKU_OK;
 }

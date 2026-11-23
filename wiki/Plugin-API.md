@@ -1,6 +1,6 @@
 # 插件 API 与服务
 
-本页说明 GakuLoader 插件的生命周期回调函数、执行线程模型，以及宿主提供的全部 14 项官方内置与扩展服务。
+本页说明 GakuLoader 插件的生命周期回调函数、执行线程模型、可选元数据与依赖契约（`GakuPluginMetadata.h`），以及宿主提供的全部 15 项官方内置与扩展服务。
 
 ---
 
@@ -19,7 +19,7 @@
 
 ---
 
-## 宿主服务全集（14 项官方与扩展服务）
+## 宿主服务全集（15 项官方与扩展服务）
 
 插件在 `activate` 或后续回调中，通过 `host->queryService` 查询宿主提供的功能接口：
 
@@ -28,7 +28,7 @@ GakuLogService log{};
 host->queryService(host->hostContext, GAKU_SERVICE_LOG, GAKU_SERVICE_VERSION, sizeof(log), &log);
 ```
 
-宿主当前提供 14 项标准服务，涵盖核心运行时、界面交互与扩展能力：
+宿主当前提供 15 项标准服务，涵盖核心运行时、界面交互与扩展能力：
 
 | 服务标识符 | 所在头文件 | 接口结构体 | 核心功能与用途 |
 |---|---|---|---|
@@ -46,6 +46,7 @@ host->queryService(host->hostContext, GAKU_SERVICE_LOG, GAKU_SERVICE_VERSION, si
 | `gakuloader.language` | `GakuLanguage.h` | `GakuLanguageServiceV1` | 查询当前加载器桌面 UI 语言偏好（英文/简中/繁中/日文） |
 | `gakuloader.file-drop` | `GakuFileDrop.h` | `GakuFileDropService` | 在 ImGui 面板中声明文件拖放区域并轮询接收拖入文件路径 |
 | `gakuloader.process-lifetime-hooks` | `GakuProcessLifetimeHooks.h` | `GakuProcessLifetimeHooksV1` | 将 Hook 独占租约升级为进程生命周期常驻（插件退役时不卸载） |
+| `gakuloader.plugins` | `GakuPluginMetadata.h` | `GakuPluginsServiceV1` | 只读查询宿主版本/ABI 以及所有已发现插件的加载状态与摘要 |
 
 ---
 
@@ -100,6 +101,73 @@ mainThread.enqueue(mainThread.context, [](void* data) {
 
 ### 7. `gakuloader.file-drop`（文件拖放集成）
 通过 `include/GakuFileDrop.h`，在所属插件的 `onDesktopUi` 回调中调用 `setTarget` 设置接收区域，坐标为宿主单视口的**客户区像素坐标**。区域每个完成的 UI 帧都要重新登记；宿主只向当前选中的插件面板投递。`poll` 先读取数量与 UTF-8 字节数，再用足够的缓冲区取回路径并消费一次；缓冲区不足时保留批次。每批最多 256 个文件、路径总长 1 MiB。窗口外或区域外的拖放不会投递。
+
+### 8. `gakuloader.plugins`（只读插件注册表）
+通过 `include/GakuPluginMetadata.h` 中的 `GAKU_SERVICE_PLUGINS`（`"gakuloader.plugins"`）与版本 `GAKU_PLUGINS_SERVICE_VERSION`（`1u`）查询 `GakuPluginsServiceV1`：
+
+- `getHostInfo(uint32_t outputSize, GakuHostInfoV1* output)`：返回 `GakuHostInfoV1`，包含 `abiVersion`、`structSize`、`pluginAbiVersion`（`GAKU_ABI_VERSION`）、`pluginCount`（已发现的插件记录总数，含禁用与失败项）与 `loaderVersion[64]`（如 `"1.1.0"`）。
+- `findPlugin(const char* pluginId, uint32_t outputSize, GakuPluginSummaryV1* output)`：按规范 `pluginId` 查找插件摘要。
+- `getPluginAt(uint32_t index, uint32_t outputSize, GakuPluginSummaryV1* output)`：按索引枚举已发现插件摘要（`0 .. pluginCount - 1`）。
+
+`GakuPluginSummaryV1` 包含 `abiVersion`、`structSize`、`state`（`GakuPluginLoadState`）、`hasMetadata`（`GakuPlugin_QueryMetadata` 成功时为 `1`）、`id[65]`、`name[128]`、`version[64]`、`subVersion[64]`。`GakuPluginLoadState` 状态值如下：
+
+| 常量 | 值 | 含义 |
+|---|---|---|
+| `GAKU_PLUGIN_STATE_NOT_FOUND` | `0u` | 未找到对应插件 |
+| `GAKU_PLUGIN_STATE_DISABLED` | `1u` | 被 `[plugins]` 配置禁用 |
+| `GAKU_PLUGIN_STATE_DEPENDENCY_ERROR` | `2u` | 缺失必需依赖、版本范围不满足、存在冲突或存在必需依赖环 |
+| `GAKU_PLUGIN_STATE_INCOMPATIBLE` | `3u` | 不满足 `minLoaderVersion` 或 ABI/描述符不兼容 |
+| `GAKU_PLUGIN_STATE_QUERIED` | `4u` | 已完成 `GakuPlugin_Query`（与可选元数据查询），尚未激活 |
+| `GAKU_PLUGIN_STATE_ACTIVATED` | `5u` | `activate()` 返回 `GAKU_OK` |
+| `GAKU_PLUGIN_STATE_RUNTIME_READY` | `6u` | `onRuntimeReady()` 已完成 |
+| `GAKU_PLUGIN_STATE_FAILED` | `7u` | `activate()` 失败或在回调中抛出异常退役 |
+
+---
+
+## 插件元数据与依赖声明（`GakuPluginMetadata.h`）
+
+插件可选择额外导出 `GakuPlugin_QueryMetadata`（签名 `FnGakuPlugin_QueryMetadata`），在不改动原 `GakuPlugin.h` v1 布局的前提下向宿主声明作者、多语言简介、最低宿主版本、依赖图与伴生 DLL。未导出该函数的旧插件仍按原流程正常加载。
+
+```cpp
+GakuStatus GakuPlugin_QueryMetadata(
+    uint32_t requestedAbi, uint32_t outputSize, GakuPluginMetadataV1* output);
+```
+
+- **调用时机与校验规则**：紧接 `GakuPlugin_Query` 在 loader lock 外调用一次；禁止在其中初始化 IL2CPP、UI、Hook 或工作线程。写入 `*output` 前必须先检查 `requestedAbi == GAKU_METADATA_ABI_VERSION`（`1u`）、`output != NULL` 且 `outputSize >= sizeof(GakuPluginMetadataV1)`。
+- **内存生命周期**：所有字符串指针与数组指针必须指向静态或模块生命周期存储；宿主会在 `activate()` 或 `FreeLibrary()` 之前拷贝全部字符串与结构内容。
+
+### `GakuPluginMetadataV1` 字段说明
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| `abiVersion` | `uint32_t` | 固定填 `GAKU_METADATA_ABI_VERSION`（`1u`） |
+| `structSize` | `uint32_t` | 固定填 `sizeof(GakuPluginMetadataV1)` |
+| `originalAuthor` | `const char*` | 原作者名（UTF-8，可选） |
+| `maintainerCount` / `maintainers` | `uint32_t` / `const char* const*` | 现任维护者数组（UTF-8，可选；`reserved0` 填 `0`） |
+| `subVersion` | `const char*` | 次级/构建展示标签（如 `"build.42"`），**不参与 SemVer 比较** |
+| `releaseChannel` | `const char*` | 发布通道展示标签（如 `"stable"`、`"beta"`、`"dev"`） |
+| `summary` | `const char*` | 默认单行简介（UTF-8，可选） |
+| `localizedSummaryCount` / `localizedSummaries` | `uint32_t` / `const GakuPluginLocalizedTextV1*` | 多语言简介数组，每项含 `languageTag`（如 `"en"`、`"zh-Hans"`、`"zh-Hant"`、`"ja"`）与 `text`（`reserved1` 填 `0`） |
+| `repositoryUrl` / `releaseUrl` / `issuesUrl` | `const char*` | 项目仓库、发布页与问题反馈链接（`https://` 或 `http://`） |
+| `license` | `const char*` | SPDX 或许可证标识（如 `"MIT"`） |
+| `minLoaderVersion` | `const char*` | 最低宿主版本或 SemVer 范围（裸版本号如 `"1.1.0"` 表示 `>=1.1.0`；当前宿主版本宏为 `GAKU_LOADER_VERSION`） |
+| `dependencyCount` / `dependencies` | `uint32_t` / `const GakuPluginDependencyV1*` | 依赖与冲突声明数组（`reserved2` 填 `0`） |
+| `auxiliaryDllCount` / `auxiliaryDlls` | `uint32_t` / `const char* const*` | 属于本插件的原生伴生 DLL 文件名数组（`reserved3` 填 `0`） |
+
+### `GakuPluginDependencyV1` 与拓扑激活规则
+
+每条依赖声明由 `GakuPluginDependencyV1` 描述：
+
+- `pluginId`：目标插件规范 ID（即 `GakuPluginDescriptor::id`）。
+- `displayName`：用于日志与 F1 界面的可读名称（可选）。
+- `versionRange`：SemVer 2.0.0 版本约束表达式（如 `">0.2.0-beta.1"`、`">=1.0.0 <2.0.0"`、`^0.2.0`、`~0.2.1`；`"*"`、`NULL` 或 `""` 表示匹配任意版本）。
+- `kind`（`GakuPluginDependencyKind`）：
+  - `GAKU_DEPENDENCY_REQUIRED`（`1u`）：强依赖，目标缺失、被禁用、不兼容或版本不满足时本插件进入 `DEPENDENCY_ERROR`。
+  - `GAKU_DEPENDENCY_OPTIONAL`（`2u`）：可选依赖，目标缺失或被禁用时本插件仍可激活；若目标存在且启用，则检查 `versionRange` 并优先在其之后激活。
+  - `GAKU_DEPENDENCY_CONFLICT`（`3u`）：互斥冲突，若目标存在、启用且命中 `versionRange`，则阻止激活。
+- `reserved`：保留字段，必须为 `0`。
+
+宿主采用两阶段加载：第一阶段发现并查询所有候选插件的描述符与元数据；第二阶段完成兼容性与依赖边校验，并按拓扑顺序调用 `activate()`（`shutdown()` 仍按严格逆序执行）。若出现仅由 `Optional` 边参与且可通过忽略该可选边打破的环路，宿主会对该 `Optional` 边执行环路降级并记录诊断，避免无谓阻塞启动。
 
 ---
 

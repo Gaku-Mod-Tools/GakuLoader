@@ -40,6 +40,7 @@ $suites = @(
     [ordered]@{ name = 'frame-pump'; script = 'tests\test-frame-pump.ps1'; evidence = @('build\frame-pump-tests\frame-pump-tests.log') }
     [ordered]@{ name = 'wndproc-chain'; script = 'tests\test-wndproc-chain.ps1'; evidence = @('build\wndproc-chain-tests\wndproc-chain-tests.log') }
     [ordered]@{ name = 'paths'; script = 'tests\test-paths.ps1'; evidence = @('build\paths-tests\report.json') }
+    [ordered]@{ name = 'plugin-metadata'; script = 'tests\test-plugin-metadata.ps1'; evidence = @('build\plugin-metadata-tests\report.json') }
     [ordered]@{ name = 'diagnostic-boundary'; script = 'tests\run_diagnostic_boundary.ps1'; evidence = @() }
     [ordered]@{ name = 'desktop-dialogs'; script = 'tools\test-desktop-dialogs.ps1'; evidence = @('build\desktop-dialogs-tests\report.json') }
     [ordered]@{ name = 'desktop-file-drop'; script = 'tests\test-desktop-file-drop.ps1'; evidence = @('build\desktop-file-drop-tests\report.json') }

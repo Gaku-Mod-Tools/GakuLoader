@@ -73,6 +73,7 @@
 
   <ItemGroup>
     <ClInclude Include="include\GakuPlugin.h" />
+    <ClInclude Include="include\GakuPluginMetadata.h" />
     <ClInclude Include="include\GakuWebPanel.h" />
     <ClInclude Include="include\GakuFileDrop.h" />
     <ClInclude Include="include\GakuPaths.h" />
@@ -81,6 +82,7 @@
     <ClInclude Include="src\DesktopFonts.hpp" />
     <ClInclude Include="src\LanguageSettings.hpp" />
     <ClInclude Include="src\ManagerStrings.hpp" />
+    <ClInclude Include="src\PluginMetadata.hpp" />
     <ClInclude Include="src\PluginPaths.hpp" />
     <ClInclude Include="src\Host.hpp" />
     <ClInclude Include="src\HostConfig.hpp" />

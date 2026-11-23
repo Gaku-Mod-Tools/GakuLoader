@@ -38,7 +38,7 @@ $buildLog = Join-Path $logDir 'msvc-build.log'
 # Direct project entry keeps older VS2022 installations usable without .slnx support.
 $projects = @((Join-Path $repo 'GakuLoader.vcxproj')) +
     @(Get-ChildItem -LiteralPath $PSScriptRoot -Filter '*.vcxproj' -File |
-        Where-Object { $_.Name -ne 'PathsFixture.vcxproj' } | ForEach-Object { $_.FullName })
+        Where-Object { $_.Name -ne 'PathsFixture.vcxproj' -and $_.Name -ne 'MetadataFixture.vcxproj' } | ForEach-Object { $_.FullName })
 Set-Content -LiteralPath $buildLog -Value '' -Encoding ASCII
 foreach ($project in $projects) {
     Write-Host "Building $([IO.Path]::GetFileName($project)) (MSVC/$Configuration)..." -ForegroundColor Cyan
@@ -67,6 +67,24 @@ foreach ($fixture in $pathsFixtures) {
     if ($LASTEXITCODE -ne 0) { throw "MSVC paths fixture build failed: $($fixture.name) (log: $buildLog)" }
 }
 
+# Native MSVC fixtures for plugin metadata and dependency scheduling.
+$metadataFixtures = @(
+    @{ name = 'zzz-base'; variant = 1 },
+    @{ name = 'aaa-consumer'; variant = 2 },
+    @{ name = 'broken-dep'; variant = 3 },
+    @{ name = 'opt-cycle-a'; variant = 4 },
+    @{ name = 'opt-cycle-b'; variant = 5 },
+    @{ name = 'aux-marker'; variant = 6 }
+)
+foreach ($fixture in $metadataFixtures) {
+    & $msbuild (Join-Path $PSScriptRoot 'MetadataFixture.vcxproj') "/p:Configuration=$Configuration" '/p:Platform=x64' `
+        "/p:PlatformToolset=$($tools.PlatformToolset)" "/p:VCToolsVersion=$($tools.Version)" `
+        "/p:FixtureName=$($fixture.name)" "/p:FixtureVariant=$($fixture.variant)" `
+        '/nologo' '/verbosity:minimal' '/m' '/nodeReuse:false' 2>&1 |
+        Tee-Object -FilePath $buildLog -Append
+    if ($LASTEXITCODE -ne 0) { throw "MSVC metadata fixture build failed: $($fixture.name) (log: $buildLog)" }
+}
+
 $testDir = Join-Path $repo "build\tests\$Configuration"
 $expected = @('host-tests.exe', 'minhook-isolation.exe', 'frame-pump-tests.exe',
     'wndproc-chain-tests.exe', 'language-settings-tests.exe', 'desktop-fonts-tests.exe', 'manager-ui-tests.exe',
@@ -74,7 +92,10 @@ $expected = @('host-tests.exe', 'minhook-isolation.exe', 'frame-pump-tests.exe',
     'web-panel-host-tests.exe',
     'diagnostic-boundary-tests.exe', 'c-abi-test.exe', 'desktop-ui-smoke.exe', 'desktop-appearance-tests.exe',
     'desktop-dialogs-tests.exe', 'desktop-file-drop-tests.exe', 'host-dialog-concurrency.exe', 'paths-tests.exe',
-    'paths-fixtures\paths-alpha.dll', 'paths-fixtures\paths-beta.dll', 'paths-fixtures\paths-uppercase.dll')
+    'plugin-metadata-tests.exe',
+    'paths-fixtures\paths-alpha.dll', 'paths-fixtures\paths-beta.dll', 'paths-fixtures\paths-uppercase.dll',
+    'metadata-fixtures\zzz-base.dll', 'metadata-fixtures\aaa-consumer.dll', 'metadata-fixtures\broken-dep.dll',
+    'metadata-fixtures\opt-cycle-a.dll', 'metadata-fixtures\opt-cycle-b.dll', 'metadata-fixtures\aux-marker.dll')
 foreach ($name in $expected) {
     if (-not (Test-Path (Join-Path $testDir $name))) {
         throw "Expected test binary missing: $(Join-Path $testDir $name)"

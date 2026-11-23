@@ -8,16 +8,31 @@
 
 #pragma once
 #include "GakuPlugin.h"
+#include "GakuPluginMetadata.h"
 #include "GakuWebPanel.h"
 #include <filesystem>
 #include <string>
+#include <utility>
 #include <vector>
 #include <windows.h>
 
 namespace GakuLoader {
 
+struct DesktopDependencyInfo {
+    uint32_t kind{0};
+    std::string pluginId;
+    std::string displayName;
+    std::string versionRange;
+    uint32_t targetState{GAKU_PLUGIN_STATE_NOT_FOUND};
+    std::string actualVersion;
+    bool satisfied{true};
+    bool cycleDegraded{false};
+    std::string diagnostic;
+};
+
 struct LoadedPlugin {
     std::wstring dllPath;
+    std::string dllFilename;
     HMODULE handle{nullptr};
     std::string id, name, version;
     GakuPluginDescriptor descriptor{};
@@ -27,6 +42,22 @@ struct LoadedPlugin {
     bool activated{false};
     bool runtimeReady{false};
     bool failed{false};
+    uint32_t loadState{GAKU_PLUGIN_STATE_QUERIED};
+    std::string statusReason;
+    bool hasMetadata{false};
+    std::string originalAuthor;
+    std::vector<std::string> maintainers;
+    std::string subVersion;
+    std::string releaseChannel;
+    std::string summary;
+    std::vector<std::pair<std::string, std::string>> localizedSummaries;
+    std::string repositoryUrl;
+    std::string releaseUrl;
+    std::string issuesUrl;
+    std::string license;
+    std::string minLoaderVersion;
+    std::vector<DesktopDependencyInfo> dependencies;
+    std::vector<std::string> auxiliaryDlls;
 };
 
 // Roots only. Plugin DLLs are not touched until ActivatePlugins().
@@ -66,11 +97,28 @@ void RunInCallbackGate(void (*body)(void*), void* userData);
 struct DesktopPluginPanel {
     std::string id, name, version;
     bool activated{false}, runtimeReady{false}, failed{false}, hasPanel{false};
+    uint32_t loadState{GAKU_PLUGIN_STATE_NOT_FOUND};
+    std::string dllFilename;
+    std::string statusReason;
+    bool hasMetadata{false};
+    std::string originalAuthor;
+    std::vector<std::string> maintainers;
+    std::string subVersion;
+    std::string releaseChannel;
+    std::string summary;
+    std::vector<std::pair<std::string, std::string>> localizedSummaries;
+    std::string repositoryUrl;
+    std::string releaseUrl;
+    std::string issuesUrl;
+    std::string license;
+    std::string minLoaderVersion;
+    std::vector<DesktopDependencyInfo> dependencies;
 };
 struct DesktopHostSnapshot {
     std::vector<DesktopPluginPanel> plugins;
     bool runtimeReady{false}, shuttingDown{false}, activated{false};
     std::vector<std::wstring> pluginFiles; // discovered DLL filenames, including disabled/rejected DLLs
+    std::vector<std::wstring> auxiliaryFiles; // skipped auxiliary DLL filenames
 };
 // Non-blocking copies and selected-panel dispatch; UI never borrows the list.
 bool SnapshotDesktopHost(DesktopHostSnapshot& output);

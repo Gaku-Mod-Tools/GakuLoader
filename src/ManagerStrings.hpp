@@ -7,7 +7,9 @@
 // See LICENSE and LICENSES/GakuLoader-Plugin-Exception.txt.
 
 #pragma once
+#include "Host.hpp"
 #include "LanguageSettings.hpp"
+#include <cstring>
 #include <string>
 
 namespace GakuLoader::ManagerStrings {
@@ -29,7 +31,13 @@ enum class Key {
     Capture, CaptureHelp, CaptureButton, InvalidCombo, SaveFailed, HotkeyHelp,
     Console, Trace, NextStart, PluginEnable, PluginEnableHelp, File, Hide, View, Plugins,
     SelectPanel, FailedHelp, NoPanel, Count, Runtime, SummaryHelp, ConfigFile, Saved,
-    DefaultBinding, CustomBinding, ScaleLimit, AppleLight, AppleDark, CountKeys
+    DefaultBinding, CustomBinding, ScaleLimit, AppleLight, AppleDark,
+    DependencyError, Incompatible, Disabled,
+    Details, SelectPluginHint, PluginId, OriginalAuthor, Maintainers, SubVersion, Channel,
+    License, MinLoaderVersion, Summary, Links, Repository, ReleasePage, IssuesPage,
+    OpenLink, CopyLink, Copied, Dependencies, NoDependencies, Required, Optional,
+    ConflictState, Satisfied, Missing, Mismatch, CycleDegraded, RequiredBy, DisableDepWarning,
+    CountKeys
 };
 inline const char* Text(Key key) {
     static const char* const strings[][4] = {
@@ -89,9 +97,55 @@ inline const char* Text(Key key) {
         {"default", "默认", "預設", "既定"}, {"custom", "自定义", "自訂", "カスタム"},
         {"This UI scale and DPI combination exceeds the font atlas limit. The previous scale is retained.", "此界面缩放与 DPI 组合超出字体贴图上限，已保留之前的缩放。", "此介面縮放與 DPI 組合超出字型貼圖上限，已保留先前的縮放。", "UI スケールと DPI の組み合わせがフォント上限を超えたため、以前の倍率を維持します。"},
         {"Apple Light", "Apple 浅色", "Apple 淺色", "Apple ライト"},
-        {"Apple Dark", "Apple 深色", "Apple 深色", "Apple ダーク"}
+        {"Apple Dark", "Apple 深色", "Apple 深色", "Apple ダーク"},
+        {"dependency error", "依赖错误", "相依性錯誤", "依存関係エラー"},
+        {"incompatible", "不兼容", "不相容", "非互換"},
+        {"disabled", "已禁用", "已停用", "無効"},
+        {"Plugin Details", "插件详情", "外掛程式詳細資料", "プラグイン詳細"},
+        {"Select a plugin from the list to inspect its metadata and dependencies.", "从列表中选择一个插件以查看其元数据和依赖信息。", "從清單中選擇外掛程式以檢視其中繼資料與相依性。", "一覧からプラグインを選択すると、メタデータと依存関係を確認できます。"},
+        {"Plugin ID", "插件 ID", "外掛程式 ID", "プラグイン ID"},
+        {"Original Author", "原作者", "原作者", "原作者"},
+        {"Maintainers", "维护者", "維護者", "メンテナー"},
+        {"Sub-version", "子版本", "子版本", "サブバージョン"},
+        {"Channel", "发布通道", "發佈通道", "チャンネル"},
+        {"License", "许可证", "授權條款", "ライセンス"},
+        {"Min Loader", "最低 Loader 版本", "最低 Loader 版本", "必要 Loader"},
+        {"Summary", "简介", "摘要", "概要"},
+        {"Links", "相关链接", "相關連結", "リンク"},
+        {"Repository", "代码仓库", "程式碼存放庫", "リポジトリ"},
+        {"Releases", "发布页面", "發佈頁面", "リリース"},
+        {"Issues", "问题反馈", "問題回報", "不具合報告"},
+        {"Open", "打开", "開啟", "開く"},
+        {"Copy", "复制", "複製", "コピー"},
+        {"Copied", "已复制", "已複製", "コピー済み"},
+        {"Dependencies", "依赖项", "相依性", "依存関係"},
+        {"No declared dependencies.", "无声明的依赖项。", "無宣告的相依性。", "宣言された依存関係はありません。"},
+        {"Required", "必需", "必要", "必須"},
+        {"Optional", "可选", "選用", "任意"},
+        {"Conflict", "冲突", "衝突", "競合"},
+        {"Satisfied", "已满足", "已滿足", "充足"},
+        {"Missing", "缺失", "遺失", "不足"},
+        {"Version mismatch", "版本不匹配", "版本不相符", "バージョン不一致"},
+        {"cycle degraded", "循环依赖降级", "循環相依降級", "循環依存縮退"},
+        {"Required by", "被以下插件依赖", "被以下外掛程式相依", "依存元プラグイン"},
+        {"Disabling this plugin will prevent dependent plugins from activating on the next start.", "禁用此插件将导致依赖它的插件在下次启动时无法激活。", "停用此外掛程式將導致相依於它的外掛程式在下次啟動時無法啟用。", "このプラグインを無効にすると、依存するプラグインが次回起動時に有効化されなくなります。"}
     };
     static_assert(sizeof(strings) / sizeof(strings[0]) == static_cast<size_t>(Key::CountKeys));
-    return strings[static_cast<size_t>(key)][LanguageSettings::Current()];
+    const uint32_t language = LanguageSettings::Current();
+    return strings[static_cast<size_t>(key)][language < 4 ? language : 0];
+}
+inline const char* CurrentLanguageTag() {
+    static const char* const tags[] = {"en", "zh-Hans", "zh-Hant", "ja"};
+    const uint32_t language = LanguageSettings::Current();
+    return tags[language < 4 ? language : 0];
+}
+inline const std::string& LocalizedSummary(const DesktopPluginPanel& plugin) {
+    const char* tag = CurrentLanguageTag();
+    for (const auto& entry : plugin.localizedSummaries) {
+        if (!entry.second.empty() && _stricmp(entry.first.c_str(), tag) == 0) {
+            return entry.second;
+        }
+    }
+    return plugin.summary;
 }
 }

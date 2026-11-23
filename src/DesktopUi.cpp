@@ -130,6 +130,9 @@ UINT g_taskbarCreated = 0;
 UINT g_resizeWidth = 0, g_resizeHeight = 0;
 DesktopHostSnapshot g_hostSnapshot;
 std::string g_selectedPlugin;
+std::string g_selectedPluginListId;
+std::string g_copiedLinkKey;
+double g_copiedLinkUntil = -1.0;
 DesktopFileDrop::Mailbox g_fileDrop;
 std::mutex g_showRequestMutex;
 std::string g_pendingPanel;
@@ -787,31 +790,396 @@ void DrawSpinner() {
     draw->PathStroke(color, false, (std::max)(1.5f, ImGui::GetFontSize() / 10.0f));
     ImGui::Dummy(ImVec2(radius * 2 + 4, ImGui::GetTextLineHeight()));
 }
+enum class SemanticTone { Green, Amber, Red };
+ImVec4 SemanticColor(SemanticTone tone) {
+    const ImVec4& bg = ImGui::GetStyle().Colors[ImGuiCol_WindowBg];
+    const bool light = (bg.x + bg.y + bg.z) / 3.0f > 0.5f;
+    switch (tone) {
+    case SemanticTone::Green:
+        return light ? ImVec4(0.10f, 0.54f, 0.22f, 1.0f) : ImVec4(0.38f, 0.85f, 0.48f, 1.0f);
+    case SemanticTone::Amber:
+        return light ? ImVec4(0.72f, 0.44f, 0.00f, 1.0f) : ImVec4(0.98f, 0.76f, 0.28f, 1.0f);
+    case SemanticTone::Red:
+    default:
+        return light ? ImVec4(0.78f, 0.14f, 0.14f, 1.0f) : ImVec4(0.98f, 0.40f, 0.40f, 1.0f);
+    }
+}
+Key PluginStateKey(const DesktopPluginPanel& plugin) {
+    switch (plugin.loadState) {
+    case GAKU_PLUGIN_STATE_DISABLED: return Key::Disabled;
+    case GAKU_PLUGIN_STATE_DEPENDENCY_ERROR: return Key::DependencyError;
+    case GAKU_PLUGIN_STATE_INCOMPATIBLE: return Key::Incompatible;
+    case GAKU_PLUGIN_STATE_QUERIED: return Key::Inactive;
+    case GAKU_PLUGIN_STATE_ACTIVATED: return Key::Activated;
+    case GAKU_PLUGIN_STATE_RUNTIME_READY: return Key::Ready;
+    case GAKU_PLUGIN_STATE_FAILED: return Key::Failed;
+    case GAKU_PLUGIN_STATE_NOT_FOUND:
+    default:
+        if (plugin.failed) return Key::Failed;
+        if (plugin.runtimeReady) return Key::Ready;
+        if (plugin.activated) return Key::Activated;
+        return Key::Inactive;
+    }
+}
+SemanticTone PluginStateTone(const DesktopPluginPanel& plugin, bool& hasTone) {
+    hasTone = true;
+    switch (PluginStateKey(plugin)) {
+    case Key::Ready:
+        return SemanticTone::Green;
+    case Key::Failed:
+    case Key::DependencyError:
+    case Key::Incompatible:
+        return SemanticTone::Red;
+    case Key::Activated:
+        return SemanticTone::Amber;
+    default:
+        hasTone = false;
+        return SemanticTone::Amber;
+    }
+}
+std::string TruncateSingleLineUtf8(const std::string& text, size_t maxBytes) {
+    std::string cleaned;
+    cleaned.reserve(text.size());
+    bool prevSpace = false;
+    for (unsigned char ch : text) {
+        if (ch == '\r' || ch == '\n' || ch == '\t') {
+            if (!prevSpace && !cleaned.empty()) cleaned.push_back(' ');
+            prevSpace = true;
+        } else {
+            cleaned.push_back(static_cast<char>(ch));
+            prevSpace = (ch == ' ');
+        }
+    }
+    if (cleaned.size() <= maxBytes) return cleaned;
+    size_t cut = maxBytes;
+    while (cut > 0 && (static_cast<unsigned char>(cleaned[cut]) & 0xC0) == 0x80) --cut;
+    cleaned.resize(cut);
+    cleaned += "...";
+    return cleaned;
+}
+bool IsSafeHttpUrl(const std::string& url) {
+    const bool http = (_strnicmp(url.c_str(), "https://", 8) == 0 && url.size() > 8) ||
+        (_strnicmp(url.c_str(), "http://", 7) == 0 && url.size() > 7);
+    if (!http) return false;
+    for (unsigned char ch : url) {
+        if (ch < 0x20 || ch == 0x7F || ch == ' ') return false;
+    }
+    return true;
+}
+std::wstring WidenUtf8(const std::string& text) {
+    if (text.empty()) return {};
+    const int needed = MultiByteToWideChar(CP_UTF8, 0, text.data(), static_cast<int>(text.size()), nullptr, 0);
+    if (needed <= 0) return {};
+    std::wstring wide(static_cast<size_t>(needed), L'\0');
+    MultiByteToWideChar(CP_UTF8, 0, text.data(), static_cast<int>(text.size()), wide.data(), needed);
+    return wide;
+}
+void QueueOpenExternalUrl(const std::string& url) {
+    if (!IsSafeHttpUrl(url)) return;
+    g_managerAction = [url] {
+        const std::wstring wide = WidenUtf8(url);
+        if (!wide.empty()) ShellExecuteW(nullptr, L"open", wide.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+    };
+}
+void DrawLinkRow(const char* inspectSuffix, Key labelKey, const std::string& url) {
+    if (url.empty()) return;
+    ImGui::PushID(inspectSuffix);
+    ImGui::Text("%s:", T(labelKey));
+    ImGui::SameLine();
+    const bool validUrl = IsSafeHttpUrl(url);
+    ImGui::BeginDisabled(!validUrl);
+    if (ImGui::SmallButton(T(Key::OpenLink))) QueueOpenExternalUrl(url);
+    ImGui::EndDisabled();
+    InspectUiItem((std::string("details.Open") + inspectSuffix).c_str(), validUrl ? url.c_str() : "invalid");
+    ImGui::SameLine();
+    const bool copied = (g_copiedLinkKey == inspectSuffix && ImGui::GetTime() < g_copiedLinkUntil);
+    if (ImGui::SmallButton(T(copied ? Key::Copied : Key::CopyLink))) {
+        ImGui::SetClipboardText(url.c_str());
+        g_copiedLinkKey = inspectSuffix;
+        g_copiedLinkUntil = ImGui::GetTime() + 1.5;
+    }
+    InspectUiItem((std::string("details.Copy") + inspectSuffix).c_str(), url.c_str());
+    ImGui::SameLine();
+    ImGui::TextDisabled("%s", url.c_str());
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", url.c_str());
+    ImGui::PopID();
+}
+std::string FormatDependencyStatus(const DesktopDependencyInfo& dep, SemanticTone& outTone) {
+    std::string status;
+    if (dep.kind == GAKU_DEPENDENCY_CONFLICT) {
+        if (dep.satisfied) {
+            outTone = SemanticTone::Green;
+            status = T(Key::Satisfied);
+        } else {
+            outTone = SemanticTone::Red;
+            status = T(Key::ConflictState);
+            if (!dep.actualVersion.empty()) status += " (" + ManagerStrings::FormatVersion(dep.actualVersion) + ")";
+        }
+    } else if (dep.satisfied) {
+        outTone = dep.cycleDegraded ? SemanticTone::Amber : SemanticTone::Green;
+        status = T(Key::Satisfied);
+        if (!dep.actualVersion.empty()) status += " (" + ManagerStrings::FormatVersion(dep.actualVersion) + ")";
+    } else {
+        outTone = dep.kind == GAKU_DEPENDENCY_REQUIRED ? SemanticTone::Red : SemanticTone::Amber;
+        if (dep.targetState == GAKU_PLUGIN_STATE_DISABLED) {
+            status = T(Key::Disabled);
+        } else if (dep.targetState == GAKU_PLUGIN_STATE_NOT_FOUND) {
+            status = T(Key::Missing);
+        } else if (!dep.actualVersion.empty()) {
+            status = std::string(T(Key::Mismatch)) + " (" + ManagerStrings::FormatVersion(dep.actualVersion) + ")";
+        } else if (dep.targetState == GAKU_PLUGIN_STATE_DEPENDENCY_ERROR) {
+            status = T(Key::DependencyError);
+        } else if (dep.targetState == GAKU_PLUGIN_STATE_INCOMPATIBLE) {
+            status = T(Key::Incompatible);
+        } else if (dep.targetState == GAKU_PLUGIN_STATE_FAILED) {
+            status = T(Key::Failed);
+        } else {
+            status = T(Key::Missing);
+        }
+    }
+    if (dep.cycleDegraded) {
+        status += " [";
+        status += T(Key::CycleDegraded);
+        status += "]";
+    }
+    return status;
+}
+void DrawPluginDetails(const DesktopPluginPanel* plugin) {
+    const float detailHeight = (std::max)(160.0f, ImGui::GetContentRegionAvail().y);
+    if (ImGui::BeginChild("##PluginDetails", ImVec2(0.0f, detailHeight), true)) {
+        InspectUiItem("details.Card", plugin ? plugin->id.c_str() : "");
+        if (!plugin) {
+            ImGui::TextWrapped("%s", T(Key::SelectPluginHint));
+        } else {
+            ImGui::TextUnformatted(plugin->name.c_str());
+            ImGui::SameLine();
+            ImGui::TextDisabled("(%s)", plugin->id.c_str());
+            const Key stateKey = PluginStateKey(*plugin);
+            bool hasTone = false;
+            const SemanticTone stateTone = PluginStateTone(*plugin, hasTone);
+            ImGui::SameLine();
+            if (hasTone) ImGui::PushStyleColor(ImGuiCol_Text, SemanticColor(stateTone));
+            else if (stateKey == Key::Disabled || stateKey == Key::Inactive)
+                ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+            ImGui::Text("[%s]", T(stateKey));
+            if (hasTone || stateKey == Key::Disabled || stateKey == Key::Inactive)
+                ImGui::PopStyleColor();
+
+            std::string metaLine = std::string(T(Key::Version)) + ": " + ManagerStrings::FormatVersion(plugin->version);
+            if (!plugin->subVersion.empty()) {
+                metaLine += " | " + std::string(T(Key::SubVersion)) + ": " + plugin->subVersion;
+            }
+            if (!plugin->releaseChannel.empty()) {
+                metaLine += " | " + std::string(T(Key::Channel)) + ": " + plugin->releaseChannel;
+            }
+            if (!plugin->license.empty()) {
+                metaLine += " | " + std::string(T(Key::License)) + ": " + plugin->license;
+            }
+            if (!plugin->minLoaderVersion.empty()) {
+                metaLine += " | " + std::string(T(Key::MinLoaderVersion)) + ": " + plugin->minLoaderVersion;
+            }
+            if (!plugin->dllFilename.empty()) {
+                metaLine += " | " + plugin->dllFilename;
+            }
+            ImGui::TextWrapped("%s", metaLine.c_str());
+
+            const bool isErrorState = plugin->failed ||
+                plugin->loadState == GAKU_PLUGIN_STATE_DEPENDENCY_ERROR ||
+                plugin->loadState == GAKU_PLUGIN_STATE_INCOMPATIBLE;
+            if (isErrorState && (!plugin->statusReason.empty() || plugin->failed)) {
+                const char* message = !plugin->statusReason.empty() ? plugin->statusReason.c_str() : T(Key::FailedHelp);
+                ImGui::Spacing();
+                ImGui::PushStyleColor(ImGuiCol_Text, SemanticColor(SemanticTone::Red));
+                ImGui::TextWrapped("%s", message);
+                ImGui::PopStyleColor();
+            }
+
+            const std::string& summary = ManagerStrings::LocalizedSummary(*plugin);
+            if (!summary.empty()) {
+                ImGui::Spacing();
+                ImGui::TextUnformatted(T(Key::Summary));
+                ImGui::TextWrapped("%s", summary.c_str());
+            }
+
+            if (!plugin->originalAuthor.empty() || !plugin->maintainers.empty()) {
+                ImGui::Spacing();
+                if (!plugin->originalAuthor.empty()) {
+                    ImGui::TextWrapped("%s: %s", T(Key::OriginalAuthor), plugin->originalAuthor.c_str());
+                }
+                if (!plugin->maintainers.empty()) {
+                    std::string joined;
+                    for (size_t i = 0; i < plugin->maintainers.size(); ++i) {
+                        if (i > 0) joined += ", ";
+                        joined += plugin->maintainers[i];
+                    }
+                    ImGui::TextWrapped("%s: %s", T(Key::Maintainers), joined.c_str());
+                }
+            }
+
+            if (!plugin->repositoryUrl.empty() || !plugin->releaseUrl.empty() || !plugin->issuesUrl.empty()) {
+                ImGui::Spacing();
+                ImGui::Separator();
+                ImGui::TextUnformatted(T(Key::Links));
+                DrawLinkRow("Repo", Key::Repository, plugin->repositoryUrl);
+                DrawLinkRow("Release", Key::ReleasePage, plugin->releaseUrl);
+                DrawLinkRow("Issues", Key::IssuesPage, plugin->issuesUrl);
+            }
+
+            ImGui::Spacing();
+            ImGui::Separator();
+            ImGui::TextUnformatted(T(Key::Dependencies));
+            if (plugin->dependencies.empty()) {
+                ImGui::TextDisabled("%s", T(Key::NoDependencies));
+            } else if (ImGui::BeginTable("##PluginDeps", 4,
+                    ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp)) {
+                ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthStretch, 0.7f);
+                ImGui::TableSetupColumn(T(Key::Plugin), ImGuiTableColumnFlags_WidthStretch, 1.5f);
+                ImGui::TableSetupColumn(T(Key::Version), ImGuiTableColumnFlags_WidthStretch, 0.9f);
+                ImGui::TableSetupColumn(T(Key::State), ImGuiTableColumnFlags_WidthStretch, 1.2f);
+                ImGui::TableHeadersRow();
+                for (const auto& dep : plugin->dependencies) {
+                    ImGui::PushID(dep.pluginId.c_str());
+                    ImGui::TableNextRow();
+                    ImGui::TableNextColumn();
+                    const Key kindKey = dep.kind == GAKU_DEPENDENCY_CONFLICT ? Key::ConflictState :
+                        dep.kind == GAKU_DEPENDENCY_OPTIONAL ? Key::Optional : Key::Required;
+                    ImGui::TextUnformatted(T(kindKey));
+
+                    ImGui::TableNextColumn();
+                    if (!dep.displayName.empty() && dep.displayName != dep.pluginId) {
+                        ImGui::Text("%s (%s)", dep.displayName.c_str(), dep.pluginId.c_str());
+                    } else {
+                        ImGui::TextUnformatted(dep.pluginId.c_str());
+                    }
+
+                    ImGui::TableNextColumn();
+                    ImGui::TextUnformatted(dep.versionRange.empty() ? "*" : dep.versionRange.c_str());
+
+                    ImGui::TableNextColumn();
+                    SemanticTone depTone = SemanticTone::Green;
+                    const std::string depStatus = FormatDependencyStatus(dep, depTone);
+                    ImGui::PushStyleColor(ImGuiCol_Text, SemanticColor(depTone));
+                    ImGui::TextUnformatted(depStatus.c_str());
+                    ImGui::PopStyleColor();
+                    if (!dep.diagnostic.empty() && ImGui::IsItemHovered()) {
+                        ImGui::SetTooltip("%s", dep.diagnostic.c_str());
+                    }
+                    ImGui::PopID();
+                }
+                ImGui::EndTable();
+            }
+        }
+    } else {
+        InspectUiItem("details.Card", plugin ? plugin->id.c_str() : "");
+    }
+    ImGui::EndChild();
+}
 void DrawPluginList(const DesktopHostSnapshot& snapshot) {
     ImGui::TextWrapped("%s", T(Key::SummaryHelp));
     ImGui::Text("%s: %zu | %s: %s | %s", T(Key::Count), snapshot.plugins.size(), T(Key::Runtime),
         T(snapshot.runtimeReady ? Key::Ready : Key::Waiting), T(snapshot.shuttingDown ? Key::Stopping : Key::Running));
-    if (ImGui::BeginTable("##plugins", 4, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollX)) {
-        ImGui::TableSetupColumn(T(Key::Plugin)); ImGui::TableSetupColumn(T(Key::Version));
-        ImGui::TableSetupColumn(T(Key::State)); ImGui::TableSetupColumn(T(Key::Panel));
+
+    if (snapshot.plugins.empty()) {
+        g_selectedPluginListId.clear();
+    } else {
+        const bool stillPresent = std::any_of(snapshot.plugins.begin(), snapshot.plugins.end(),
+            [](const DesktopPluginPanel& p) { return p.id == g_selectedPluginListId; });
+        if (!stillPresent) g_selectedPluginListId = snapshot.plugins.front().id;
+    }
+
+    const float availY = ImGui::GetContentRegionAvail().y;
+    const float rowHeight = ImGui::GetTextLineHeightWithSpacing() + ImGui::GetStyle().CellPadding.y * 2.0f + 2.0f;
+    const float desiredTableHeight = (std::max)(rowHeight * 2.5f,
+        rowHeight * (static_cast<float>(snapshot.plugins.size()) + 1.35f));
+    const float tableHeight = (std::min)(desiredTableHeight, (std::max)(rowHeight * 4.5f, availY * 0.45f));
+
+    if (ImGui::BeginTable("##plugins", 5,
+            ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollX |
+            ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable,
+            ImVec2(0.0f, tableHeight))) {
+        ImGui::TableSetupColumn(T(Key::Plugin));
+        ImGui::TableSetupColumn(T(Key::Version));
+        ImGui::TableSetupColumn(T(Key::State));
+        ImGui::TableSetupColumn(T(Key::Panel));
+        ImGui::TableSetupColumn(T(Key::Summary));
         ImGui::TableHeadersRow();
         for (const auto& plugin : snapshot.plugins) {
             ImGui::PushID(plugin.id.c_str());
             ImGui::TableNextRow();
-            ImGui::TableNextColumn(); ImGui::TextUnformatted(plugin.name.c_str());
-            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", plugin.id.c_str());
-            ImGui::TableNextColumn(); ImGui::TextUnformatted(ManagerStrings::FormatVersion(plugin.version).c_str());
-            ImGui::TableNextColumn(); ImGui::TextUnformatted(T(plugin.failed ? Key::Failed :
-                plugin.runtimeReady ? Key::Ready : plugin.activated ? Key::Activated : Key::Inactive));
-            if (plugin.failed || !plugin.runtimeReady) {
-                ImGui::SameLine(); DrawSpinner();
+
+            ImGui::TableNextColumn();
+            const bool selected = (g_selectedPluginListId == plugin.id);
+            if (ImGui::Selectable(plugin.name.c_str(), selected,
+                    ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowItemOverlap)) {
+                g_selectedPluginListId = plugin.id;
+            }
+            InspectUiItem(("pluginRow." + plugin.id).c_str(), selected ? "selected" : "");
+            if (ImGui::IsItemHovered()) {
+                if (!plugin.dllFilename.empty()) {
+                    ImGui::SetTooltip("%s\n%s", plugin.id.c_str(), plugin.dllFilename.c_str());
+                } else {
+                    ImGui::SetTooltip("%s", plugin.id.c_str());
+                }
+            }
+
+            ImGui::TableNextColumn();
+            ImGui::TextUnformatted(ManagerStrings::FormatVersion(plugin.version).c_str());
+            if (!plugin.subVersion.empty() || !plugin.releaseChannel.empty()) {
+                ImGui::SameLine();
+                std::string meta;
+                if (!plugin.subVersion.empty()) meta += plugin.subVersion;
+                if (!plugin.releaseChannel.empty()) {
+                    if (!meta.empty()) meta += " ";
+                    meta += "[" + plugin.releaseChannel + "]";
+                }
+                ImGui::TextDisabled("%s", meta.c_str());
+            }
+
+            ImGui::TableNextColumn();
+            const Key stateKey = PluginStateKey(plugin);
+            bool hasTone = false;
+            const SemanticTone tone = PluginStateTone(plugin, hasTone);
+            if (hasTone) ImGui::PushStyleColor(ImGuiCol_Text, SemanticColor(tone));
+            else if (stateKey == Key::Disabled || stateKey == Key::Inactive)
+                ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+            ImGui::TextUnformatted(T(stateKey));
+            if (hasTone || stateKey == Key::Disabled || stateKey == Key::Inactive)
+                ImGui::PopStyleColor();
+            if (plugin.failed || (!plugin.runtimeReady && plugin.activated)) {
+                ImGui::SameLine();
+                DrawSpinner();
                 InspectUiItem(("spinner." + plugin.id).c_str());
             }
-            ImGui::TableNextColumn(); ImGui::TextUnformatted(T(plugin.hasPanel ? Key::Yes : Key::No));
+
+            ImGui::TableNextColumn();
+            ImGui::TextUnformatted(T(plugin.hasPanel ? Key::Yes : Key::No));
+
+            ImGui::TableNextColumn();
+            const std::string& fullSummary = ManagerStrings::LocalizedSummary(plugin);
+            if (!fullSummary.empty()) {
+                const std::string shortSummary = TruncateSingleLineUtf8(fullSummary, 72);
+                ImGui::TextUnformatted(shortSummary.c_str());
+                if (shortSummary != fullSummary && ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("%s", fullSummary.c_str());
+                }
+            } else {
+                ImGui::TextDisabled("-");
+            }
+
             ImGui::PopID();
         }
         ImGui::EndTable();
     }
+
+    const DesktopPluginPanel* selectedPlugin = nullptr;
+    for (const auto& plugin : snapshot.plugins) {
+        if (plugin.id == g_selectedPluginListId) {
+            selectedPlugin = &plugin;
+            break;
+        }
+    }
+    ImGui::Spacing();
+    DrawPluginDetails(selectedPlugin);
 }
 void QueueAppearanceSave() {
     g_saveAppearance = true;
@@ -1006,6 +1374,24 @@ void DrawSettingsPage(const DesktopHostSnapshot& snapshot) {
     }
     ImGui::Spacing(); ImGui::Separator(); ImGui::TextUnformatted(T(Key::PluginEnable));
     ImGui::TextWrapped("%s", T(Key::PluginEnableHelp));
+    const auto findPanelByFilename = [&snapshot](const std::string& filename) -> const DesktopPluginPanel* {
+        for (const auto& entry : snapshot.plugins) {
+            if (!entry.dllFilename.empty() && _stricmp(entry.dllFilename.c_str(), filename.c_str()) == 0) {
+                return &entry;
+            }
+        }
+        return nullptr;
+    };
+    const auto isPluginEnabled = [](const std::string& filename, uint32_t loadState) -> bool {
+        if (!filename.empty()) {
+            for (const auto& setting : plugins) {
+                if (_stricmp(setting.label.c_str(), filename.c_str()) == 0) {
+                    return setting.enabled;
+                }
+            }
+        }
+        return loadState != GAKU_PLUGIN_STATE_DISABLED;
+    };
     for (size_t i = 0; i < plugins.size(); ++i) {
         auto& plugin = plugins[i];
         if (ImGui::Checkbox(plugin.label.c_str(), &plugin.enabled)) g_managerAction = [i] {
@@ -1015,6 +1401,41 @@ void DrawSettingsPage(const DesktopHostSnapshot& snapshot) {
             if (g_saveFailed) value.enabled = !value.enabled;
         };
         InspectUiItem("settings.Plugin", plugin.label.c_str());
+
+        const DesktopPluginPanel* matched = findPanelByFilename(plugin.label);
+        if (matched) {
+            ImGui::SameLine();
+            ImGui::TextDisabled("%s %s", matched->name.c_str(),
+                ManagerStrings::FormatVersion(matched->version).c_str());
+
+            std::string dependents;
+            for (const auto& other : snapshot.plugins) {
+                if (other.id == matched->id) continue;
+                if (!isPluginEnabled(other.dllFilename, other.loadState)) continue;
+                const bool requiresMatched = std::any_of(other.dependencies.begin(), other.dependencies.end(),
+                    [&matched](const DesktopDependencyInfo& dep) {
+                        return dep.kind == GAKU_DEPENDENCY_REQUIRED && dep.pluginId == matched->id;
+                    });
+                if (requiresMatched) {
+                    if (!dependents.empty()) dependents += ", ";
+                    dependents += other.name.empty() ? other.id : other.name;
+                }
+            }
+            if (!dependents.empty()) {
+                ImGui::Indent();
+                if (!plugin.enabled) {
+                    ImGui::PushStyleColor(ImGuiCol_Text, SemanticColor(SemanticTone::Amber));
+                    ImGui::TextWrapped("%s: %s\n%s", T(Key::RequiredBy), dependents.c_str(),
+                        T(Key::DisableDepWarning));
+                    ImGui::PopStyleColor();
+                } else {
+                    ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+                    ImGui::TextWrapped("%s: %s", T(Key::RequiredBy), dependents.c_str());
+                    ImGui::PopStyleColor();
+                }
+                ImGui::Unindent();
+            }
+        }
     }
 }
 void DrawManagerPage(const DesktopHostSnapshot& snapshot) {
@@ -1143,8 +1564,25 @@ void DrawHostShell(bool pluginGateHeld) {
         ImGui::PopID();
     } else {
         ImGui::Text("%s  %s", selected->name.c_str(), ManagerStrings::FormatVersion(selected->version).c_str()); ImGui::Separator();
-        if (selected->failed) ImGui::TextWrapped("%s", T(Key::FailedHelp));
-        else if (!selected->hasPanel) ImGui::TextWrapped("%s", T(Key::NoPanel));
+        if (selected->failed) {
+            ImGui::TextWrapped("%s", T(Key::FailedHelp));
+            if (!selected->statusReason.empty()) {
+                ImGui::Spacing();
+                ImGui::PushStyleColor(ImGuiCol_Text, SemanticColor(SemanticTone::Red));
+                ImGui::TextWrapped("%s", selected->statusReason.c_str());
+                ImGui::PopStyleColor();
+            }
+        } else if ((selected->loadState == GAKU_PLUGIN_STATE_DEPENDENCY_ERROR ||
+                    selected->loadState == GAKU_PLUGIN_STATE_INCOMPATIBLE ||
+                    selected->loadState == GAKU_PLUGIN_STATE_DISABLED) &&
+                   !selected->statusReason.empty()) {
+            ImGui::TextWrapped("%s", T(PluginStateKey(*selected)));
+            ImGui::Spacing();
+            ImGui::PushStyleColor(ImGuiCol_Text, SemanticColor(
+                selected->loadState == GAKU_PLUGIN_STATE_DISABLED ? SemanticTone::Amber : SemanticTone::Red));
+            ImGui::TextWrapped("%s", selected->statusReason.c_str());
+            ImGui::PopStyleColor();
+        } else if (!selected->hasPanel) ImGui::TextWrapped("%s", T(Key::NoPanel));
         else {
             ImGui::PushID(selected->id.c_str());
             g_inCallback = true;

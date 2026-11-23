@@ -1,22 +1,32 @@
 # 开发 GakuLoader 插件
 
-新插件使用 [include/GakuPlugin.h](../include/GakuPlugin.h)，只导出 `GakuPlugin_Query`。Loader 拥有进程生命周期、主线程投递、hook 租约、热键、Desktop UI 和配置；插件拥有自己的业务。旧 GML ABI 已整体删除，没有兼容层，`HOST_MIGRATION.md` 只是第一阶段的历史记录。
+新插件使用 [include/GakuPlugin.h](../include/GakuPlugin.h)，必须导出 `GakuPlugin_Query`，并可按需引入 [include/GakuPluginMetadata.h](../include/GakuPluginMetadata.h) 导出可选的 `GakuPlugin_QueryMetadata`。Loader 拥有进程生命周期、主线程投递、hook 租约、热键、Desktop UI 和配置；插件拥有自己的业务。旧 GML ABI 已整体删除，没有兼容层，`HOST_MIGRATION.md` 只是第一阶段的历史记录。
 
 ## 最小插件
 
 下面的代码就是 `examples/minimal-plugin/MinimalPlugin.cpp`；`tools/test-docs.ps1` 校验文档与文件逐字一致，并通过 MSVC 编译和检查导出符号。
 
 ```cpp
-// Minimal GakuLoader plugin. It negotiates ABI v1, writes to the loader log and
-// keeps a frame counter. It is compiled by tools/test-docs.ps1 so the example in
-// docs/PLUGIN_DEVELOPMENT.md cannot drift away from the header.
+// Minimal GakuLoader plugin. It negotiates ABI v1, exports optional metadata,
+// writes to the loader log and keeps a frame counter. It is compiled by
+// tools/test-docs.ps1 so the example in docs/PLUGIN_DEVELOPMENT.md cannot drift
+// away from the headers.
 #include "GakuPlugin.h"
+#include "GakuPluginMetadata.h"
 #include "GakuPaths.hpp"
 
 namespace {
 GakuLogService g_log{};
 GakuPathsV1 g_paths{};
 std::filesystem::path g_configRoot;
+
+const char* const kMaintainers[] = {"GakuLoader Contributors"};
+const GakuPluginLocalizedTextV1 kLocalizedSummaries[] = {
+    {"en", "Minimal ABI v1 sample plugin with metadata."},
+    {"zh-Hans", "包含可选元数据的最小 ABI v1 示例插件。"},
+    {"zh-Hant", "包含可選中繼資料的最小 ABI v1 範例插件。"},
+    {"ja", "オプションのメタデータを備えた最小 ABI v1 サンプルプラグイン。"},
+};
 
 void Log(GakuLogLevel level, const char* message) {
     if (g_log.write) g_log.write(g_log.context, level, message);
@@ -81,6 +91,33 @@ extern "C" GAKU_PLUGIN_EXPORT GakuStatus GakuPlugin_Query(
     *output = descriptor;
     return GAKU_OK;
 }
+
+extern "C" GAKU_PLUGIN_EXPORT GakuStatus GakuPlugin_QueryMetadata(
+    uint32_t requestedAbi, uint32_t outputSize, GakuPluginMetadataV1* output) {
+    if (requestedAbi != GAKU_METADATA_ABI_VERSION) return GAKU_E_VERSION;
+    if (!output) return GAKU_E_INVALID_ARGUMENT;
+    if (outputSize < sizeof(GakuPluginMetadataV1)) return GAKU_E_SIZE;
+
+    GakuPluginMetadataV1 metadata{};
+    metadata.abiVersion = GAKU_METADATA_ABI_VERSION;
+    metadata.structSize = sizeof(GakuPluginMetadataV1);
+    metadata.originalAuthor = "GakuLoader Team";
+    metadata.maintainerCount = static_cast<uint32_t>(sizeof(kMaintainers) / sizeof(kMaintainers[0]));
+    metadata.maintainers = kMaintainers;
+    metadata.subVersion = "build.1";
+    metadata.releaseChannel = "stable";
+    metadata.summary = "Minimal ABI v1 sample plugin with metadata.";
+    metadata.localizedSummaryCount =
+        static_cast<uint32_t>(sizeof(kLocalizedSummaries) / sizeof(kLocalizedSummaries[0]));
+    metadata.localizedSummaries = kLocalizedSummaries;
+    metadata.repositoryUrl = "https://github.com/GakuLoader/GakuLoader";
+    metadata.releaseUrl = "https://github.com/GakuLoader/GakuLoader/releases";
+    metadata.license = "MIT";
+    metadata.minLoaderVersion = "1.1.0";
+    // Nothing is written before every check above passed.
+    *output = metadata;
+    return GAKU_OK;
+}
 ```
 
 Windows x64 DLL 放在 `GakuLoader/plugins/`。几条硬性规则：
@@ -109,6 +146,7 @@ Windows x64 DLL 放在 `GakuLoader/plugins/`。几条硬性规则：
 | 回调 | 线程与时机 | 允许做什么 |
 |---|---|---|
 | `GakuPlugin_Query` | Loader 启动线程，loader lock 外 | 只填描述符；宿主先 `LoadLibraryExW`，再在此协商 ABI |
+| `GakuPlugin_QueryMetadata` | Loader 启动线程，紧接 `GakuPlugin_Query` | 可选导出，填写 `GakuPluginMetadataV1`（版本、依赖、作者与伴生库等静态元数据） |
 | `activate(host, &state)` | Loader 启动线程，早于 runtime-ready | 连接服务、读配置、装进程级 hook；**不调用 IL2CPP、不建托管对象** |
 | `onRuntimeReady(state)` | 可能是 loader worker 线程 | 解析导出/元数据、安装 detour；仍**不创建托管对象** |
 | `onTick(state, dt)` | Unity 主线程，每帧至多一次 | 帧级工作；无 actor 的标题/登录界面同样执行 |
@@ -132,6 +170,7 @@ const auto status = host->queryService(host->hostContext, GAKU_SERVICE_LOG,
 |---|---|
 | `gakuloader.log` | UTF-8 纯文本写入 Loader 私有日志；不是 printf 格式串，也不走 Unity 日志 |
 | `gakuloader.runtime` | 游戏根/本地/插件目录（绝对宽字符路径，进程生命周期有效）与 `getGameAssembly()`；后者在 GameAssembly 加载前为 NULL |
+| `gakuloader.plugins` | 可选 v1，独立 `GakuPluginMetadata.h`；只读查询宿主版本/ABI 以及所有已发现插件的状态快照（`GakuPluginsServiceV1`） |
 | `gakuloader.paths` | 可选 v1，独立 `GakuPaths.h`；按 owner 查询绝对 UTF-16 分类根、按需创建，见[数据路径](PLUGIN_PATHS.md)。不自动迁移旧数据 |
 | `gakuloader.lifecycle` | 可选 v1，独立 `GakuLifecycle.h`；按 owner 查询 `GakuLifecycleServiceV1`。`isStopping(context)` 可在任意插件线程查询宿主退出请求或 owner 退休，不获取回调门闩；适合让耗时的 `onRuntimeReady` 等待主动取消。旧宿主缺少服务时插件自行选择回退策略 |
 | `gakuloader.main-thread` | 有界 FIFO（1024）；`enqueue` 永不同步执行，shutdown 丢弃未执行任务；`isMainThread` 供线程判断 |
@@ -198,6 +237,22 @@ ImGui::SetCurrentContext(static_cast<ImGuiContext*>(binding.imguiContext));
 服务的 `getLanguage(sizeof(GakuUiLanguageV1), &value)` 可在任意线程轮询；成功时返回完整 POD 快照：`0` English、`1` 简体中文、`2` 繁體中文、`3` 日本語，`reserved=0`。空指针返回 INVALID_ARGUMENT，短输出返回 SIZE 且不改写输出。调用侧只在成功后使用结果并校验版本、尺寸和语言范围。建议在每次 `onDesktopUi` 绘制文案前读取，切换自身持有的静态词典；没有跨模块字符串、内存所有权或语言变更回调。
 
 宿主偏好是界面语言，不自动选择游戏译文、字幕或资源包。GakuLocalify 配套版本复用原有四语言 GUI 词典接入本服务，其它插件可以逐个接入。切换 UI Scale／DPI 时宿主会重建字体；使用当前回调的默认字体，不缓存宿主字体指针跨帧。
+
+## 插件元数据、依赖与两阶段拓扑加载
+
+[include/GakuPluginMetadata.h](../include/GakuPluginMetadata.h) 为 ABI v1 提供可选的插件元数据、SemVer 2.0.0 依赖声明与只读注册表扩展；未导出 `GakuPlugin_QueryMetadata` 的旧插件仍可正常加载。
+
+- **元数据导出 (`GakuPlugin_QueryMetadata`)**：紧跟 `GakuPlugin_Query` 在 loader lock 外调用一次。函数必须先校验 `requestedAbi == GAKU_METADATA_ABI_VERSION`、`output != NULL` 且 `outputSize >= sizeof(GakuPluginMetadataV1)`，再写入 `*output`；禁止在此初始化 IL2CPP、UI、Hook 或工作线程。`GakuPluginMetadataV1` 中的全部字符串指针与数组指针（`originalAuthor`、`maintainers`、`subVersion`、`releaseChannel`、`summary`、`localizedSummaries`、`repositoryUrl`、`releaseUrl`、`issuesUrl`、`license`、`minLoaderVersion`、`dependencies`、`auxiliaryDlls`）必须指向静态或模块生命周期存储，宿主会在 `activate()` 或 `FreeLibrary()` 之前完成深拷贝。`subVersion` 仅作展示标签（如 `"build.42"`），不参与 SemVer 比较。
+- **最低宿主版本 (`minLoaderVersion`)**：可填写单个版本号（如 `"1.1.0"`，裸版本号等价于 `>=1.1.0`）或 SemVer 2.0.0 范围表达式。宿主将其与当前 `GAKU_LOADER_VERSION` 比较；不满足时该插件标记为 `GAKU_PLUGIN_STATE_INCOMPATIBLE`，不会进入 `activate()`。
+- **SemVer 2.0.0 依赖边 (`GakuPluginDependencyV1`)**：支持 `versionRange`（如 `">0.2.0-beta.1"`、`">=1.0.0 <2.0.0"`、`^0.2.0`、`~0.2.1"`，以及 `"*"` / `NULL` / `""` 表示任意版本），`kind` 分为三类：
+  - `GAKU_DEPENDENCY_REQUIRED`（`1`）：目标插件必须存在、未禁用、通过兼容性与依赖校验且满足 `versionRange`，否则本插件标记为 `GAKU_PLUGIN_STATE_DEPENDENCY_ERROR` 并跳过激活。
+  - `GAKU_DEPENDENCY_OPTIONAL`（`2`）：若目标插件不存在或被禁用，本插件仍可激活；若目标插件存在且已启用，则需满足 `versionRange` 并优先在其之后激活。
+  - `GAKU_DEPENDENCY_CONFLICT`（`3`）：若目标插件存在、已启用且命中 `versionRange`（默认任意版本），则判定存在冲突，阻止激活并报告诊断信息。
+- **两阶段拓扑加载与 Optional 环路降级**：
+  1. **第一阶段（发现与元数据查询）**：扫描 `GakuLoader/plugins/` 顶层 DLL，跳过 `[plugins]` 禁用的插件以及配置或元数据声明的伴生库，执行 `LoadLibraryExW`、`GakuPlugin_Query` 与可选的 `GakuPlugin_QueryMetadata`，完成字符串拷贝、`minLoaderVersion` 校验与重复 `id` 检查。
+  2. **第二阶段（依赖求值与拓扑激活）**：校验全部 `Required` / `Optional` / `Conflict` 边与版本约束，按拓扑序依次调用 `activate`（保证被依赖方先于依赖方激活；退出时按严格逆序调用 `shutdown`）。若依赖图中出现环路：含 `Required` 边的环路无法排序，涉及插件进入 `DEPENDENCY_ERROR`；若环路可通过忽略 `Optional` 边的排序约束打破，宿主会将该 `Optional` 边降级处理（保留诊断记录），使相关插件仍能按有效拓扑序激活。
+- **只读插件注册表 (`gakuloader.plugins`)**：通过 `GAKU_SERVICE_PLUGINS`（`GAKU_PLUGINS_SERVICE_VERSION = 1`）查询 `GakuPluginsServiceV1`，提供 `getHostInfo`（返回 `GakuHostInfoV1`，含 `loaderVersion`、`pluginAbiVersion` 与 `pluginCount`）、`findPlugin` 和 `getPluginAt`（返回 `GakuPluginSummaryV1`，含 `state`、`hasMetadata`、`id`、`name`、`version`、`subVersion`），方便插件之间探测环境或其它插件的加载状态（`GakuPluginLoadState`）。
+- **原生伴生 DLL (`plugins/libs/`、`auxiliaryDlls` 与 `[auxiliary]`)**：仅供插件内部调用的原生辅助库（非插件入口 DLL）不应作为插件被扫描或调用 `DllMain`。建议将此类文件放入 `GakuLoader/plugins/libs/` 子目录（扫描器不会进入该子目录），或在插件元数据 `GakuPluginMetadataV1::auxiliaryDlls` 中显式列出文件名；对于无法修改代码的第三方顶层伴生 DLL，也可在 `gakuloader.ini` 的 `[auxiliary]` 段声明跳过，见 [配置文件](../wiki/Configuration.md)。
 
 ## 退出与模块
 

@@ -22,6 +22,12 @@ language=zh-Hans
 ; 设为 false、0 或 no 会在 LoadLibrary 之前跳过加载，文件仍保留在磁盘上。
 SomePlugin.dll=false
 
+[auxiliary]
+; 声明位于 GakuLoader/plugins/ 顶层的原生伴生/辅助 DLL（文件名不区分大小写）。
+; 设为 true、1 或 yes 时，加载器在扫描阶段直接跳过，不将其当作插件加载或执行 DllMain。
+; 若将伴生库放入 GakuLoader/plugins/libs/ 子目录，则无需在此配置，扫描器默认不会进入该子目录。
+SomeNativeHelper.dll=true
+
 [hotkeys]
 ; 推荐在 F1 窗口的可视化 Hotkeys 面板中修改，系统会自动保存为高精度键名：
 ; v2:<pluginId十六进制>:<actionId十六进制>=<组合键> 或 <default>
@@ -72,6 +78,15 @@ trace=false
 
 - 检查在 `LoadLibraryExW` 之前执行。被禁用的 DLL 不会被载入进程内存，其 `DllMain` 也不会执行。
 - 键名为插件文件名（如 `GakuMotion.dll`），不区分大小写。
+
+### `[auxiliary]` 段与 `plugins/libs/` 目录约定
+
+部分插件需要携带非插件入口的原生辅助/伴生 DLL（例如底层编解码库、原生桥接模块等）。为避免加载器将其误判为缺少 `GakuPlugin_Query` 导出的损坏插件，推荐使用以下两种方式之一进行组织：
+
+- **`GakuLoader/plugins/libs/` 子目录约定（推荐）**：将伴生 DLL 统一放入 `GakuLoader/plugins/libs/` 目录中。GakuLoader 插件扫描器仅扫描 `plugins/` 顶层目录，不会递归进入 `libs/`，因此无需额外配置即可由所属插件按路径自行按需加载。
+- **`[auxiliary]` 配置段**：当伴生 DLL 因历史路径或第三方打包原因必须留在 `GakuLoader/plugins/` 顶层目录、且所属插件尚未通过 `GakuPluginMetadataV1::auxiliaryDlls` 元数据声明时，可在 `[auxiliary]` 段中将该文件名设为 `true`（或 `1` / `yes`，文件名不区分大小写）。加载器会在发现阶段跳过该文件，不执行 `LoadLibraryExW` 或 `GakuPlugin_Query` 探测。
+  - 若需临时取消伴生标记，删除对应键值或设为 `false` 并重启游戏即可。
+  - 宿主已知内置伴生库（如 `GakuBurstBridge.dll`、`GakuMotion.VmdImporter.Native.dll`）及插件在 `GakuPlugin_QueryMetadata` 中声明的 `auxiliaryDlls` 也会自动按伴生库处理。
 
 ### `[hotkeys]` 段
 

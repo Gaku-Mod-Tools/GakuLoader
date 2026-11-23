@@ -27,11 +27,13 @@
 namespace {
 struct Item { std::string value; float left, top, right, bottom; unsigned frame; };
 std::filesystem::path configPath, evidenceRoot;
-std::mutex itemMutex, inputMutex, screenshotMutex, errorMutex;
+std::mutex itemMutex, inputMutex, screenshotMutex, errorMutex, clipboardMutex;
 std::map<std::string, Item> items;
 std::deque<std::function<void()>> inputs;
 std::filesystem::path screenshot;
 std::string workerError;
+std::string observedClipboard;
+std::atomic_uint clipboardSeq{1};
 std::atomic_uint cpuFrames{0}, presentedFrames{0}, completedInput{0}, screenshots{0};
 std::atomic<float> rasterSize{0}, bitmapScale{0}, background{0};
 std::atomic_bool callbackGateBusy{false};
@@ -197,9 +199,33 @@ bool TryDispatchDesktopFrame(void (*build)(void*), void* data) {
 }
 bool SnapshotDesktopHost(DesktopHostSnapshot& output) {
     if (callbackGateBusy) return false;
-    output.plugins = {{"test.waiting", "Waiting plugin", "1.0", true, false, false, false},
-        {"test.failed", "Failed plugin", "1.0", true, true, true, false},
-        {"test.ready", "Ready plugin", "1.0", true, true, false, false}};
+    DesktopPluginPanel waiting{"test.waiting", "Waiting plugin", "1.0", true, false, false, false};
+    waiting.loadState = GAKU_PLUGIN_STATE_ACTIVATED;
+    waiting.summary = "Waiting plugin summary";
+    waiting.releaseUrl = "https://example.com/waiting/releases";
+
+    DesktopPluginPanel failed{"test.failed", "Failed plugin", "1.0", true, true, true, false};
+    failed.loadState = GAKU_PLUGIN_STATE_FAILED;
+    failed.statusReason = "Synthetic failure";
+    failed.releaseUrl = "javascript:alert(1)";
+
+    DesktopPluginPanel ready{"test.ready", "Ready plugin", "1.0", true, true, false, false};
+    ready.loadState = GAKU_PLUGIN_STATE_RUNTIME_READY;
+    ready.hasMetadata = true;
+    ready.subVersion = "build.99";
+    ready.releaseChannel = "stable";
+    ready.summary = "Ready plugin summary";
+    ready.originalAuthor = "Ready Author";
+    ready.maintainers = {"Ready Maintainer"};
+    ready.repositoryUrl = "https://example.com/ready";
+    ready.releaseUrl = "https://example.com/ready/releases";
+    ready.issuesUrl = "https://example.com/ready/issues";
+    ready.license = "MIT";
+    ready.minLoaderVersion = "1.1.0";
+    ready.dependencies = {{GAKU_DEPENDENCY_OPTIONAL, "test.waiting", "Waiting plugin", ">=1.0",
+        GAKU_PLUGIN_STATE_ACTIVATED, "1.0", true, false, ""}};
+
+    output.plugins = {std::move(waiting), std::move(failed), std::move(ready)};
     if (includeWebPlugins) {
         output.plugins.push_back({"test.web", "Web plugin", "1.0", true, true, false, true});
         output.plugins.push_back({"test.imgui", "Legacy plugin", "1.0", true, true, false, true});
@@ -333,6 +359,20 @@ int main(int argc, char** argv) {
         webHooks.shutdown = [&] { ++webShutdownHookCount; };
         WebView2Ui::ConfigureTest(webHooks);
         DesktopUi::TestHooks hooks{true, InspectFrame, BeginFrame, [] { ++presentedFrames; }};
+        hooks.clipboardGet = [](void*) -> const char* {
+            thread_local std::string snapshot;
+            std::lock_guard lock(clipboardMutex);
+            snapshot = observedClipboard;
+            return snapshot.c_str();
+        };
+        hooks.clipboardSet = [](void*, const char* text) {
+            {
+                std::lock_guard lock(clipboardMutex);
+                observedClipboard = text ? text : "";
+            }
+            ++clipboardSeq;
+        };
+        hooks.clipboardSequence = []() -> uint32_t { return clipboardSeq.load(); };
         hooks.inspectUiItem = InspectItem;
         hooks.inspectWebPanel = InspectWebPanel;
         hooks.enableWebPanel = true;
@@ -344,8 +384,35 @@ int main(int argc, char** argv) {
         Check(HasFresh("tab.PluginList", "selected"), "default Plugin List selection was unstable");
         Check(HasFresh("spinner.test.waiting") && HasFresh("spinner.test.failed") && !HasFresh("spinner.test.ready"),
             "spinner must follow the displayed state, including failed after runtime ready");
+        Check(HasFresh("details.Card", "test.waiting") && HasFresh("pluginRow.test.waiting", "selected"),
+            "details card did not default to the first plugin row");
         Check(rasterSize == 18 && bitmapScale == 1.0f, "initial font rasterization");
         Screenshot("plugin-list-dark.bmp");
+
+        Click("pluginRow.test.ready");
+        Wait([] { return HasFresh("pluginRow.test.ready", "selected") && HasFresh("details.Card", "test.ready"); },
+            "clicking pluginRow.test.ready did not select details.Card");
+        Wait([] {
+            return HasFresh("details.OpenRelease", "https://example.com/ready/releases") &&
+                HasFresh("details.CopyRelease", "https://example.com/ready/releases");
+        }, "details release link hooks did not report expected URL");
+        Click("details.CopyRelease");
+        Wait([] {
+            std::lock_guard lock(clipboardMutex);
+            return observedClipboard == "https://example.com/ready/releases";
+        }, "clicking details.CopyRelease did not copy release URL to clipboard");
+
+        Click("pluginRow.test.failed");
+        Wait([] {
+            return HasFresh("pluginRow.test.failed", "selected") &&
+                HasFresh("details.Card", "test.failed") &&
+                HasFresh("details.OpenRelease", "invalid") &&
+                HasFresh("details.CopyRelease", "javascript:alert(1)");
+        }, "clicking pluginRow.test.failed did not update details card and invalid release link state");
+        Click("details.OpenRelease"); // disabled for invalid URL; must be a safe no-op
+        Click("pluginRow.test.waiting");
+        Wait([] { return HasFresh("pluginRow.test.waiting", "selected") && HasFresh("details.Card", "test.waiting"); },
+            "clicking pluginRow.test.waiting did not restore selection");
 
         // Initialization owns the plugin callback gate. The manager must still
         // build and present new frames using the last copied status, so the

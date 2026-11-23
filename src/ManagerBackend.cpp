@@ -11,6 +11,7 @@
 #include "LanguageSettings.hpp"
 #include "ManagerStrings.hpp"
 #include "HostConfig.hpp"
+#include "PluginMetadata.hpp"
 #include <windows.h>
 #include <algorithm>
 #include <cmath>
@@ -104,19 +105,59 @@ const std::pair<const char*, ManagerStrings::Key> kStringKeys[] = {
 Backend::Backend(Context context) : ctx_(std::move(context)) { RegisterHandlers(); }
 
 json Backend::SnapshotJson(const DesktopHostSnapshot& snapshot) const {
+    const std::string langTag = Narrow(LanguageSettings::kTags[LanguageSettings::Current()]);
     json plugins = json::array();
     for (const auto& plugin : snapshot.plugins) {
-        plugins.push_back(json{{"id", plugin.id}, {"name", plugin.name},
-            {"version", ManagerStrings::FormatVersion(plugin.version)}, {"activated", plugin.activated},
-            {"runtimeReady", plugin.runtimeReady}, {"failed", plugin.failed}, {"hasPanel", plugin.hasPanel}});
+        json deps = json::array();
+        for (const auto& dep : plugin.dependencies) {
+            deps.push_back(json{
+                {"kind", dep.kind},
+                {"pluginId", dep.pluginId},
+                {"displayName", dep.displayName},
+                {"versionRange", dep.versionRange},
+                {"targetState", dep.targetState},
+                {"actualVersion", dep.actualVersion},
+                {"satisfied", dep.satisfied},
+                {"cycleDegraded", dep.cycleDegraded},
+                {"diagnostic", dep.diagnostic}
+            });
+        }
+        plugins.push_back(json{
+            {"id", plugin.id},
+            {"name", plugin.name},
+            {"version", ManagerStrings::FormatVersion(plugin.version)},
+            {"activated", plugin.activated},
+            {"runtimeReady", plugin.runtimeReady},
+            {"failed", plugin.failed},
+            {"hasPanel", plugin.hasPanel},
+            {"loadState", plugin.loadState},
+            {"statusReason", plugin.statusReason},
+            {"dllFilename", plugin.dllFilename},
+            {"hasMetadata", plugin.hasMetadata},
+            {"subVersion", plugin.subVersion},
+            {"releaseChannel", plugin.releaseChannel},
+            {"summary", Metadata::ResolveLocalizedSummary(plugin.summary, plugin.localizedSummaries, langTag)},
+            {"originalAuthor", plugin.originalAuthor},
+            {"maintainers", plugin.maintainers},
+            {"repositoryUrl", plugin.repositoryUrl},
+            {"releaseUrl", plugin.releaseUrl},
+            {"issuesUrl", plugin.issuesUrl},
+            {"license", plugin.license},
+            {"minLoaderVersion", plugin.minLoaderVersion},
+            {"dependencies", std::move(deps)}
+        });
     }
     json files = json::array();
     for (const auto& file : snapshot.pluginFiles) {
         files.push_back(Narrow(file));
     }
+    json auxFiles = json::array();
+    for (const auto& file : snapshot.auxiliaryFiles) {
+        auxFiles.push_back(Narrow(file));
+    }
     return json{{"available", true}, {"plugins", plugins}, {"pluginFiles", files},
-        {"runtimeReady", snapshot.runtimeReady}, {"shuttingDown", snapshot.shuttingDown},
-        {"activated", snapshot.activated}};
+        {"auxiliaryFiles", auxFiles}, {"runtimeReady", snapshot.runtimeReady},
+        {"shuttingDown", snapshot.shuttingDown}, {"activated", snapshot.activated}};
 }
 
 json Backend::RowsJson() const {
@@ -179,8 +220,9 @@ void Backend::RegisterHandlers() {
         DesktopHostSnapshot snapshot;
         if (!ctx_.snapshot || !ctx_.snapshot(snapshot))
             return Result::Ok(json{{"available", false}, {"plugins", json::array()},
-                {"pluginFiles", json::array()}, {"runtimeReady", false},
-                {"shuttingDown", ctx_.shuttingDown && ctx_.shuttingDown()}, {"activated", false}});
+                {"pluginFiles", json::array()}, {"auxiliaryFiles", json::array()},
+                {"runtimeReady", false}, {"shuttingDown", ctx_.shuttingDown && ctx_.shuttingDown()},
+                {"activated", false}});
         return Result::Ok(SnapshotJson(snapshot));
     });
     b.Register("hotkeys.rows", [this](const json&) { return Result::Ok(RowsJson()); });
@@ -430,12 +472,30 @@ void Backend::EmitSnapshot(bool force) {
     std::string signature = (snapshot.runtimeReady ? "R" : "r");
     signature += snapshot.shuttingDown ? "S" : "s";
     signature += snapshot.activated ? "A" : "a";
-    for (const auto& plugin : snapshot.plugins)
+    signature += ":L" + std::to_string(LanguageSettings::Current());
+    for (const auto& plugin : snapshot.plugins) {
         signature += "|" + plugin.id + ":" + plugin.name + ":" + plugin.version + ":" +
             (plugin.activated ? "1" : "0") + (plugin.runtimeReady ? "1" : "0") +
-            (plugin.failed ? "1" : "0") + (plugin.hasPanel ? "1" : "0");
+            (plugin.failed ? "1" : "0") + (plugin.hasPanel ? "1" : "0") + ":" +
+            std::to_string(plugin.loadState) + ":" + plugin.statusReason + ":" +
+            plugin.dllFilename + ":" + (plugin.hasMetadata ? "1" : "0") + ":" +
+            plugin.subVersion + ":" + plugin.releaseChannel + ":" + plugin.summary + ":" +
+            plugin.originalAuthor + ":" + plugin.repositoryUrl + ":" + plugin.releaseUrl + ":" +
+            plugin.issuesUrl + ":" + plugin.license + ":" + plugin.minLoaderVersion;
+        for (const auto& m : plugin.maintainers) signature += "~" + m;
+        for (const auto& loc : plugin.localizedSummaries) signature += "^" + loc.first + "=" + loc.second;
+        for (const auto& dep : plugin.dependencies) {
+            signature += ";" + std::to_string(dep.kind) + ":" + dep.pluginId + ":" +
+                dep.displayName + ":" + dep.versionRange + ":" + std::to_string(dep.targetState) + ":" +
+                dep.actualVersion + ":" + (dep.satisfied ? "1" : "0") +
+                (dep.cycleDegraded ? "1" : "0") + ":" + dep.diagnostic;
+        }
+    }
     for (const auto& file : snapshot.pluginFiles) {
         signature += "#" + Narrow(file);
+    }
+    for (const auto& file : snapshot.auxiliaryFiles) {
+        signature += "@" + Narrow(file);
     }
     if (!force && signature == lastSnapshotSig_) return;
     lastSnapshotSig_ = signature;

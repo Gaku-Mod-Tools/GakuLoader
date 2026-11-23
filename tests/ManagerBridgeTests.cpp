@@ -11,6 +11,7 @@
 #include "LanguageSettings.hpp"
 #include "HostConfig.hpp"
 #include "ManagerStrings.hpp"
+#include "PluginMetadata.hpp"
 #include <windows.h>
 #include <algorithm>
 #include <cstdarg>
@@ -467,15 +468,34 @@ GakuLoader::Hotkeys::PollResult PollKey(uint32_t key, uint32_t modifiers = 0) {
 void SeedSnapshot(StubHost& host) {
     host.snapshot.plugins.clear();
     host.snapshot.pluginFiles = {L"test.plugin.dll", L"other.plugin.dll", L"disabled.dll"};
+    host.snapshot.auxiliaryFiles = {L"aux-helper.dll"};
     host.snapshot.runtimeReady = true;
     host.snapshot.shuttingDown = false;
     host.snapshot.activated = true;
     GakuLoader::DesktopPluginPanel first;
     first.id = "test.plugin"; first.name = "Test Plugin"; first.version = "1.2.3";
     first.activated = true; first.runtimeReady = true; first.failed = false; first.hasPanel = true;
+    first.loadState = GAKU_PLUGIN_STATE_RUNTIME_READY;
+    first.dllFilename = "test.plugin.dll";
+    first.hasMetadata = true;
+    first.originalAuthor = "Original Author";
+    first.maintainers = {"Maintainer A", "Maintainer B"};
+    first.subVersion = "build.7";
+    first.releaseChannel = "stable";
+    first.summary = "Default test summary";
+    first.localizedSummaries = {{"en", "English test summary"}, {"zh-Hans", "ZH-Hans test summary"}};
+    first.repositoryUrl = "https://example.com/repo";
+    first.releaseUrl = "https://example.com/releases";
+    first.issuesUrl = "https://example.com/issues";
+    first.license = "MIT";
+    first.minLoaderVersion = "1.1.0";
+    first.dependencies = {{GAKU_DEPENDENCY_REQUIRED, "other.plugin", "Other Plugin", ">=1.0.0",
+        GAKU_PLUGIN_STATE_FAILED, "", false, false, "Required dependency failed"}};
     GakuLoader::DesktopPluginPanel second;
     second.id = "other.plugin"; second.name = "Other Plugin"; second.version = "";
     second.activated = false; second.runtimeReady = false; second.failed = true; second.hasPanel = false;
+    second.loadState = GAKU_PLUGIN_STATE_FAILED;
+    second.dllFilename = "other.plugin.dll";
     host.snapshot.plugins = {first, second};
 }
 
@@ -486,16 +506,47 @@ void TestBackendQueries(Backend& backend, StubHost& host) {
     Check(snapshot.value("runtimeReady", false) && snapshot.value("activated", false) &&
         !snapshot.value("shuttingDown", true), "snapshot host flags");
     Check(snapshot["plugins"].size() == 2, "snapshot plugin count");
-    Check(snapshot["plugins"][0].value("id", "") == "test.plugin", "snapshot plugin id");
-    Check(snapshot["plugins"][0].value("version", "") == "v1.2.3", "snapshot version formatted");
-    Check(snapshot["plugins"][0].value("hasPanel", false), "snapshot panel flag");
+    const auto& p0 = snapshot["plugins"][0];
+    Check(p0.value("id", "") == "test.plugin", "snapshot plugin id");
+    Check(p0.value("version", "") == "v1.2.3", "snapshot version formatted");
+    Check(p0.value("hasPanel", false), "snapshot panel flag");
+    Check(p0.value("loadState", 99u) == GAKU_PLUGIN_STATE_RUNTIME_READY, "snapshot loadState");
+    Check(p0.value("subVersion", "") == "build.7", "snapshot subVersion");
+    const auto langWide = GakuLoader::LanguageSettings::kTags[GakuLoader::LanguageSettings::Current()];
+    std::string langTag;
+    for (const wchar_t* p = langWide; *p; ++p) langTag.push_back(static_cast<char>(*p));
+    const std::string expectedSummary = GakuLoader::Metadata::ResolveLocalizedSummary(
+        host.snapshot.plugins[0].summary, host.snapshot.plugins[0].localizedSummaries, langTag);
+    Check(p0.contains("summary") && p0.value("summary", "") == expectedSummary && !expectedSummary.empty(),
+        "snapshot summary");
+    Check(p0.value("originalAuthor", "") == "Original Author", "snapshot originalAuthor");
+    Check(p0.contains("maintainers") && p0["maintainers"].is_array() && p0["maintainers"].size() == 2 &&
+        p0["maintainers"][0] == "Maintainer A" && p0["maintainers"][1] == "Maintainer B", "snapshot maintainers");
+    Check(p0.value("repositoryUrl", "") == "https://example.com/repo", "snapshot repositoryUrl");
+    Check(p0.value("releaseUrl", "") == "https://example.com/releases", "snapshot releaseUrl");
+    Check(p0.contains("dependencies") && p0["dependencies"].is_array() && p0["dependencies"].size() == 1,
+        "snapshot dependencies");
+    const auto& dep0 = p0["dependencies"][0];
+    Check(dep0.value("kind", 0u) == GAKU_DEPENDENCY_REQUIRED &&
+        dep0.value("pluginId", "") == "other.plugin" &&
+        dep0.value("displayName", "") == "Other Plugin" &&
+        dep0.value("versionRange", "") == ">=1.0.0" &&
+        dep0.value("targetState", 99u) == GAKU_PLUGIN_STATE_FAILED &&
+        !dep0.value("satisfied", true) &&
+        !dep0.value("cycleDegraded", true) &&
+        dep0.value("diagnostic", "") == "Required dependency failed", "snapshot dependency entry");
     Check(snapshot["plugins"][1].value("failed", false), "snapshot failed flag");
+    Check(snapshot["plugins"][1].value("loadState", 99u) == GAKU_PLUGIN_STATE_FAILED, "snapshot second loadState");
     Check(snapshot["pluginFiles"].size() == 3 && snapshot["pluginFiles"][2] == "disabled.dll", "snapshot plugin files");
+    Check(snapshot.contains("auxiliaryFiles") && snapshot["auxiliaryFiles"].is_array() &&
+        snapshot["auxiliaryFiles"].size() == 1 && snapshot["auxiliaryFiles"][0] == "aux-helper.dll",
+        "snapshot auxiliaryFiles");
 
     host.snapshotAvailable = false;
     const auto unavailable = CallOk(bridge, 101, "host.snapshot");
     Check(!unavailable.value("available", true), "unavailable snapshot reported");
-    Check(unavailable["plugins"].empty() && unavailable["pluginFiles"].empty(), "unavailable snapshot arrays empty");
+    Check(unavailable["plugins"].empty() && unavailable["pluginFiles"].empty() &&
+        unavailable["auxiliaryFiles"].empty(), "unavailable snapshot arrays empty");
     Check(!unavailable.value("shuttingDown", true), "unavailable snapshot not shutting down");
     host.shuttingDown = true;
     Check(CallOk(bridge, 102, "host.snapshot").value("shuttingDown", false), "shutdown flag from context hook");

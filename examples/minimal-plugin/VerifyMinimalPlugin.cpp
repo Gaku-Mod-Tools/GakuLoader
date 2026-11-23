@@ -1,5 +1,6 @@
 // Offline consumer of the real sample DLL; never starts or injects into a game.
 #include "GakuPlugin.h"
+#include "GakuPluginMetadata.h"
 #include <windows.h>
 #include <cstring>
 #include <iostream>
@@ -47,7 +48,31 @@ int wmain(int argc, wchar_t** argv) {
     descriptor.onTick(state, 1.0f / 60.0f);
     descriptor.shutdown(state);
     if (messages != "example.minimal activated\nexample.minimal runtime ready\nexample.minimal shutdown\n") return 9;
+    const auto queryMetadata =
+        reinterpret_cast<FnGakuPlugin_QueryMetadata>(GetProcAddress(module, "GakuPlugin_QueryMetadata"));
+    if (!queryMetadata) { std::cerr << "GakuPlugin_QueryMetadata missing\n"; return 10; }
+    GakuPluginMetadataV1 metaSentinel{};
+    std::memset(&metaSentinel, 0x5a, sizeof(metaSentinel));
+    auto metadata = metaSentinel;
+    if (queryMetadata(GAKU_METADATA_ABI_VERSION + 1, sizeof(metadata), &metadata) != GAKU_E_VERSION ||
+        std::memcmp(&metadata, &metaSentinel, sizeof(metadata))) return 11;
+    if (queryMetadata(GAKU_METADATA_ABI_VERSION, sizeof(metadata) - 1, &metadata) != GAKU_E_SIZE ||
+        std::memcmp(&metadata, &metaSentinel, sizeof(metadata))) return 12;
+    if (queryMetadata(GAKU_METADATA_ABI_VERSION, sizeof(metadata), nullptr) != GAKU_E_INVALID_ARGUMENT) return 13;
+    if (queryMetadata(GAKU_METADATA_ABI_VERSION, sizeof(metadata), &metadata) != GAKU_OK ||
+        metadata.abiVersion != GAKU_METADATA_ABI_VERSION || metadata.structSize != sizeof(metadata) ||
+        !metadata.originalAuthor || !metadata.originalAuthor[0] ||
+        metadata.maintainerCount == 0 || !metadata.maintainers || !metadata.maintainers[0] ||
+        !metadata.subVersion || !metadata.subVersion[0] ||
+        !metadata.releaseChannel || !metadata.releaseChannel[0] ||
+        !metadata.summary || !metadata.summary[0] ||
+        metadata.localizedSummaryCount == 0 || !metadata.localizedSummaries ||
+        !metadata.localizedSummaries[0].languageTag || !metadata.localizedSummaries[0].text ||
+        !metadata.repositoryUrl || !metadata.repositoryUrl[0] ||
+        !metadata.releaseUrl || !metadata.releaseUrl[0] ||
+        !metadata.license || std::strcmp(metadata.license, "MIT") != 0 ||
+        !metadata.minLoaderVersion || std::strcmp(metadata.minLoaderVersion, "1.1.0") != 0) return 14;
     // Mirror the host lifetime contract: keep the module resident until process exit.
-    std::cout << "PASS: ABI rejection preserves output; activation, ready, tick, shutdown completed\n";
+    std::cout << "PASS: ABI & metadata rejection preserve output; activation, ready, tick, shutdown completed\n";
     return 0;
 }
