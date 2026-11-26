@@ -25,6 +25,178 @@ std::string ErrorResponse(uint64_t id, const char* code, const char* message) {
              {"error", {{"code", code}, {"message", message}}}};
     return out.dump();
 }
+
+// Single-pass SAX inspector for top-level request/response envelopes.
+// Validates full RFC 8259 JSON syntax without allocating a DOM tree for large
+// nested payloads (e.g. 600KB+ state snapshots or base64 cover images).
+struct EnvelopeSax {
+    using number_integer_t = json::number_integer_t;
+    using number_unsigned_t = json::number_unsigned_t;
+    using number_float_t = json::number_float_t;
+    using string_t = json::string_t;
+    using binary_t = json::binary_t;
+
+    enum class Field { None, V, Id, Type, Method, Params, Ok };
+    enum class IntState { Missing, Valid, Negative, InvalidType };
+
+    size_t depth = 0;
+    bool rootStarted = false;
+    bool rootIsObject = false;
+    bool malformed = false;
+    Field activeField = Field::None;
+
+    IntState vState = IntState::Missing;
+    uint64_t vValue = 0;
+    IntState idState = IntState::Missing;
+    uint64_t idValue = 0;
+    bool hasType = false;
+    bool typeIsString = false;
+    std::string typeValue;
+    bool hasMethod = false;
+    bool methodIsNonEmptyString = false;
+    bool hasParams = false;
+    bool paramsIsObject = false;
+    bool hasOk = false;
+    bool okIsBool = false;
+
+    void MarkScalarNonObject() {
+        if (depth != 1) return;
+        switch (activeField) {
+        case Field::V: vState = IntState::InvalidType; break;
+        case Field::Id: idState = IntState::InvalidType; break;
+        case Field::Type: hasType = true; typeIsString = false; typeValue.clear(); break;
+        case Field::Method: hasMethod = true; methodIsNonEmptyString = false; break;
+        case Field::Params: hasParams = true; paramsIsObject = false; break;
+        case Field::Ok: hasOk = true; okIsBool = false; break;
+        case Field::None: break;
+        }
+        activeField = Field::None;
+    }
+
+    bool null() {
+        if (!rootStarted) { rootStarted = true; return false; }
+        MarkScalarNonObject();
+        return true;
+    }
+    bool boolean(bool) {
+        if (!rootStarted) { rootStarted = true; return false; }
+        if (depth == 1 && activeField == Field::Ok) {
+            hasOk = true;
+            okIsBool = true;
+            activeField = Field::None;
+            return true;
+        }
+        MarkScalarNonObject();
+        return true;
+    }
+    bool number_integer(number_integer_t val) {
+        if (!rootStarted) { rootStarted = true; return false; }
+        if (depth == 1 && (activeField == Field::V || activeField == Field::Id)) {
+            IntState& state = (activeField == Field::V) ? vState : idState;
+            uint64_t& target = (activeField == Field::V) ? vValue : idValue;
+            state = val < 0 ? IntState::Negative : IntState::Valid;
+            target = static_cast<uint64_t>(val);
+            activeField = Field::None;
+            return true;
+        }
+        MarkScalarNonObject();
+        return true;
+    }
+    bool number_unsigned(number_unsigned_t val) {
+        if (!rootStarted) { rootStarted = true; return false; }
+        if (depth == 1 && (activeField == Field::V || activeField == Field::Id)) {
+            IntState& state = (activeField == Field::V) ? vState : idState;
+            uint64_t& target = (activeField == Field::V) ? vValue : idValue;
+            state = IntState::Valid;
+            target = static_cast<uint64_t>(val);
+            activeField = Field::None;
+            return true;
+        }
+        MarkScalarNonObject();
+        return true;
+    }
+    bool number_float(number_float_t, const string_t&) {
+        if (!rootStarted) { rootStarted = true; return false; }
+        MarkScalarNonObject();
+        return true;
+    }
+    bool string(string_t& val) {
+        if (!rootStarted) { rootStarted = true; return false; }
+        if (depth == 1) {
+            if (activeField == Field::Type) {
+                hasType = true;
+                typeIsString = true;
+                typeValue = val;
+                activeField = Field::None;
+                return true;
+            }
+            if (activeField == Field::Method) {
+                hasMethod = true;
+                methodIsNonEmptyString = !val.empty();
+                activeField = Field::None;
+                return true;
+            }
+        }
+        MarkScalarNonObject();
+        return true;
+    }
+    bool binary(binary_t&) {
+        if (!rootStarted) { rootStarted = true; return false; }
+        MarkScalarNonObject();
+        return true;
+    }
+    bool start_object(std::size_t) {
+        if (!rootStarted) {
+            rootStarted = true;
+            rootIsObject = true;
+            depth = 1;
+            return true;
+        }
+        if (depth == 1) {
+            if (activeField == Field::Params) {
+                hasParams = true;
+                paramsIsObject = true;
+                activeField = Field::None;
+            } else {
+                MarkScalarNonObject();
+            }
+        }
+        ++depth;
+        return true;
+    }
+    bool key(string_t& val) {
+        if (depth == 1) {
+            if (val == "v") activeField = Field::V;
+            else if (val == "id") activeField = Field::Id;
+            else if (val == "type") activeField = Field::Type;
+            else if (val == "method") activeField = Field::Method;
+            else if (val == "params") activeField = Field::Params;
+            else if (val == "ok") activeField = Field::Ok;
+            else activeField = Field::None;
+        }
+        return true;
+    }
+    bool end_object() {
+        if (depth > 0) --depth;
+        if (depth == 1) activeField = Field::None;
+        return true;
+    }
+    bool start_array(std::size_t) {
+        if (!rootStarted) { rootStarted = true; return false; }
+        MarkScalarNonObject();
+        ++depth;
+        return true;
+    }
+    bool end_array() {
+        if (depth > 0) --depth;
+        if (depth == 1) activeField = Field::None;
+        return true;
+    }
+    bool parse_error(std::size_t, const std::string&, const json::exception&) {
+        malformed = true;
+        return false;
+    }
+};
 } // namespace
 
 Bridge::Bridge() { Reset(); }
@@ -131,32 +303,31 @@ void Bridge::EmitEvent(const std::string& name, const json& payload) {
 }
 
 std::string ForwardRequest(const std::string& message, const RawHandler& handler) {
-    json parsed;
+    EnvelopeSax req;
     try {
-        parsed = json::parse(message);
+        json::sax_parse(message, &req);
     } catch (const std::exception&) {
-        return ErrorResponse(0, "invalid_json", "Message is not valid JSON.");
+        req.malformed = true;
     }
-    if (!parsed.is_object()) return ErrorResponse(0, "invalid_request", "Message must be an object.");
-    if (!parsed.contains("type") || !parsed["type"].is_string() || parsed["type"].get<std::string>() != "request")
+    if (req.malformed)
+        return ErrorResponse(0, "invalid_json", "Message is not valid JSON.");
+    if (!req.rootIsObject) return ErrorResponse(0, "invalid_request", "Message must be an object.");
+    if (!req.hasType || !req.typeIsString || req.typeValue != "request")
         return ErrorResponse(0, "invalid_request", "Message must be a request.");
-    uint64_t id = 0;
-    if (!parsed.contains("id")) return ErrorResponse(0, "invalid_request", "Missing request id.");
-    if (parsed["id"].is_number_unsigned()) id = parsed["id"].get<uint64_t>();
-    else if (parsed["id"].is_number_integer()) {
-        const auto signedId = parsed["id"].get<int64_t>();
-        if (signedId < 0) return ErrorResponse(0, "invalid_request", "Request id must not be negative.");
-        id = static_cast<uint64_t>(signedId);
-    } else return ErrorResponse(0, "invalid_request", "Request id must be an integer.");
-    if (!parsed.contains("v") || !parsed["v"].is_number_integer())
+    if (req.idState == EnvelopeSax::IntState::Missing)
+        return ErrorResponse(0, "invalid_request", "Missing request id.");
+    if (req.idState == EnvelopeSax::IntState::Negative)
+        return ErrorResponse(0, "invalid_request", "Request id must not be negative.");
+    if (req.idState != EnvelopeSax::IntState::Valid)
+        return ErrorResponse(0, "invalid_request", "Request id must be an integer.");
+    const uint64_t id = req.idValue;
+    if (req.vState != EnvelopeSax::IntState::Valid && req.vState != EnvelopeSax::IntState::Negative)
         return ErrorResponse(id, "invalid_request", "Missing protocol version.");
-    const auto version = parsed["v"].is_number_unsigned() ? parsed["v"].get<uint64_t>()
-        : static_cast<uint64_t>(parsed["v"].get<int64_t>());
-    if (version != kProtocolVersion)
+    if (req.vValue != kProtocolVersion)
         return ErrorResponse(id, "unsupported_protocol", "Unsupported bridge protocol version.");
-    if (!parsed.contains("method") || !parsed["method"].is_string() || parsed["method"].get<std::string>().empty())
+    if (!req.hasMethod || !req.methodIsNonEmptyString)
         return ErrorResponse(id, "invalid_request", "Missing method.");
-    if (parsed.contains("params") && !parsed["params"].is_object())
+    if (req.hasParams && !req.paramsIsObject)
         return ErrorResponse(id, "invalid_request", "Request params must be an object.");
     if (!handler) return ErrorResponse(id, "internal_error", "No web panel handler is bound.");
     std::string response;
@@ -168,27 +339,22 @@ std::string ForwardRequest(const std::string& message, const RawHandler& handler
         return ErrorResponse(id, "internal_error", "Unknown web panel handler exception.");
     }
     if (response.empty()) return ErrorResponse(id, "internal_error", "Web panel handler returned no response.");
+    EnvelopeSax res;
     try {
-        const auto result = json::parse(response);
-        uint64_t responseId = 0;
-        bool validId = false;
-        if (result.contains("id")) {
-            if (result["id"].is_number_unsigned()) { responseId = result["id"].get<uint64_t>(); validId = true; }
-            else if (result["id"].is_number_integer()) {
-                const auto signedId = result["id"].get<int64_t>();
-                if (signedId >= 0) { responseId = static_cast<uint64_t>(signedId); validId = true; }
-            }
-        }
-        if (!result.is_object() || !result.contains("v") || !result["v"].is_number_integer() ||
-            result["v"].get<uint64_t>() != kProtocolVersion ||
-            !validId || responseId != id ||
-            !result.contains("type") || !result["type"].is_string() || result["type"].get<std::string>() != "response" ||
-            !result.contains("ok") || !result["ok"].is_boolean())
-            return ErrorResponse(id, "internal_error", "Web panel handler returned an invalid response envelope.");
-        return response;
+        json::sax_parse(response, &res);
     } catch (const std::exception&) {
-        return ErrorResponse(id, "internal_error", "Web panel handler returned malformed JSON.");
+        res.malformed = true;
     }
+    if (res.malformed)
+        return ErrorResponse(id, "internal_error", "Web panel handler returned malformed JSON.");
+    if (!res.rootIsObject ||
+        res.vState != EnvelopeSax::IntState::Valid || res.vValue != kProtocolVersion ||
+        res.idState != EnvelopeSax::IntState::Valid || res.idValue != id ||
+        !res.hasType || !res.typeIsString || res.typeValue != "response" ||
+        !res.hasOk || !res.okIsBool) {
+        return ErrorResponse(id, "internal_error", "Web panel handler returned an invalid response envelope.");
+    }
+    return response;
 }
 
 } // namespace GakuLoader::ManagerBridge
