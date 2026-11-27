@@ -14,6 +14,7 @@
 #include "Hotkeys.hpp"
 #include "DesktopFonts.hpp"
 #include "ManagerStrings.hpp"
+#include "DxgiAdapter.hpp"
 #include "WebView2Ui.hpp"
 #include "ManagerBridge.hpp"
 #include "GakuWebPanel.h"
@@ -124,6 +125,7 @@ ID3D11Device* g_device = nullptr;
 ID3D11DeviceContext* g_deviceContext = nullptr;
 IDXGISwapChain* g_swapchain = nullptr;
 ID3D11RenderTargetView* g_target = nullptr;
+DxgiAdapter::AdapterInfo g_presentationAdapter;
 bool g_inCallback = false, g_win32Ready = false, g_dx11Ready = false;
 bool g_minimized = false, g_trayAdded = false;
 UINT g_taskbarCreated = 0;
@@ -676,24 +678,47 @@ bool CreatePresentation(HWND window) {
     desc.BufferCount = 2; desc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
     desc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT; desc.OutputWindow = window;
     desc.SampleDesc.Count = 1; desc.Windowed = TRUE;
-    auto tryCreate = [&](D3D_DRIVER_TYPE driver, DXGI_SWAP_EFFECT swapEffect) -> HRESULT {
+    auto tryCreate = [&](IDXGIAdapter* adapter, D3D_DRIVER_TYPE driver, DXGI_SWAP_EFFECT swapEffect) -> HRESULT {
         desc.SwapEffect = swapEffect;
         Release(g_swapchain);
         Release(g_deviceContext);
         Release(g_device);
-        return D3D11CreateDeviceAndSwapChain(nullptr, driver, nullptr, 0, nullptr, 0,
+        return D3D11CreateDeviceAndSwapChain(adapter, driver, nullptr, 0, nullptr, 0,
             D3D11_SDK_VERSION, &desc, &g_swapchain, &g_device, nullptr, &g_deviceContext);
     };
     HRESULT result = E_FAIL;
 #if !defined(GAKULOADER_DESKTOP_UI_TEST)
-    // Prefer flip-discard to eliminate legacy DWM blt copies; fall back to discard
-    // if the adapter/environment rejects the flip presentation model.
-    result = tryCreate(D3D_DRIVER_TYPE_HARDWARE, DXGI_SWAP_EFFECT_FLIP_DISCARD);
-    if (FAILED(result)) result = tryCreate(D3D_DRIVER_TYPE_HARDWARE, DXGI_SWAP_EFFECT_DISCARD);
+    // Prefer flip-discard on the game-aligned GPU adapter to eliminate legacy
+    // DWM blt copies and cross-adapter composition overhead.
+    DxgiAdapter::AdapterInfo preferred;
+    Microsoft::WRL::ComPtr<IDXGIAdapter1> preferredAdapter;
+    if (DxgiAdapter::SelectSystemGameAlignedAdapter(nullptr, preferred, &preferredAdapter) &&
+        preferred.valid && !preferred.isSoftware && preferredAdapter) {
+        result = tryCreate(preferredAdapter.Get(), D3D_DRIVER_TYPE_UNKNOWN, DXGI_SWAP_EFFECT_FLIP_DISCARD);
+        if (FAILED(result)) result = tryCreate(preferredAdapter.Get(), D3D_DRIVER_TYPE_UNKNOWN, DXGI_SWAP_EFFECT_DISCARD);
+    }
+    if (FAILED(result)) result = tryCreate(nullptr, D3D_DRIVER_TYPE_HARDWARE, DXGI_SWAP_EFFECT_FLIP_DISCARD);
+    if (FAILED(result)) result = tryCreate(nullptr, D3D_DRIVER_TYPE_HARDWARE, DXGI_SWAP_EFFECT_DISCARD);
 #endif
-    if (FAILED(result)) result = tryCreate(D3D_DRIVER_TYPE_WARP, DXGI_SWAP_EFFECT_FLIP_DISCARD);
-    if (FAILED(result)) result = tryCreate(D3D_DRIVER_TYPE_WARP, DXGI_SWAP_EFFECT_DISCARD);
+    if (FAILED(result)) result = tryCreate(nullptr, D3D_DRIVER_TYPE_WARP, DXGI_SWAP_EFFECT_FLIP_DISCARD);
+    if (FAILED(result)) result = tryCreate(nullptr, D3D_DRIVER_TYPE_WARP, DXGI_SWAP_EFFECT_DISCARD);
     if (FAILED(result) || !CreateRenderTarget()) return false;
+    g_presentationAdapter = DxgiAdapter::DescribeDeviceAdapter(g_device, "host-d3d11");
+    if (g_presentationAdapter.valid) {
+        std::string adapterName;
+        const int utf8Len = WideCharToMultiByte(CP_UTF8, 0, g_presentationAdapter.description.c_str(),
+            static_cast<int>(g_presentationAdapter.description.size()), nullptr, 0, nullptr, nullptr);
+        if (utf8Len > 0) {
+            adapterName.resize(static_cast<size_t>(utf8Len));
+            WideCharToMultiByte(CP_UTF8, 0, g_presentationAdapter.description.c_str(),
+                static_cast<int>(g_presentationAdapter.description.size()), adapterName.data(), utf8Len, nullptr, nullptr);
+        }
+        LogInfo("[DesktopUI] D3D11 adapter=%s vendor=0x%04x device=0x%04x luid=%ld,%lu vram=%lluMB software=%d",
+            adapterName.c_str(), g_presentationAdapter.vendorId, g_presentationAdapter.deviceId,
+            g_presentationAdapter.luid.HighPart, g_presentationAdapter.luid.LowPart,
+            static_cast<unsigned long long>(g_presentationAdapter.dedicatedVideoMemoryBytes / (1024ull * 1024ull)),
+            g_presentationAdapter.isSoftware ? 1 : 0);
+    }
     g_context = ImGui::CreateContext();
     ContextScope scope;
     auto& io = ImGui::GetIO();
@@ -750,6 +775,7 @@ void DestroyPresentation(HWND window, HINSTANCE instance) {
     g_clipboardCache.clear(); g_clipboardPending.clear(); g_clipboardValid = g_clipboardWritePending = false;
     if (g_deviceContext) g_deviceContext->ClearState();
     Release(g_target); Release(g_swapchain); Release(g_deviceContext); Release(g_device);
+    g_presentationAdapter = {};
     UpdateTray(window, false);
     g_window.store(nullptr, std::memory_order_release);
     if (g_dropCatcher) {
@@ -1763,6 +1789,17 @@ WebPanelState* FindWebPanel(const std::string& pluginId) {
     return it == g_webPanels.end() ? nullptr : it->second.get();
 }
 
+std::string WideToUtf8Local(const std::wstring& value) {
+    if (value.empty()) return {};
+    const int needed = WideCharToMultiByte(
+        CP_UTF8, 0, value.data(), static_cast<int>(value.size()), nullptr, 0, nullptr, nullptr);
+    if (needed <= 0) return {};
+    std::string result(static_cast<size_t>(needed), '\0');
+    WideCharToMultiByte(
+        CP_UTF8, 0, value.data(), static_cast<int>(value.size()), result.data(), needed, nullptr, nullptr);
+    return result;
+}
+
 WebView2Ui::EnvironmentConfig BuildWebEnvironmentConfig() {
     WebView2Ui::EnvironmentConfig envConfig;
     envConfig.userDataDir = ConfigPath().parent_path().parent_path() / L"WebView2" / L"Shared";
@@ -1770,8 +1807,54 @@ WebView2Ui::EnvironmentConfig BuildWebEnvironmentConfig() {
 #if !defined(GAKULOADER_DESKTOP_UI_TEST)
     wchar_t env[8]{};
     envConfig.devToolsEnabled = GetEnvironmentVariableW(L"GAKULOADER_WEBVIEW_DEVTOOLS", env, 8) > 0 && env[0] == L'1';
+    const auto gpuMode = ReadConfigValue(ConfigPath(), L"webview", L"gpu");
+    if (lstrcmpiW(gpuMode.c_str(), L"default") == 0) {
+        envConfig.alignGpuAdapter = false;
+    } else {
+        DxgiAdapter::AdapterInfo aligned;
+        const LUID* hostHint = g_presentationAdapter.valid ? &g_presentationAdapter.luid : nullptr;
+        if (!DxgiAdapter::SelectSystemGameAlignedAdapter(hostHint, aligned) && g_presentationAdapter.valid) {
+            aligned = g_presentationAdapter;
+        }
+        if (aligned.valid) {
+            envConfig.hasAdapterLuid = true;
+            envConfig.adapterIsSoftware = aligned.isSoftware;
+            envConfig.adapterLuid = aligned.luid;
+            envConfig.adapterVendorId = aligned.vendorId;
+            envConfig.adapterDeviceId = aligned.deviceId;
+            envConfig.adapterVramBytes = aligned.dedicatedVideoMemoryBytes;
+            envConfig.adapterDescription = aligned.description;
+            envConfig.adapterSource = aligned.source;
+        }
+    }
 #endif
     return envConfig;
+}
+
+void LogWebEnvironmentGpuAlignment(const WebView2Ui::EnvironmentConfig& envConfig) {
+    static std::string s_lastLogged;
+    const std::wstring args = WebView2Ui::BuildAdditionalBrowserArguments(envConfig);
+    std::string key = std::string(envConfig.alignGpuAdapter ? "1" : "0") + "|" +
+        std::to_string(envConfig.adapterLuid.HighPart) + "," + std::to_string(envConfig.adapterLuid.LowPart) + "|" +
+        WideToUtf8Local(args);
+    if (key == s_lastLogged) return;
+    s_lastLogged = std::move(key);
+    if (envConfig.hasAdapterLuid) {
+        LogInfo("[DesktopUI] WebView2 GPU alignment: adapter=%s vendor=0x%04x device=0x%04x luid=%ld,%lu vram=%lluMB software=%d source=%s args=\"%s\"",
+            WideToUtf8Local(envConfig.adapterDescription).c_str(),
+            envConfig.adapterVendorId,
+            envConfig.adapterDeviceId,
+            envConfig.adapterLuid.HighPart,
+            envConfig.adapterLuid.LowPart,
+            static_cast<unsigned long long>(envConfig.adapterVramBytes / (1024ull * 1024ull)),
+            envConfig.adapterIsSoftware ? 1 : 0,
+            envConfig.adapterSource.c_str(),
+            WideToUtf8Local(args).c_str());
+    } else {
+        LogInfo("[DesktopUI] WebView2 GPU alignment: mode=%s args=\"%s\"",
+            envConfig.alignGpuAdapter ? "auto-unresolved" : "default",
+            WideToUtf8Local(args).c_str());
+    }
 }
 
 std::string CallWebPanelService(const GakuWebPanelServiceV1& service, const std::string& request) {
@@ -1910,6 +1993,7 @@ bool BindWebPanel(const std::string& pluginId) {
         return failBind("Web panel assets are unavailable (status " + std::to_string(assetStatus) + ").");
     }
     const auto envConfig = BuildWebEnvironmentConfig();
+    LogWebEnvironmentGpuAlignment(envConfig);
     WebView2Ui::PanelConfig panelConfig;
     panelConfig.assetsDir = assets.assetsDir;
     panelConfig.entryPath = assets.entryPath;
@@ -2036,7 +2120,9 @@ void ServiceWebPanelSelection(const std::string& selected) {
         for (const auto& plugin : g_hostSnapshot.plugins) {
             GakuWebPanelServiceV1 svc{};
             if (QueryWebPanelService(plugin.id.c_str(), &svc) == GAKU_OK) {
-                WebView2Ui::EnsureEnvironment(BuildWebEnvironmentConfig());
+                const auto envConfig = BuildWebEnvironmentConfig();
+                LogWebEnvironmentGpuAlignment(envConfig);
+                WebView2Ui::EnsureEnvironment(envConfig);
                 break;
             }
         }

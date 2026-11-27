@@ -37,6 +37,7 @@ struct EnvironmentState {
     bool initializing = false;
     std::atomic<uint64_t> generation{0};
     std::string diagnostic;
+    std::wstring browserArgs;
     std::vector<std::string> pendingPanels;
 };
 
@@ -533,6 +534,24 @@ HRESULT OnEnvironmentCreated(uint64_t envGeneration, HRESULT result, ICoreWebVie
 
 } // namespace
 
+std::wstring BuildAdditionalBrowserArguments(const EnvironmentConfig& config) {
+    std::wstring args;
+    auto append = [&](const std::wstring& token) {
+        if (token.empty()) return;
+        if (!args.empty()) args.push_back(L' ');
+        args += token;
+    };
+    if (config.alignGpuAdapter && config.hasAdapterLuid && !config.adapterIsSoftware) {
+        append(L"--use-angle=d3d11");
+        append(L"--use-adapter-luid=" + std::to_wstring(config.adapterLuid.HighPart) +
+            L"," + std::to_wstring(config.adapterLuid.LowPart));
+    }
+    if (config.devToolsEnabled) {
+        append(L"--auto-open-devtools-for-tabs");
+    }
+    return args;
+}
+
 bool EnsureEnvironment(const EnvironmentConfig& config) {
 #if defined(GAKULOADER_WEBVIEW2_TEST)
     if (g_env.ready.load()) return true;
@@ -544,6 +563,7 @@ bool EnsureEnvironment(const EnvironmentConfig& config) {
 
     g_env.config = config;
     g_env.diagnostic.clear();
+    g_env.browserArgs = BuildAdditionalBrowserArguments(config);
 
 #if defined(GAKULOADER_WEBVIEW2_TEST)
     if (g_testHooks.ensureEnvironment) g_testHooks.ensureEnvironment(config);
@@ -575,7 +595,7 @@ bool EnsureEnvironment(const EnvironmentConfig& config) {
     auto options = Microsoft::WRL::Make<CoreWebView2EnvironmentOptions>();
     if (options) {
         options->put_Language(config.languageTag.c_str());
-        if (config.devToolsEnabled) options->put_AdditionalBrowserArguments(L"--auto-open-devtools-for-tabs");
+        if (!g_env.browserArgs.empty()) options->put_AdditionalBrowserArguments(g_env.browserArgs.c_str());
     }
     ComPtr<ICoreWebView2EnvironmentOptions> optionsBase;
     if (options) options.As(&optionsBase);
@@ -923,6 +943,7 @@ void Shutdown() {
 #endif
     g_env.environment.Reset();
     g_env.config = {};
+    g_env.browserArgs.clear();
     g_dpiScale = 1.0f;
     g_uiGuidance = {};
 }
@@ -930,6 +951,7 @@ void Shutdown() {
 bool IsEnvironmentReady() { return g_env.ready.load(); }
 bool HasEnvironmentFailed() { return g_env.failed.load(); }
 std::string LastEnvironmentDiagnostic() { return g_env.diagnostic; }
+std::wstring LastBrowserArguments() { return g_env.browserArgs; }
 
 bool HasPanel(const std::string& panelId) { return FindPanel(panelId) != nullptr; }
 bool IsReady(const std::string& panelId) {

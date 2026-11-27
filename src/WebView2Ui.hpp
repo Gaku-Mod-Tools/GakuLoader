@@ -31,6 +31,15 @@ struct EnvironmentConfig {
     std::filesystem::path userDataDir;
     std::wstring languageTag;
     bool devToolsEnabled = false;
+    bool alignGpuAdapter = true;
+    bool hasAdapterLuid = false;
+    bool adapterIsSoftware = false;
+    LUID adapterLuid{};
+    uint32_t adapterVendorId = 0;
+    uint32_t adapterDeviceId = 0;
+    uint64_t adapterVramBytes = 0;
+    std::wstring adapterDescription;
+    std::string adapterSource;
 };
 
 struct PanelConfig {
@@ -97,6 +106,8 @@ void Shutdown();
 bool IsEnvironmentReady();
 bool HasEnvironmentFailed();
 std::string LastEnvironmentDiagnostic();
+std::wstring BuildAdditionalBrowserArguments(const EnvironmentConfig& config);
+std::wstring LastBrowserArguments();
 
 bool HasPanel(const std::string& panelId);
 bool IsReady(const std::string& panelId);

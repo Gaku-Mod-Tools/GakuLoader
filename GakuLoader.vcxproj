@@ -95,6 +95,7 @@
     <ClInclude Include="src\ExitDiagnosis.hpp" />
     <ClInclude Include="src\GameHook.hpp" />
     <ClInclude Include="src\DesktopUi.hpp" />
+    <ClInclude Include="src\DxgiAdapter.hpp" />
     <ClInclude Include="src\DesktopAppearance.hpp" />
     <ClInclude Include="src\DesktopFileDrop.hpp" />
     <ClInclude Include="src\DesktopDialogs.hpp" />

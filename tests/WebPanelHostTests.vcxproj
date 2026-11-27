@@ -18,7 +18,7 @@
   <PropertyGroup><OutDir>$(GakuBuildDir)tests\$(Configuration)\</OutDir><TargetName>web-panel-host-tests</TargetName></PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile><PreprocessorDefinitions>GAKULOADER_WEBVIEW2_TEST;%(PreprocessorDefinitions)</PreprocessorDefinitions></ClCompile>
-    <Link><AdditionalDependencies>ole32.lib;user32.lib;%(AdditionalDependencies)</AdditionalDependencies></Link>
+    <Link><AdditionalDependencies>ole32.lib;user32.lib;dxgi.lib;d3d11.lib;%(AdditionalDependencies)</AdditionalDependencies></Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="WebPanelHostTests.cpp" />
